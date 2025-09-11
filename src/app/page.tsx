@@ -20,12 +20,13 @@ export default function Home() {
   //anyはTSのどんな方でも使える配列
   const [todos, setTodos] = useState<any[]>([]);
 
+  const fetchTodos = async () => {
+    //supabase.from("todos").select("*");で取得
+    const { data, error } = await supabase.from("todos").select("*");
+    if (data) setTodos(data);
+  };
+
   useEffect(() => {
-    const fetchTodos = async () => {
-      //supabase.from("todos").select("*");で取得
-      const { data, error } = await supabase.from("todos").select("*");
-      if (data) setTodos(data);
-    };
     fetchTodos();
   }, []);
 
@@ -43,7 +44,7 @@ export default function Home() {
             <h1 className="text-xl font-bold">ホーム</h1>
           </div>
           {/* 投稿フォーム */}
-          <PostForm onSubmit={() => {}} />
+          <PostForm onPostAdded={fetchTodos} />
           {/* todos一覧（Postコンポーネントで表示） */}
           <div>
             {todos.map((todo) => (

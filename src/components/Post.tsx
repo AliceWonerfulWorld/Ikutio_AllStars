@@ -60,16 +60,29 @@ export default function Post({ post, onLike, onBookmark }: PostProps) {
             <span className="text-gray-500 text-sm">@{post.username}</span>
             <span className="text-gray-500 text-sm">·</span>
             <span className="text-gray-500 text-sm">
-              {new Date(post.created_at).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              {new Date(post.created_at).toLocaleString("ja-JP", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </span>
             <button className="ml-auto text-gray-500 hover:text-white transition-colors">
               <MoreHorizontal size={18} />
             </button>
           </div>
 
-          {/* 投稿内容（titleカラム表示） */}
+          {/* 投稿内容（titleカラム表示・タグは青色） */}
           <div className="text-white mb-3 whitespace-pre-wrap leading-relaxed">
-            {post.title}
+            <span
+              dangerouslySetInnerHTML={{
+                __html: post.title.replace(
+                  /#([\wぁ-んァ-ン一-龠]+)/g,
+                  '<span style="color:#3b82f6">#$1</span>'
+                ),
+              }}
+            />
           </div>
 
           {/* タグ */}
