@@ -1,0 +1,59 @@
+import { Post } from '@/types'
+
+export const mockPosts: Post[] = [
+  {
+    id: '1',
+    text: '今日は天気が良くて気分がいいです！散歩に出かけようと思います。',
+    likes: 24,
+    tags: ['天気', '散歩'],
+    user_id: 'user1',
+    username: 'user1',
+    created_at: '2024-01-15T10:30:00Z',
+    replies: 3,
+    bookmarked: false
+  },
+  {
+    id: '2',
+    text: '新しいプロジェクトを始めました。Next.jsとSupabaseを使ってSNSアプリを作成中です。',
+    likes: 156,
+    tags: ['プログラミング', 'Next.js', 'Supabase'],
+    user_id: 'user2',
+    username: 'user2',
+    created_at: '2024-01-15T09:15:00Z',
+    replies: 12,
+    bookmarked: true
+  },
+  {
+    id: '3',
+    text: 'コーヒーを飲みながらコードを書いています。集中力が高まります。',
+    likes: 8,
+    tags: ['コーヒー', 'プログラミング'],
+    user_id: 'user3',
+    username: 'user3',
+    created_at: '2024-01-15T08:45:00Z',
+    replies: 1,
+    bookmarked: false
+  },
+  {
+    id: '4',
+    text: '今日学んだこと：ReactのuseEffectの依存配列について。空の配列を渡すと初回レンダリング時のみ実行される。',
+    likes: 42,
+    tags: ['React', '学習', 'JavaScript'],
+    user_id: 'user4',
+    username: 'user4',
+    created_at: '2024-01-15T07:20:00Z',
+    replies: 5,
+    bookmarked: false
+  },
+  {
+    id: '5',
+    text: '夕日が綺麗でした。自然の美しさに感動します。',
+    likes: 67,
+    tags: ['夕日', '自然', '写真'],
+    user_id: 'user5',
+    username: 'user5',
+    created_at: '2024-01-14T18:30:00Z',
+    replies: 8,
+    bookmarked: true
+  }
+]
