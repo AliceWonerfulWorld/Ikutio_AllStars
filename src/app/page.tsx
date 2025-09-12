@@ -1,46 +1,37 @@
-'use client'
-
-import { useState } from 'react'
-import Sidebar from '@/components/Sidebar'
-import PostForm from '@/components/PostForm'
-import Post from '@/components/Post'
-import { mockPosts } from '@/data/mockData'
-import { Post as PostType } from '@/types'
+"use client";
+import { useState, useEffect } from "react";
+type PostType = {
+  id: string;
+  user_id: string;
+  username: string;
+  title: string;
+  created_at: string;
+  tags: string[];
+  replies: number;
+  likes: number;
+  bookmarked: boolean;
+};
+import Sidebar from "@/components/Sidebar";
+import PostForm from "@/components/PostForm";
+import Post from "@/components/Post";
+import { supabase } from "@/utils/supabase/client";
 
 export default function Home() {
-  const [posts, setPosts] = useState<PostType[]>(mockPosts)
+  //anyはTSのどんな方でも使える配列
+  const [todos, setTodos] = useState<any[]>([]);
 
-  const handleSubmit = (text: string, tags: string[]) => {
-    const newPost: PostType = {
-      id: Date.now().toString(),
-      text,
-      tags,
-      likes: 0,
-      user_id: 'current_user',
-      username: 'current_user',
-      created_at: new Date().toISOString(),
-      replies: 0,
-      bookmarked: false
-    }
-    
-    setPosts([newPost, ...posts])
-  }
+  const fetchTodos = async () => {
+    //supabase.from("todos").select("*");で取得
+    const { data, error } = await supabase.from("todos").select("*");
+    if (data) setTodos(data);
+  };
 
-  const handleLike = (postId: string) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, likes: post.likes + 1 }
-        : post
-    ))
-  }
+  useEffect(() => {
+    fetchTodos();
+  }, []);
 
-  const handleBookmark = (postId: string) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, bookmarked: !post.bookmarked }
-        : post
-    ))
-  }
+  // R2のパブリック開発URL
+  const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -49,30 +40,38 @@ export default function Home() {
         <div className="w-64 flex-shrink-0">
           <Sidebar />
         </div>
-        
         {/* メインコンテンツ */}
         <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
             <h1 className="text-xl font-bold">ホーム</h1>
           </div>
-
           {/* 投稿フォーム */}
-          <PostForm onSubmit={handleSubmit} />
-
-          {/* 投稿一覧 */}
+          <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
+          {/* todos一覧（Postコンポーネントで表示） */}
           <div>
-            {posts.map((post) => (
+            {todos.map((todo) => (
               <Post
-                key={post.id}
-                post={post}
-                onLike={handleLike}
-                onBookmark={handleBookmark}
+                key={todo.id}
+                post={{
+                  id: todo.id,
+                  // ||は空だったら右側を入れる処理
+                  user_id: todo.user_id || "",
+                  username: todo.username || "User",
+                  title: todo.title,
+                  created_at: todo.created_at || "",
+                  tags: todo.tags || [],
+                  replies: todo.replies || 0,
+                  likes: todo.likes || 0,
+                  bookmarked: todo.bookmarked || false,
+                  imageUrl: todo.image_url || "", // 画像URLを渡す
+                }}
+                onLike={() => {}}
+                onBookmark={() => {}}
               />
             ))}
           </div>
         </div>
-
         {/* 右サイドバー */}
         <div className="w-80 flex-shrink-0 p-4">
           <div className="sticky top-4 space-y-4">
@@ -104,6 +103,16 @@ export default function Home() {
                   <div className="font-semibold">#React</div>
                   <div className="text-sm text-gray-500">25.1K件のツイート</div>
                 </div>
+                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
+                  <div className="text-sm text-gray-500">AI</div>
+                  <div className="font-semibold">#ChatGPT</div>
+                  <div className="text-sm text-gray-500">18.9K件のツイート</div>
+                </div>
+                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
+                  <div className="text-sm text-gray-500">デザイン</div>
+                  <div className="font-semibold">#Figma</div>
+                  <div className="text-sm text-gray-500">7.2K件のツイート</div>
+                </div>
               </div>
             </div>
 
@@ -129,9 +138,45 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* トレンド情報 */}
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h3 className="text-lg font-semibold mb-3">今日のトレンド</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">プログラミング</span>
+                  <span className="text-white font-semibold">+15%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">AI・機械学習</span>
+                  <span className="text-white font-semibold">+23%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Web開発</span>
+                  <span className="text-white font-semibold">+8%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* フッター情報 */}
+            <div className="text-xs text-gray-500 space-y-1">
+              <div className="flex flex-wrap gap-2">
+                <span className="hover:underline cursor-pointer">利用規約</span>
+                <span className="hover:underline cursor-pointer">プライバシーポリシー</span>
+                <span className="hover:underline cursor-pointer">クッキーポリシー</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="hover:underline cursor-pointer">アクセシビリティ</span>
+                <span className="hover:underline cursor-pointer">広告情報</span>
+                <span className="hover:underline cursor-pointer">その他</span>
+              </div>
+              <div className="text-gray-600 mt-2">
+                © 2024 Ikutio AllStars
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
