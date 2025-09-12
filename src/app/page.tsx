@@ -1,46 +1,37 @@
-'use client'
-
-import { useState } from 'react'
-import Sidebar from '@/components/Sidebar'
-import PostForm from '@/components/PostForm'
-import Post from '@/components/Post'
-import { mockPosts } from '@/data/mockData'
-import { Post as PostType } from '@/types'
+"use client";
+import { useState, useEffect } from "react";
+type PostType = {
+  id: string;
+  user_id: string;
+  username: string;
+  title: string;
+  created_at: string;
+  tags: string[];
+  replies: number;
+  likes: number;
+  bookmarked: boolean;
+};
+import Sidebar from "@/components/Sidebar";
+import PostForm from "@/components/PostForm";
+import Post from "@/components/Post";
+import { supabase } from "@/utils/supabase/client";
 
 export default function Home() {
-  const [posts, setPosts] = useState<PostType[]>(mockPosts)
+  //anyはTSのどんな方でも使える配列
+  const [todos, setTodos] = useState<any[]>([]);
 
-  const handleSubmit = (text: string, tags: string[]) => {
-    const newPost: PostType = {
-      id: Date.now().toString(),
-      text,
-      tags,
-      likes: 0,
-      user_id: 'current_user',
-      username: 'current_user',
-      created_at: new Date().toISOString(),
-      replies: 0,
-      bookmarked: false
-    }
-    
-    setPosts([newPost, ...posts])
-  }
+  const fetchTodos = async () => {
+    //supabase.from("todos").select("*");で取得
+    const { data, error } = await supabase.from("todos").select("*");
+    if (data) setTodos(data);
+  };
 
-  const handleLike = (postId: string) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, likes: post.likes + 1 }
-        : post
-    ))
-  }
+  useEffect(() => {
+    fetchTodos();
+  }, []);
 
-  const handleBookmark = (postId: string) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, bookmarked: !post.bookmarked }
-        : post
-    ))
-  }
+  // R2のパブリック開発URL
+  const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -49,30 +40,38 @@ export default function Home() {
         <div className="w-64 flex-shrink-0">
           <Sidebar />
         </div>
-        
         {/* メインコンテンツ */}
         <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
             <h1 className="text-xl font-bold">ホーム</h1>
           </div>
-
           {/* 投稿フォーム */}
-          <PostForm onSubmit={handleSubmit} />
-
-          {/* 投稿一覧 */}
+          <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
+          {/* todos一覧（Postコンポーネントで表示） */}
           <div>
-            {posts.map((post) => (
+            {todos.map((todo) => (
               <Post
-                key={post.id}
-                post={post}
-                onLike={handleLike}
-                onBookmark={handleBookmark}
+                key={todo.id}
+                post={{
+                  id: todo.id,
+                  // ||は空だったら右側を入れる処理
+                  user_id: todo.user_id || "",
+                  username: todo.username || "User",
+                  title: todo.title,
+                  created_at: todo.created_at || "",
+                  tags: todo.tags || [],
+                  replies: todo.replies || 0,
+                  likes: todo.likes || 0,
+                  bookmarked: todo.bookmarked || false,
+                  imageUrl: todo.image_url || "", // 画像URLを渡す
+                }}
+                onLike={() => {}}
+                onBookmark={() => {}}
               />
             ))}
           </div>
         </div>
-
         {/* 右サイドバー */}
         <div className="w-80 flex-shrink-0 p-4">
           <div className="sticky top-4 space-y-4">
@@ -84,54 +83,11 @@ export default function Home() {
                 className="w-full bg-transparent text-white placeholder-gray-500 outline-none"
               />
             </div>
-
             {/* トレンド */}
-            <div className="bg-gray-800 rounded-2xl p-4">
-              <h2 className="text-xl font-bold mb-4">いま話題</h2>
-              <div className="space-y-3">
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm text-gray-500">プログラミング</div>
-                  <div className="font-semibold">#Next.js</div>
-                  <div className="text-sm text-gray-500">12.3K件のツイート</div>
-                </div>
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm text-gray-500">テクノロジー</div>
-                  <div className="font-semibold">#Supabase</div>
-                  <div className="text-sm text-gray-500">8.7K件のツイート</div>
-                </div>
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm text-gray-500">開発</div>
-                  <div className="font-semibold">#React</div>
-                  <div className="text-sm text-gray-500">25.1K件のツイート</div>
-                </div>
-              </div>
-            </div>
-
-            {/* おすすめユーザー */}
-            <div className="bg-gray-800 rounded-2xl p-4">
-              <h2 className="text-xl font-bold mb-4">おすすめユーザー</h2>
-              <div className="space-y-3">
-                {['user1', 'user2', 'user3'].map((user) => (
-                  <div key={user} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                        {user.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-semibold">{user}</div>
-                        <div className="text-sm text-gray-500">@{user}</div>
-                      </div>
-                    </div>
-                    <button className="bg-white text-black px-4 py-1 rounded-full text-sm font-semibold hover:bg-gray-200 transition-colors">
-                      フォロー
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* ...その他のUI... */}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
