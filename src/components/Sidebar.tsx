@@ -9,6 +9,7 @@ export default function Sidebar() {
     { icon: Mail, label: 'メッセージ', href: '/messages' },
     { icon: Bookmark, label: 'ブックマーク', href: '/bookmarks' },
     { icon: User, label: 'プロフィール', href: '/profile' },
+    { icon: Settings, label: '設定', href: '/settings' },
   ]
 
   return (
@@ -50,9 +51,9 @@ export default function Sidebar() {
             <div className="text-gray-500 text-sm">@user</div>
           </div>
           <div className="flex space-x-2">
-            <button className="text-gray-500 hover:text-white transition-colors">
+            <Link href="/settings" className="text-gray-500 hover:text-white transition-colors">
               <Settings size={18} />
-            </button>
+            </Link>
             <button className="text-gray-500 hover:text-white transition-colors">
               <LogOut size={18} />
             </button>
