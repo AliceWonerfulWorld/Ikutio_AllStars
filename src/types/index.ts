@@ -27,3 +27,25 @@ export interface Message {
     created_at: string
 }
 
+// 認証関連の型定義を追加
+export interface AuthUser {
+  id: string;
+  email: string;
+  user_metadata: {
+    username?: string;
+    displayName?: string;
+  };
+}
+
+export interface SignUpData {
+  email: string;
+  password: string;
+  username: string;
+  displayName: string;
+}
+
+export interface SignInData {
+  email: string;
+  password: string;
+}
+
