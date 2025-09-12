@@ -18,3 +18,12 @@ export interface User {
   displayName: string;
   avatar?: string;
 }
+  
+export interface Message {
+    id: string
+    text: string
+    user_id: string
+    username: string
+    created_at: string
+}
+
