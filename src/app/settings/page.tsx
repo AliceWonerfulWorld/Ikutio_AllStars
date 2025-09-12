@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ArrowLeft, User, Mail, Bell, Shield, Palette, Globe, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
+import ProtectedRoute from '@/components/ProtectedRoute'
 
 // 型定義を追加
 interface NotificationSettings {
@@ -36,7 +37,7 @@ interface FormData {
   privacy: PrivacySettings
 }
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const [activeTab, setActiveTab] = useState('profile')
   const [formData, setFormData] = useState<FormData>({
     username: 'current_user',
@@ -427,5 +428,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <ProtectedRoute>
+      <SettingsPageContent />
+    </ProtectedRoute>
   )
 }
