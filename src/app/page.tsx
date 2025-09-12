@@ -10,6 +10,7 @@ type PostType = {
   replies: number;
   likes: number;
   bookmarked: boolean;
+  image_url?: string;
 };
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -17,13 +18,17 @@ import Post from "@/components/Post";
 import { supabase } from "@/utils/supabase/client";
 
 export default function Home() {
-  //anyはTSのどんな方でも使える配列
-  const [todos, setTodos] = useState<any[]>([]);
+  // PostTypeの配列として型を指定
+  const [todos, setTodos] = useState<PostType[]>([]);
 
   const fetchTodos = async () => {
     //supabase.from("todos").select("*");で取得
     const { data, error } = await supabase.from("todos").select("*");
-    if (data) setTodos(data);
+    if (error) {
+      console.error("Error fetching todos:", error);
+    } else if (data) {
+      setTodos(data);
+    }
   };
 
   useEffect(() => {

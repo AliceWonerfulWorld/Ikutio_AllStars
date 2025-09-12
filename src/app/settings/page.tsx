@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, User, Mail, Lock, Bell, Shield, Palette, Globe, Trash2 } from 'lucide-react'
+import { ArrowLeft, User, Mail, Bell, Shield, Palette, Globe, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 
@@ -52,7 +52,7 @@ export default function SettingsPage() {
       email: true,
       push: true,
       mentions: true,
-      likes: true,
+      likes: false,
       retweets: false,
       follows: true
     },
@@ -64,7 +64,7 @@ export default function SettingsPage() {
     }
   })
 
-  const handleInputChange = (field: keyof FormData, value: any) => {
+  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -72,14 +72,14 @@ export default function SettingsPage() {
   }
 
   const handleNestedInputChange = (
-    parent: 'notifications' | 'privacy', 
-    field: string, 
-    value: any
+    section: 'notifications' | 'privacy',
+    field: string,
+    value: boolean
   ) => {
     setFormData(prev => ({
       ...prev,
-      [parent]: {
-        ...prev[parent],
+      [section]: {
+        ...prev[section],
         [field]: value
       }
     }))
@@ -93,7 +93,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'profile', label: 'プロフィール', icon: User },
-    { id: 'account', label: 'アカウント', icon: Lock },
+    { id: 'account', label: 'アカウント', icon: Mail },
     { id: 'notifications', label: '通知', icon: Bell },
     { id: 'privacy', label: 'プライバシー', icon: Shield },
     { id: 'appearance', label: '外観', icon: Palette },
