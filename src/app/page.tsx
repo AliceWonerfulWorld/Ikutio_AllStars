@@ -30,6 +30,9 @@ export default function Home() {
     fetchTodos();
   }, []);
 
+  // R2のパブリック開発URL
+  const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
+
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto flex">
@@ -44,7 +47,7 @@ export default function Home() {
             <h1 className="text-xl font-bold">ホーム</h1>
           </div>
           {/* 投稿フォーム */}
-          <PostForm onPostAdded={fetchTodos} />
+          <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
           {/* todos一覧（Postコンポーネントで表示） */}
           <div>
             {todos.map((todo) => (
@@ -61,6 +64,7 @@ export default function Home() {
                   replies: todo.replies || 0,
                   likes: todo.likes || 0,
                   bookmarked: todo.bookmarked || false,
+                  imageUrl: todo.image_url || "", // 画像URLを渡す
                 }}
                 onLike={() => {}}
                 onBookmark={() => {}}

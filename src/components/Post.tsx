@@ -15,6 +15,7 @@ type PostType = {
   replies: number;
   likes: number;
   bookmarked: boolean;
+  imageUrl?: string;
 };
 
 interface PostProps {
@@ -24,6 +25,8 @@ interface PostProps {
 }
 
 export default function Post({ post, onLike, onBookmark }: PostProps) {
+  console.log("画像URL:", post.imageUrl);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -77,13 +80,26 @@ export default function Post({ post, onLike, onBookmark }: PostProps) {
           <div className="text-white mb-3 whitespace-pre-wrap leading-relaxed">
             <span
               dangerouslySetInnerHTML={{
-                __html: post.title.replace(
+                __html: (post.title ?? "").replace(
                   /#([\wぁ-んァ-ン一-龠]+)/g,
                   '<span style="color:#3b82f6">#$1</span>'
                 ),
               }}
             />
           </div>
+          {/* 画像表示 */}
+          {post.imageUrl &&
+            post.imageUrl !== "" &&
+            post.imageUrl.startsWith("https://") && (
+              <div className="mb-3">
+                <img
+                  src={post.imageUrl}
+                  alt="投稿画像"
+                  className="max-w-xs rounded-lg"
+                  style={{ maxHeight: 300 }}
+                />
+              </div>
+            )}
 
           {/* タグ */}
           {post.tags.length > 0 && (

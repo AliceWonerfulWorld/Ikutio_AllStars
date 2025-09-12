@@ -6,30 +6,69 @@ import { Image, Smile, Calendar, MapPin, BarChart3 } from "lucide-react";
 
 interface PostFormProps {
   onPostAdded?: () => void;
+  r2PublicUrl?: string;
 }
 
-export default function PostForm({ onPostAdded }: PostFormProps) {
+export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const handleImageUpload = async (file: File): Promise<string | null> => {
+    const uniqueFileName = `${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2)}.jpg`;
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onload = async () => {
+        const img = new window.Image();
+        img.onload = async () => {
+          const canvas = document.createElement("canvas");
+          const maxWidth = 400;
+          const scale = Math.min(1, maxWidth / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressedBase64 = canvas
+            .toDataURL("image/jpeg", 0.7)
+            .split(",")[1];
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              file: compressedBase64,
+              fileName: uniqueFileName,
+            }),
+          });
+          resolve(r2PublicUrl + uniqueFileName);
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    // Supabaseにデータを挿入
-    const { error } = await supabase.from("todos").insert([
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = await handleImageUpload(imageFile);
+    }
+
+    await supabase.from("todos").insert([
       {
         title: text,
         tags: tags,
         created_at: new Date().toISOString(),
-        // 他の必要なフィールドもここに追加
+        image_url: imageUrl,
       },
     ]);
-    if (!error) {
-      if (onPostAdded) onPostAdded();
-      setText("");
-      setTags([]);
-    }
+    if (onPostAdded) onPostAdded();
+    setText("");
+    setTags([]);
+    setImageFile(null);
   };
 
   const extractTags = (text: string) => {
@@ -93,9 +132,22 @@ export default function PostForm({ onPostAdded }: PostFormProps) {
                   type="button"
                   className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
                   aria-label="画像を追加"
+                  onClick={() =>
+                    document.getElementById("image-upload")?.click()
+                  }
                 >
                   <Image size={20} />
                 </button>
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setImageFile(file);
+                  }}
+                />
                 <button
                   type="button"
                   className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
