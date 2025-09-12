@@ -13,7 +13,7 @@ export default function Sidebar() {
   ]
 
   return (
-    <div className="w-64 h-screen flex flex-col border-r border-gray-800">
+    <div className="w-64 h-screen flex flex-col border-r border-gray-800 sticky top-0">
       {/* ロゴ */}
       <div className="p-4">
         <h1 className="text-2xl font-bold text-white">Ikutio</h1>
