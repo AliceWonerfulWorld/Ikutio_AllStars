@@ -9,10 +9,11 @@ export default function Sidebar() {
     { icon: Mail, label: 'メッセージ', href: '/messages' },
     { icon: Bookmark, label: 'ブックマーク', href: '/bookmarks' },
     { icon: User, label: 'プロフィール', href: '/profile' },
+    { icon: Settings, label: '設定', href: '/settings' },
   ]
 
   return (
-    <div className="w-64 h-screen flex flex-col border-r border-gray-800">
+    <div className="w-64 h-screen flex flex-col border-r border-gray-800 sticky top-0">
       {/* ロゴ */}
       <div className="p-4">
         <h1 className="text-2xl font-bold text-white">Ikutio</h1>
@@ -50,9 +51,9 @@ export default function Sidebar() {
             <div className="text-gray-500 text-sm">@user</div>
           </div>
           <div className="flex space-x-2">
-            <button className="text-gray-500 hover:text-white transition-colors">
+            <Link href="/settings" className="text-gray-500 hover:text-white transition-colors">
               <Settings size={18} />
-            </button>
+            </Link>
             <button className="text-gray-500 hover:text-white transition-colors">
               <LogOut size={18} />
             </button>
