@@ -49,3 +49,30 @@ export interface SignInData {
   password: string;
 }
 
+// 通知関連の型定義を追加
+export interface Notification {
+  id: string;
+  type: 'like' | 'follow' | 'mention' | 'reply' | 'bookmark' | 'system';
+  title: string;
+  message: string;
+  user_id: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  post_id?: string;
+  created_at: string;
+  read: boolean;
+  action_url?: string;
+}
+
+export interface NotificationSettings {
+  email: boolean;
+  push: boolean;
+  mentions: boolean;
+  likes: boolean;
+  follows: boolean;
+  replies: boolean;
+  bookmarks: boolean;
+  system: boolean;
+}
+
