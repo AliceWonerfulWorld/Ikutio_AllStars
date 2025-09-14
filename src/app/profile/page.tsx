@@ -49,6 +49,7 @@ function ProfilePageContent() {
     iconUrl: "",
   });
   const [uploading, setUploading] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -80,6 +81,17 @@ function ProfilePageContent() {
           follower: 0,
           iconUrl: userData?.icon_url || "",
         }));
+
+        // 投稿取得（自分のuser_idのみ）
+        const { data: userPosts, error: postsError } = await supabase
+          .from("todos")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (postsError) {
+          console.error("投稿取得エラー:", postsError);
+        }
+        setPosts(userPosts ?? []);
       }
     });
   }, []);
@@ -184,25 +196,6 @@ function ProfilePageContent() {
     };
     reader.readAsDataURL(file);
   };
-
-  const mockPosts = [
-    {
-      id: 1,
-      content: "今日はNext.jsの勉強をしました！とても楽しいです。",
-      timestamp: "2時間前",
-      likes: 12,
-      replies: 3,
-      tags: ["Next.js", "プログラミング"],
-    },
-    {
-      id: 2,
-      content: "新しいプロジェクトを始めました。今度はSupabaseを使ってみます。",
-      timestamp: "1日前",
-      likes: 8,
-      replies: 1,
-      tags: ["Supabase", "開発"],
-    },
-  ];
 
   function getPublicIconUrl(iconUrl?: string) {
     if (!iconUrl) return "";
@@ -469,7 +462,7 @@ function ProfilePageContent() {
 
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
-            {mockPosts.map((post) => (
+            {posts.map((post) => (
               <div
                 key={post.id}
                 className="p-4 hover:bg-gray-900/50 transition-colors"
@@ -502,15 +495,15 @@ function ProfilePageContent() {
                       </span>
                       <span className="text-gray-400 text-sm">·</span>
                       <span className="text-gray-400 text-sm">
-                        {post.timestamp}
+                        {post.created_at
+                          ? new Date(post.created_at).toLocaleString("ja-JP")
+                          : ""}
                       </span>
                     </div>
-                    <p className="text-white mb-2 break-words">
-                      {post.content}
-                    </p>
-                    {post.tags.length > 0 && (
+                    <p className="text-white mb-2 break-words">{post.title}</p>
+                    {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-2">
-                        {post.tags.map((tag, index) => (
+                        {post.tags.map((tag: string, index: number) => (
                           <span
                             key={index}
                             className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
@@ -522,10 +515,10 @@ function ProfilePageContent() {
                     )}
                     <div className="flex items-center space-x-6 text-sm text-gray-400">
                       <button className="hover:text-blue-400 transition-colors">
-                        返信 {post.replies}
+                        返信 {post.replies ?? 0}
                       </button>
                       <button className="hover:text-red-400 transition-colors">
-                        いいね {post.likes}
+                        いいね {post.likes ?? 0}
                       </button>
                     </div>
                   </div>

@@ -8,7 +8,8 @@ export interface Post {
   username: string;
   created_at: string;
   replies: number; // number型に統一
-  bookmarked: boolean;
+  bookmarked?: boolean; // ← これだけ残す
+  liked?: boolean;
   imageUrl?: string;
 }
 
@@ -18,13 +19,13 @@ export interface User {
   displayName: string;
   avatar?: string;
 }
-  
+
 export interface Message {
-    id: string
-    text: string
-    user_id: string
-    username: string
-    created_at: string
+  id: string;
+  text: string;
+  user_id: string;
+  username: string;
+  created_at: string;
 }
 
 // 認証関連の型定義を追加
@@ -52,7 +53,7 @@ export interface SignInData {
 // 通知関連の型定義を追加
 export interface Notification {
   id: string;
-  type: 'like' | 'follow' | 'mention' | 'reply' | 'bookmark' | 'system';
+  type: "like" | "follow" | "mention" | "reply" | "bookmark" | "system";
   title: string;
   message: string;
   user_id: string;
@@ -75,4 +76,3 @@ export interface NotificationSettings {
   bookmarks: boolean;
   system: boolean;
 }
-
