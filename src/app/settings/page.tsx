@@ -1,106 +1,192 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { ArrowLeft, User, Mail, Bell, Shield, Palette, Globe, Trash2 } from 'lucide-react'
-import Link from 'next/link'
-import Sidebar from '@/components/Sidebar'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import { useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Bell,
+  Shield,
+  Palette,
+  Globe,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { supabase } from "@/utils/supabase/client";
 
 // 型定義を追加
 interface NotificationSettings {
-  email: boolean
-  push: boolean
-  mentions: boolean
-  likes: boolean
-  retweets: boolean
-  follows: boolean
+  email: boolean;
+  push: boolean;
+  mentions: boolean;
+  likes: boolean;
+  retweets: boolean;
+  follows: boolean;
 }
 
 interface PrivacySettings {
-  publicProfile: boolean
-  showEmail: boolean
-  showBirthDate: boolean
-  allowMessages: boolean
+  publicProfile: boolean;
+  showEmail: boolean;
+  showBirthDate: boolean;
+  allowMessages: boolean;
 }
 
 interface FormData {
-  username: string
-  displayName: string
-  email: string
-  bio: string
-  location: string
-  website: string
-  birthDate: string
-  language: string
-  theme: string
-  notifications: NotificationSettings
-  privacy: PrivacySettings
+  setID: string; // 追加
+  username: string;
+  displayName: string;
+  email: string;
+  bio: string;
+  location: string;
+  site: string; // ← website → site
+  birthDate: string;
+  language: string;
+  theme: string;
+  notifications: NotificationSettings;
+  privacy: PrivacySettings;
+  follow: number; // 追加
+  follower: number; // 追加
 }
 
+type Saves = {
+  username: string;
+  user_id: string;
+  introduction: string;
+  place: string;
+  site: string; // ← website → site
+  birth_date: string;
+  follow: number;
+  follower: number;
+};
+
 function SettingsPageContent() {
-  const [activeTab, setActiveTab] = useState('profile')
+  const [activeTab, setActiveTab] = useState("profile");
   const [formData, setFormData] = useState<FormData>({
-    username: 'current_user',
-    displayName: 'ユーザー',
-    email: 'user@example.com',
-    bio: 'プログラミングが好きです。',
-    location: '東京, 日本',
-    website: 'https://example.com',
-    birthDate: '1990-01-01',
-    language: 'ja',
-    theme: 'dark',
+    setID: "", // 追加
+    username: "",
+    displayName: "",
+    email: "",
+    bio: "",
+    location: "",
+    site: "", // ← website → site
+    birthDate: "",
+    language: "ja",
+    theme: "dark",
     notifications: {
       email: true,
       push: true,
       mentions: true,
       likes: false,
       retweets: false,
-      follows: true
+      follows: true,
     },
     privacy: {
       publicProfile: true,
       showEmail: false,
       showBirthDate: false,
-      allowMessages: true
-    }
-  })
+      allowMessages: true,
+    },
+    follow: 0,
+    follower: 0,
+  });
+  const [isNewUser, setIsNewUser] = useState(false);
 
-  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
-    setFormData(prev => ({
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data?.user;
+      if (user) {
+        const { data: userData, error } = await supabase
+          .from("usels")
+          .select(
+            "setID, username, introduction, place, site, user_id, birth_date, follow"
+          )
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) {
+          console.error("usels取得エラー:", error);
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          setID: userData?.setID || "", // ← setIDをformData.setIDに
+          username: userData?.username || "",
+          displayName: userData?.username || "",
+          email: user.email || "",
+          bio: userData?.introduction || "",
+          location: userData?.place || "",
+          site: userData?.site || "",
+          birthDate: userData?.birth_date || "",
+          follow: userData?.follow || 0,
+          follower: 0,
+        }));
+      }
+    });
+  }, []);
+
+  const handleInputChange = (
+    field: keyof FormData,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
-    }))
-  }
+      [field]: value,
+    }));
+  };
 
   const handleNestedInputChange = (
-    section: 'notifications' | 'privacy',
+    section: "notifications" | "privacy",
     field: string,
     value: boolean
   ) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [section]: {
         ...prev[section],
-        [field]: value
-      }
-    }))
-  }
+        [field]: value,
+      },
+    }));
+  };
 
-  const handleSave = () => {
-    // ここでSupabaseに保存処理を実装
-    console.log('設定を保存:', formData)
-    alert('設定が保存されました！')
-  }
+  const handleSave = async () => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      return;
+    }
+    // 型を明示してデータを整形
+    const updateData = {
+      setID: formData.setID || "",
+      username: formData.displayName || "",
+      introduction: formData.bio || "",
+      place: formData.location || "",
+      site: formData.site || "",
+      birth_date: formData.birthDate ? formData.birthDate : null, // 空文字ならnull
+      follow: Number(formData.follow) || 0,
+    };
+    const { error } = await supabase
+      .from("usels")
+      .update(updateData)
+      .eq("user_id", userId);
+    if (error) {
+      alert("プロフィールの更新に失敗しました: " + error.message);
+    } else {
+      alert("プロフィールが更新されました！");
+    }
+  };
 
   const tabs = [
-    { id: 'profile', label: 'プロフィール', icon: User },
-    { id: 'account', label: 'アカウント', icon: Mail },
-    { id: 'notifications', label: '通知', icon: Bell },
-    { id: 'privacy', label: 'プライバシー', icon: Shield },
-    { id: 'appearance', label: '外観', icon: Palette },
-    { id: 'language', label: '言語', icon: Globe },
-    { id: 'danger', label: '危険な操作', icon: Trash2 }
-  ]
+    { id: "profile", label: "プロフィール", icon: User },
+    { id: "account", label: "アカウント", icon: Mail },
+    { id: "notifications", label: "通知", icon: Bell },
+    { id: "privacy", label: "プライバシー", icon: Shield },
+    { id: "appearance", label: "外観", icon: Palette },
+    { id: "language", label: "言語", icon: Globe },
+    { id: "danger", label: "危険な操作", icon: Trash2 },
+  ];
 
   const renderProfileTab = () => (
     <div className="space-y-6">
@@ -113,12 +199,12 @@ function SettingsPageContent() {
             </label>
             <input
               type="text"
-              value={formData.username}
-              onChange={(e) => handleInputChange('username', e.target.value)}
+              value={formData.setID}
+              onChange={(e) => handleInputChange("setID", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               表示名
@@ -126,7 +212,7 @@ function SettingsPageContent() {
             <input
               type="text"
               value={formData.displayName}
-              onChange={(e) => handleInputChange('displayName', e.target.value)}
+              onChange={(e) => handleInputChange("displayName", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -137,7 +223,7 @@ function SettingsPageContent() {
             </label>
             <textarea
               value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
+              onChange={(e) => handleInputChange("bio", e.target.value)}
               rows={3}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 resize-none"
             />
@@ -150,7 +236,7 @@ function SettingsPageContent() {
             <input
               type="text"
               value={formData.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
+              onChange={(e) => handleInputChange("location", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -161,15 +247,15 @@ function SettingsPageContent() {
             </label>
             <input
               type="url"
-              value={formData.website}
-              onChange={(e) => handleInputChange('website', e.target.value)}
+              value={formData.site} // ← website → site
+              onChange={(e) => handleInputChange("site", e.target.value)} // ← website → site
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderAccountTab = () => (
     <div className="space-y-6">
@@ -183,7 +269,7 @@ function SettingsPageContent() {
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
+              onChange={(e) => handleInputChange("email", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -195,7 +281,7 @@ function SettingsPageContent() {
             <input
               type="date"
               value={formData.birthDate}
-              onChange={(e) => handleInputChange('birthDate', e.target.value)}
+              onChange={(e) => handleInputChange("birthDate", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -208,7 +294,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
@@ -219,27 +305,33 @@ function SettingsPageContent() {
             <div key={key} className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-white">
-                  {key === 'email' && 'メール通知'}
-                  {key === 'push' && 'プッシュ通知'}
-                  {key === 'mentions' && 'メンション'}
-                  {key === 'likes' && 'いいね'}
-                  {key === 'retweets' && 'リツイート'}
-                  {key === 'follows' && 'フォロー'}
+                  {key === "email" && "メール通知"}
+                  {key === "push" && "プッシュ通知"}
+                  {key === "mentions" && "メンション"}
+                  {key === "likes" && "いいね"}
+                  {key === "retweets" && "リツイート"}
+                  {key === "follows" && "フォロー"}
                 </div>
                 <div className="text-sm text-gray-400">
-                  {key === 'email' && 'メールで通知を受け取る'}
-                  {key === 'push' && 'ブラウザでプッシュ通知を受け取る'}
-                  {key === 'mentions' && 'メンションされた時に通知'}
-                  {key === 'likes' && 'いいねされた時に通知'}
-                  {key === 'retweets' && 'リツイートされた時に通知'}
-                  {key === 'follows' && 'フォローされた時に通知'}
+                  {key === "email" && "メールで通知を受け取る"}
+                  {key === "push" && "ブラウザでプッシュ通知を受け取る"}
+                  {key === "mentions" && "メンションされた時に通知"}
+                  {key === "likes" && "いいねされた時に通知"}
+                  {key === "retweets" && "リツイートされた時に通知"}
+                  {key === "follows" && "フォローされた時に通知"}
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) => handleNestedInputChange('notifications', key, e.target.checked)}
+                  onChange={(e) =>
+                    handleNestedInputChange(
+                      "notifications",
+                      key,
+                      e.target.checked
+                    )
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -249,7 +341,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderPrivacyTab = () => (
     <div className="space-y-6">
@@ -260,23 +352,26 @@ function SettingsPageContent() {
             <div key={key} className="flex items-center justify-between">
               <div>
                 <div className="font-medium text-white">
-                  {key === 'publicProfile' && '公開プロフィール'}
-                  {key === 'showEmail' && 'メールアドレスを表示'}
-                  {key === 'showBirthDate' && '生年月日を表示'}
-                  {key === 'allowMessages' && 'メッセージを許可'}
+                  {key === "publicProfile" && "公開プロフィール"}
+                  {key === "showEmail" && "メールアドレスを表示"}
+                  {key === "showBirthDate" && "生年月日を表示"}
+                  {key === "allowMessages" && "メッセージを許可"}
                 </div>
                 <div className="text-sm text-gray-400">
-                  {key === 'publicProfile' && 'プロフィールを公開する'}
-                  {key === 'showEmail' && 'プロフィールにメールアドレスを表示'}
-                  {key === 'showBirthDate' && 'プロフィールに生年月日を表示'}
-                  {key === 'allowMessages' && '他のユーザーからのメッセージを許可'}
+                  {key === "publicProfile" && "プロフィールを公開する"}
+                  {key === "showEmail" && "プロフィールにメールアドレスを表示"}
+                  {key === "showBirthDate" && "プロフィールに生年月日を表示"}
+                  {key === "allowMessages" &&
+                    "他のユーザーからのメッセージを許可"}
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) => handleNestedInputChange('privacy', key, e.target.checked)}
+                  onChange={(e) =>
+                    handleNestedInputChange("privacy", key, e.target.checked)
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -286,7 +381,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderAppearanceTab = () => (
     <div className="space-y-6">
@@ -299,7 +394,7 @@ function SettingsPageContent() {
             </label>
             <select
               value={formData.theme}
-              onChange={(e) => handleInputChange('theme', e.target.value)}
+              onChange={(e) => handleInputChange("theme", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             >
               <option value="dark">ダーク</option>
@@ -310,7 +405,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderLanguageTab = () => (
     <div className="space-y-6">
@@ -323,7 +418,7 @@ function SettingsPageContent() {
             </label>
             <select
               value={formData.language}
-              onChange={(e) => handleInputChange('language', e.target.value)}
+              onChange={(e) => handleInputChange("language", e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             >
               <option value="ja">日本語</option>
@@ -335,7 +430,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderDangerTab = () => (
     <div className="space-y-6">
@@ -354,20 +449,28 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'profile': return renderProfileTab()
-      case 'account': return renderAccountTab()
-      case 'notifications': return renderNotificationsTab()
-      case 'privacy': return renderPrivacyTab()
-      case 'appearance': return renderAppearanceTab()
-      case 'language': return renderLanguageTab()
-      case 'danger': return renderDangerTab()
-      default: return renderProfileTab()
+      case "profile":
+        return renderProfileTab();
+      case "account":
+        return renderAccountTab();
+      case "notifications":
+        return renderNotificationsTab();
+      case "privacy":
+        return renderPrivacyTab();
+      case "appearance":
+        return renderAppearanceTab();
+      case "language":
+        return renderLanguageTab();
+      case "danger":
+        return renderDangerTab();
+      default:
+        return renderProfileTab();
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -376,13 +479,16 @@ function SettingsPageContent() {
         <div className="w-64 flex-shrink-0">
           <Sidebar />
         </div>
-        
+
         {/* メインコンテンツ */}
         <div className="flex-1 max-w-4xl mx-auto">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
             <div className="flex items-center space-x-4">
-              <Link href="/" className="hover:bg-gray-800 p-2 rounded-full transition-colors">
+              <Link
+                href="/"
+                className="hover:bg-gray-800 p-2 rounded-full transition-colors"
+              >
                 <ArrowLeft size={20} />
               </Link>
               <h1 className="text-xl font-bold">設定</h1>
@@ -399,8 +505,8 @@ function SettingsPageContent() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'text-gray-500 hover:text-white hover:bg-gray-800'
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "text-gray-500 hover:text-white hover:bg-gray-800"
                     }`}
                   >
                     <tab.icon size={20} />
@@ -413,7 +519,7 @@ function SettingsPageContent() {
             {/* 設定内容 */}
             <div className="flex-1 p-6">
               {renderTabContent()}
-              
+
               {/* 保存ボタン */}
               <div className="mt-8 pt-6 border-t border-gray-800">
                 <button
@@ -428,7 +534,7 @@ function SettingsPageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function SettingsPage() {
@@ -436,5 +542,5 @@ export default function SettingsPage() {
     <ProtectedRoute>
       <SettingsPageContent />
     </ProtectedRoute>
-  )
+  );
 }

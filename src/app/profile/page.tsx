@@ -1,68 +1,221 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { ArrowLeft, Camera, MapPin, Calendar, Link as LinkIcon, Edit3, Save, X } from 'lucide-react'
-import Link from 'next/link'
-import Sidebar from '@/components/Sidebar'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import { useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  Camera,
+  MapPin,
+  Calendar,
+  Link as LinkIcon,
+  Edit3,
+  Save,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { supabase } from "@/utils/supabase/client";
+
+// 型定義
+interface FormData {
+  setID: string;
+  username: string;
+  displayName: string;
+  email: string;
+  bio: string;
+  location: string;
+  site: string;
+  birthDate: string;
+  follow: number;
+  follower: number;
+  iconUrl?: string; // 追加
+}
+
+const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
 function ProfilePageContent() {
-  const [isEditing, setIsEditing] = useState(false)
-  const [profileData, setProfileData] = useState({
-    displayName: 'ユーザー',
-    username: 'user',
-    bio: 'プログラミングが好きです。Next.jsとReactを勉強中です。',
-    location: '東京, 日本',
-    website: 'https://example.com',
-    birthDate: '1990-01-01',
-    joinDate: '2024年1月',
-    following: 150,
-    followers: 1200,
-    posts: 89
-  })
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    setID: "",
+    username: "",
+    displayName: "",
+    email: "",
+    bio: "",
+    location: "",
+    site: "",
+    birthDate: "",
+    follow: 0,
+    follower: 0,
+    iconUrl: "",
+  });
+  const [uploading, setUploading] = useState(false);
 
-  const [editData, setEditData] = useState(profileData)
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data?.user;
+      if (user) {
+        const { data: userData, error } = await supabase
+          .from("usels")
+          .select(
+            "setID, username, introduction, place, site, user_id, birth_date, follow, icon_url"
+          )
+          .eq("user_id", user.id)
+          .single();
+
+        if (error) {
+          console.error("usels取得エラー:", error);
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          setID: userData?.setID || "",
+          username: userData?.username || "",
+          displayName: userData?.username || "",
+          email: user.email || "",
+          bio: userData?.introduction || "",
+          location: userData?.place || "",
+          site: userData?.site || "",
+          birthDate: userData?.birth_date || "",
+          follow: userData?.follow || 0,
+          follower: 0,
+          iconUrl: userData?.icon_url || "",
+        }));
+      }
+    });
+  }, []);
+
+  const handleInputChange = (
+    field: keyof FormData,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const handleEdit = () => {
-    setEditData(profileData)
-    setIsEditing(true)
-  }
+    setIsEditing(true);
+  };
 
-  const handleSave = () => {
-    setProfileData(editData)
-    setIsEditing(false)
-  }
+  const handleSave = async () => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      return;
+    }
+    const updateData = {
+      setID: formData.setID || "",
+      username: formData.displayName || "",
+      introduction: formData.bio || "",
+      place: formData.location || "",
+      site: formData.site || "",
+      birth_date: formData.birthDate ? formData.birthDate : null,
+      follow: Number(formData.follow) || 0,
+    };
+    const { error } = await supabase
+      .from("usels")
+      .update(updateData)
+      .eq("user_id", userId);
+    if (error) {
+      alert("プロフィールの更新に失敗しました: " + error.message);
+    } else {
+      alert("プロフィールが更新されました！");
+      setIsEditing(false);
+    }
+  };
 
   const handleCancel = () => {
-    setEditData(profileData)
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
-  const handleInputChange = (field: string, value: string) => {
-    setEditData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+  // 画像アップロード処理
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルのみアップロードできます");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("画像サイズは5MB以下にしてください");
+      return;
+    }
+    setUploading(true);
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      setUploading(false);
+      return;
+    }
+    let fileExt = file.name.split(".").pop();
+    if (!fileExt) fileExt = "png";
+    const fileName = `icon_${userId}_${Date.now()}.${fileExt}`;
+
+    // ファイルをbase64化
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      // APIへPOST
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, fileName }),
+      });
+      if (!res.ok) {
+        alert("アイコンアップロード失敗");
+        setUploading(false);
+        return;
+      }
+      const { imageUrl } = await res.json();
+      // Supabaseに保存
+      await supabase
+        .from("usels")
+        .update({ icon_url: imageUrl })
+        .eq("user_id", userId);
+
+      setFormData((prev) => ({
+        ...prev,
+        iconUrl: imageUrl,
+      }));
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const mockPosts = [
     {
       id: 1,
-      content: '今日はNext.jsの勉強をしました！とても楽しいです。',
-      timestamp: '2時間前',
+      content: "今日はNext.jsの勉強をしました！とても楽しいです。",
+      timestamp: "2時間前",
       likes: 12,
       replies: 3,
-      tags: ['Next.js', 'プログラミング']
+      tags: ["Next.js", "プログラミング"],
     },
     {
       id: 2,
-      content: '新しいプロジェクトを始めました。今度はSupabaseを使ってみます。',
-      timestamp: '1日前',
+      content: "新しいプロジェクトを始めました。今度はSupabaseを使ってみます。",
+      timestamp: "1日前",
       likes: 8,
       replies: 1,
-      tags: ['Supabase', '開発']
+      tags: ["Supabase", "開発"],
+    },
+  ];
+
+  function getPublicIconUrl(iconUrl?: string) {
+    if (!iconUrl) return "";
+    // cloudflarestorage.com の場合 r2.dev に変換
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      // 例: https://da1ba209d61b3c9fb6834468fb0bb4f4.r2.cloudflarestorage.com/24sns/icon_xxx.png
+      // → https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/icon_xxx.png
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
     }
-  ]
+    return iconUrl;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -71,18 +224,25 @@ function ProfilePageContent() {
         <div className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">
           <Sidebar />
         </div>
-        
+
         {/* メインコンテンツ */}
         <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center space-x-4">
-              <Link href="/" className="text-gray-400 hover:text-white transition-colors">
+              <Link
+                href="/"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
                 <ArrowLeft size={20} />
               </Link>
               <div>
-                <h1 className="text-lg lg:text-xl font-bold">{profileData.displayName}</h1>
-                <p className="text-sm text-gray-400">{profileData.posts}件の投稿</p>
+                <h1 className="text-lg lg:text-xl font-bold">
+                  {formData.displayName}
+                </h1>
+                <p className="text-sm text-gray-400">
+                  {formData.follow}件の投稿
+                </p>
               </div>
             </div>
           </div>
@@ -100,14 +260,36 @@ function ProfilePageContent() {
             <div className="px-4 pb-4">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 sm:-mt-16 space-y-4 sm:space-y-0">
                 <div className="relative">
-                  <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold">
-                    {profileData.displayName.charAt(0)}
-                  </div>
-                  <button className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors">
+                  {/* 画像表示 */}
+                  {formData.iconUrl &&
+                  getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
+                    <img
+                      src={getPublicIconUrl(formData.iconUrl)}
+                      alt="icon"
+                      className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold">
+                      {formData.displayName.charAt(0)}
+                    </div>
+                  )}
+                  {/* 画像アップロードボタン */}
+                  <label className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
                     <Camera size={16} />
-                  </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleIconUpload}
+                      disabled={uploading}
+                    />
+                  </label>
                 </div>
-                
+
                 <div className="flex space-x-2">
                   {isEditing ? (
                     <>
@@ -132,7 +314,9 @@ function ProfilePageContent() {
                       className="border border-gray-600 text-white px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2 text-sm sm:text-base"
                     >
                       <Edit3 size={16} />
-                      <span className="hidden sm:inline">プロフィールを編集</span>
+                      <span className="hidden sm:inline">
+                        プロフィールを編集
+                      </span>
                       <span className="sm:hidden">編集</span>
                     </button>
                   )}
@@ -146,56 +330,74 @@ function ProfilePageContent() {
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">表示名</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    ユーザー名
+                  </label>
                   <input
                     type="text"
-                    value={editData.displayName}
-                    onChange={(e) => handleInputChange('displayName', e.target.value)}
+                    value={formData.setID}
+                    onChange={(e) => handleInputChange("setID", e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">ユーザー名</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    表示名
+                  </label>
                   <input
                     type="text"
-                    value={editData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    value={formData.displayName}
+                    onChange={(e) =>
+                      handleInputChange("displayName", e.target.value)
+                    }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">自己紹介</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    自己紹介
+                  </label>
                   <textarea
-                    value={editData.bio}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    value={formData.bio}
+                    onChange={(e) => handleInputChange("bio", e.target.value)}
                     rows={3}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">場所</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    場所
+                  </label>
                   <input
                     type="text"
-                    value={editData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    value={formData.location}
+                    onChange={(e) =>
+                      handleInputChange("location", e.target.value)
+                    }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">ウェブサイト</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    ウェブサイト
+                  </label>
                   <input
                     type="url"
-                    value={editData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
+                    value={formData.site}
+                    onChange={(e) => handleInputChange("site", e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">生年月日</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    生年月日
+                  </label>
                   <input
                     type="date"
-                    value={editData.birthDate}
-                    onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                    value={formData.birthDate}
+                    onChange={(e) =>
+                      handleInputChange("birthDate", e.target.value)
+                    }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
@@ -203,40 +405,45 @@ function ProfilePageContent() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold">{profileData.displayName}</h2>
-                  <p className="text-gray-400">@{profileData.username}</p>
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    {formData.displayName}
+                  </h2>
+                  <p className="text-gray-400">@{formData.setID}</p>
                 </div>
-                
-                <p className="text-white">{profileData.bio}</p>
-                
+
+                <p className="text-white">{formData.bio}</p>
+
                 <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                  {profileData.location && (
+                  {formData.location && (
                     <div className="flex items-center space-x-1">
                       <MapPin size={16} />
-                      <span>{profileData.location}</span>
+                      <span>{formData.location}</span>
                     </div>
                   )}
-                  {profileData.website && (
+                  {formData.site && (
                     <div className="flex items-center space-x-1">
                       <LinkIcon size={16} />
-                      <a href={profileData.website} className="text-blue-400 hover:underline">
-                        {profileData.website}
+                      <a
+                        href={formData.site}
+                        className="text-blue-400 hover:underline"
+                      >
+                        {formData.site}
                       </a>
                     </div>
                   )}
                   <div className="flex items-center space-x-1">
                     <Calendar size={16} />
-                    <span>{profileData.joinDate}から登録</span>
+                    <span>{formData.birthDate}から登録</span>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-6 text-sm">
                   <div className="flex space-x-1">
-                    <span className="font-semibold">{profileData.following}</span>
+                    <span className="font-semibold">{formData.follow}</span>
                     <span className="text-gray-400">フォロー中</span>
                   </div>
                   <div className="flex space-x-1">
-                    <span className="font-semibold">{profileData.followers}</span>
+                    <span className="font-semibold">{formData.follower}</span>
                     <span className="text-gray-400">フォロワー</span>
                   </div>
                 </div>
@@ -263,19 +470,44 @@ function ProfilePageContent() {
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
             {mockPosts.map((post) => (
-              <div key={post.id} className="p-4 hover:bg-gray-900/50 transition-colors">
+              <div
+                key={post.id}
+                className="p-4 hover:bg-gray-900/50 transition-colors"
+              >
                 <div className="flex space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {profileData.displayName.charAt(0)}
-                  </div>
+                  {/* 投稿アイコン表示 */}
+                  {formData.iconUrl &&
+                  getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
+                    <img
+                      src={getPublicIconUrl(formData.iconUrl)}
+                      alt="icon"
+                      className="w-10 h-10 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      {formData.displayName.charAt(0)}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold">{profileData.displayName}</span>
-                      <span className="text-gray-400 text-sm">@{profileData.username}</span>
+                      <span className="font-semibold">
+                        {formData.displayName}
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        @{formData.setID}
+                      </span>
                       <span className="text-gray-400 text-sm">·</span>
-                      <span className="text-gray-400 text-sm">{post.timestamp}</span>
+                      <span className="text-gray-400 text-sm">
+                        {post.timestamp}
+                      </span>
                     </div>
-                    <p className="text-white mb-2 break-words">{post.content}</p>
+                    <p className="text-white mb-2 break-words">
+                      {post.content}
+                    </p>
                     {post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-2">
                         {post.tags.map((tag, index) => (
@@ -302,7 +534,7 @@ function ProfilePageContent() {
             ))}
           </div>
         </div>
-        
+
         {/* 右サイドバー - デスクトップのみ */}
         <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
           <div className="sticky top-4">
@@ -329,7 +561,7 @@ function ProfilePageContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function ProfilePage() {
@@ -337,5 +569,5 @@ export default function ProfilePage() {
     <ProtectedRoute>
       <ProfilePageContent />
     </ProtectedRoute>
-  )
+  );
 }

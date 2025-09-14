@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
 import { Image, Smile, Calendar, MapPin, BarChart3 } from "lucide-react";
 
@@ -13,6 +13,15 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // ログインユーザーのUID取得
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data?.user?.id ?? null);
+    });
+  }, []);
+
   const handleImageUpload = async (file: File): Promise<string | null> => {
     const uniqueFileName = `${Date.now()}_${Math.random()
       .toString(36)
@@ -57,14 +66,16 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
       imageUrl = await handleImageUpload(imageFile);
     }
 
-    await supabase.from("todos").insert([
-      {
-        title: text,
-        tags: tags,
-        created_at: new Date().toISOString(),
-        image_url: imageUrl,
-      },
-    ]);
+    // 必要な投稿データを作成
+    const newPost = {
+      title: text,
+      tags: tags,
+      created_at: new Date().toISOString(),
+      image_url: imageUrl,
+      user_id: userId, // ←ここでUIDをセット
+    };
+
+    await supabase.from("todos").insert([newPost]);
     if (onPostAdded) onPostAdded();
     setText("");
     setTags([]);
