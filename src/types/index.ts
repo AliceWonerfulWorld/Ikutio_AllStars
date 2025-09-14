@@ -35,6 +35,7 @@ export interface AuthUser {
   user_metadata: {
     username?: string;
     displayName?: string;
+    iconUrl?: string;
   };
 }
 

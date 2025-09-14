@@ -16,7 +16,6 @@ type PostType = {
   displayName?: string;
   setID?: string;
   liked?: boolean; // ← 追加
-  bookmarksCount?: number; // ← 追加
 };
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -40,7 +39,15 @@ function getPublicIconUrl(iconUrl?: string) {
 export default function Home() {
   const [todos, setTodos] = useState<PostType[]>([]);
   const [userMap, setUserMap] = useState<
-    Record<string, { iconUrl?: string; displayName?: string; setID?: string }> // ← setID追加
+    Record<
+      string,
+      {
+        iconUrl?: string; // ← これが必須
+        displayName?: string;
+        setID?: string;
+        username?: string;
+      }
+    >
   >({});
   const [userId, setUserId] = useState<string | null>(null); // 追加
 
@@ -80,8 +87,8 @@ export default function Home() {
     let usersError: any = null;
     if (userIds.length > 0) {
       const { data, error } = await supabase
-        .from("usels")
-        .select("user_id, icon_url, username, setID") // setIDを追加
+        .from("usels") // ← ここがusels参照
+        .select("user_id, icon_url, username, setID")
         .in("user_id", userIds);
       usersData = data ?? [];
       usersError = error;
@@ -92,13 +99,19 @@ export default function Home() {
     // user_id→iconUrl, displayName, setIDのMap作成
     const userMap: Record<
       string,
-      { iconUrl?: string; displayName?: string; setID?: string }
+      {
+        iconUrl?: string;
+        displayName?: string;
+        setID?: string;
+        username?: string;
+      }
     > = {};
     (usersData ?? []).forEach((user: any) => {
       userMap[user.user_id] = {
-        iconUrl: getPublicIconUrl(user.icon_url),
+        iconUrl: getPublicIconUrl(user.icon_url), // ← icon_urlカラムを参照
         displayName: user.username || "User",
-        setID: user.setID || "", // 追加
+        setID: user.setID || "",
+        username: user.username || "",
       };
     });
     setUserMap(userMap);
@@ -126,26 +139,10 @@ export default function Home() {
           .eq("user_id", userId)
           .maybeSingle();
 
-        // いいね数
-        const { count: likesCount } = await supabase
-          .from("likes")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", Number(todo.id))
-          .eq("on", true);
-
-        // ブックマーク数
-        const { count: bookmarksCount } = await supabase
-          .from("bookmarks")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", Number(todo.id))
-          .eq("on", true);
-
         return {
           ...todo,
           liked: likeData?.on === true,
           bookmarked: bookmarkData?.on === true,
-          likes: likesCount ?? 0,
-          bookmarksCount: bookmarksCount ?? 0,
         };
       })
     );
@@ -284,16 +281,13 @@ export default function Home() {
                   id: todo.id,
                   user_id: todo.user_id || "",
                   username:
-                    userMap[todo.user_id]?.displayName ||
-                    todo.username ||
-                    "User",
+                    userMap[todo.user_id]?.username || todo.username || "User",
                   setID: userMap[todo.user_id]?.setID || "",
                   title: todo.title,
                   created_at: todo.created_at || "",
                   tags: todo.tags || [],
                   replies: todo.replies || 0,
-                  likes: todo.likes ?? 0,
-                  bookmarksCount: todo.bookmarksCount ?? 0, // ← 追加
+                  likes: todo.likes || 0,
                   bookmarked: todo.bookmarked || false,
                   imageUrl: todo.image_url || "",
                   iconUrl: userMap[todo.user_id]?.iconUrl,
