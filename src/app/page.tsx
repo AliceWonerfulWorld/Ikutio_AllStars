@@ -125,7 +125,7 @@ export default function Home() {
             <div className="bg-gray-800 rounded-2xl p-4">
               <h2 className="text-xl font-bold mb-4">おすすめユーザー</h2>
               <div className="space-y-3">
-                {["user1", "user2", "user3"].map((user) => (
+                {['user1', 'user2', 'user3'].map((user) => (
                   <div key={user} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
@@ -167,21 +167,17 @@ export default function Home() {
             <div className="text-xs text-gray-500 space-y-1">
               <div className="flex flex-wrap gap-2">
                 <span className="hover:underline cursor-pointer">利用規約</span>
-                <span className="hover:underline cursor-pointer">
-                  プライバシーポリシー
-                </span>
-                <span className="hover:underline cursor-pointer">
-                  クッキーポリシー
-                </span>
+                <span className="hover:underline cursor-pointer">プライバシーポリシー</span>
+                <span className="hover:underline cursor-pointer">クッキーポリシー</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="hover:underline cursor-pointer">
-                  アクセシビリティ
-                </span>
+                <span className="hover:underline cursor-pointer">アクセシビリティ</span>
                 <span className="hover:underline cursor-pointer">広告情報</span>
                 <span className="hover:underline cursor-pointer">その他</span>
               </div>
-              <div className="text-gray-600 mt-2">© 2024 Ikutio AllStars</div>
+              <div className="text-gray-600 mt-2">
+                © 2024 Ikutio AllStars
+              </div>
             </div>
           </div>
         </div>
