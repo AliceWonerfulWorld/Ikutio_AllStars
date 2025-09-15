@@ -10,12 +10,12 @@ import { Post as PostType } from "@/types";
 export default function BookmarksPage() {
   const [posts] = useState<PostType[]>([]);
 
-  const handleLike = (postId: string) => {
+  const handleLike = () => {
     // ブックマークページではいいね機能を無効化
     console.log("いいね機能はブックマークページでは無効です");
   };
 
-  const handleBookmark = (postId: string) => {
+  const handleBookmark = () => {
     // ブックマークページではブックマーク機能を無効化
     console.log("ブックマーク機能はブックマークページでは無効です");
   };
