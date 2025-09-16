@@ -10,8 +10,8 @@ import {
   Menu,
   X,
   Clock,
-  Heart, // ← リアクション用のアイコンを追加
-  CloudSun, // ← 天気用のアイコンを追加
+  Heart,
+  CloudSun,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -28,8 +28,8 @@ export default function Sidebar() {
     { icon: Mail, label: "メッセージ", href: "/messages" },
     { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
     { icon: Clock, label: "Grok", href: "/glok" },
-    { icon: Heart, label: "リアクション", href: "/reactions" }, // ← 追加
-    { icon: CloudSun, label: "天気", href: "/weather" }, // ← 追加
+    { icon: Heart, label: "リアクション", href: "/reactions" },
+    { icon: CloudSun, label: "天気", href: "/weather" },
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
@@ -49,15 +49,15 @@ export default function Sidebar() {
       </button>
 
       {/* デスクトップサイドバー */}
-      <div className="hidden lg:block w-64 h-screen flex flex-col border-r border-gray-800 sticky top-0">
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden">
         {/* ロゴ */}
-        <div className="p-4">
+        <div className="flex-shrink-0 p-4">
           <h1 className="text-2xl font-bold text-white">Ikutio</h1>
         </div>
 
-        {/* メニュー */}
-        <nav className="flex-1 px-4">
-          <ul className="space-y-2">
+        {/* メニュー（スクロール可能） */}
+        <nav className="flex-1 px-4 overflow-y-auto overflow-x-hidden">
+          <ul className="space-y-2 pb-4">
             {menuItems.map((item) => (
               <li key={item.label}>
                 <Link
@@ -69,15 +69,15 @@ export default function Sidebar() {
                   }`}
                 >
                   <item.icon size={24} />
-                  <span className="text-lg">{item.label}</span>
+                  <span className="text-lg whitespace-nowrap">{item.label}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
 
-        {/* ユーザー情報 */}
-        <div className="p-4 border-t border-gray-800">
+        {/* ユーザー情報（固定） */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-800">
           {user ? (
             <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
               {/* アイコン画像表示 */}
@@ -85,24 +85,24 @@ export default function Sidebar() {
                 <img
                   src={user.user_metadata.iconUrl}
                   alt="ユーザーアイコン"
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {user.user_metadata?.displayName?.charAt(0) ||
                     user.email?.charAt(0) ||
                     "U"}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-white font-semibold">
+                <div className="text-white font-semibold truncate">
                   {user.user_metadata?.displayName || "ユーザー"}
                 </div>
-                <div className="text-gray-500 text-sm">
+                <div className="text-gray-500 text-sm truncate">
                   @{user.user_metadata?.username || "user"}
                 </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 flex-shrink-0">
                 <Link
                   href="/settings"
                   className="text-gray-500 hover:text-white transition-colors"
@@ -147,21 +147,21 @@ export default function Sidebar() {
           />
 
           {/* サイドバー */}
-          <div className="absolute left-0 top-0 w-64 h-full bg-black border-r border-gray-800 flex flex-col">
+          <div className="relative w-80 h-full bg-black border-r border-gray-800 overflow-hidden">
             {/* ヘッダー */}
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-              <h1 className="text-xl font-bold text-white">Ikutio</h1>
+            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+              <h1 className="text-2xl font-bold text-white">Ikutio</h1>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-500 hover:text-white transition-colors"
               >
                 <X size={24} />
               </button>
             </div>
 
-            {/* メニュー */}
-            <nav className="flex-1 px-4 py-4">
-              <ul className="space-y-2">
+            {/* メニュー（スクロール可能） */}
+            <nav className="flex-1 px-4 overflow-y-auto">
+              <ul className="space-y-2 py-4">
                 {menuItems.map((item) => (
                   <li key={item.label}>
                     <Link
@@ -181,11 +181,10 @@ export default function Sidebar() {
               </ul>
             </nav>
 
-            {/* ユーザー情報（モバイル） */}
+            {/* ユーザー情報 */}
             <div className="p-4 border-t border-gray-800">
               {user ? (
                 <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
-                  {/* アイコン画像表示 */}
                   {user.user_metadata?.iconUrl ? (
                     <img
                       src={user.user_metadata.iconUrl}
