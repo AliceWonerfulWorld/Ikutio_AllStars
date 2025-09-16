@@ -64,5 +64,10 @@ function color(){
    var r = Math.floor(Math.random()*256);
    var g = Math.floor(Math.random()*256);
    var b = Math.floor(Math.random()*256);
-   context.fillStyle = 'rgb('+r+','+g+','+b+')';
+  
+   context.beginPath();
+    context.arc(x, y, 10, 0, Math.PI * 2);
+     context.fillStyle = 'rgb('+r+','+g+','+b+')';
+    context.fill();
+    context.closePath();
 }
