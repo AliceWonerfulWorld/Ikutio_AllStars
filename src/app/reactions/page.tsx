@@ -16,6 +16,7 @@ import {
   Save,
   RotateCcw,
   RotateCw,
+  Hourglass,
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -321,6 +322,34 @@ export default function ReactionsPage() {
     alert("スタンプがクラウドに保存されました！");
   };
 
+  // 24時間後までの残り時間を計算する関数
+  function getRemainingTime(createdAt: string): string {
+    const created = new Date(createdAt).getTime();
+    const expires = created + 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const diff = expires - now;
+    if (diff <= 0) return "00:00:00";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  // --- スタンプ一覧の取得と表示例（仮） ---
+  // ここではmake_stampテーブルのデータを取得し、砂時計＋残り時間を表示する例を追加します。
+  const [stamps, setStamps] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchStamps = async () => {
+      const { data, error } = await supabase
+        .from("make_stamp")
+        .select("id, make_stanp_url, created_at");
+      if (!error && data) setStamps(data);
+    };
+    fetchStamps();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white relative overflow-hidden">
       {/* 背景装飾 */}
@@ -580,7 +609,35 @@ export default function ReactionsPage() {
                     {historyIndex + 1} / {history.length}
                   </span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">残り時間:</span>
+                  <span className="text-white font-semibold">
+                    {getRemainingTime(new Date().toISOString())}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            {/* スタンプ一覧表示例 */}
+            <div className="mt-8 space-y-4">
+              {stamps.map((stamp) => (
+                <div
+                  key={stamp.id}
+                  className="flex items-center space-x-3 bg-gray-800/60 rounded-xl p-3"
+                >
+                  <img
+                    src={stamp.make_stanp_url}
+                    alt="stamp"
+                    className="w-16 h-16 rounded-lg border border-gray-600"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <Hourglass size={20} className="text-yellow-400" />
+                    <span className="text-lg font-mono text-yellow-200">
+                      {getRemainingTime(stamp.created_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
