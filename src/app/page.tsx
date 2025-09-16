@@ -264,13 +264,13 @@ export default function Home() {
       <ServiceWorkerRegistration />
       <PWAInstaller />
       <div className="min-h-screen bg-black text-white">
-        <div className="max-w-7xl mx-auto flex">
+        <div className="max-w-7xl mx-auto flex h-screen">
           {/* サイドバー */}
           <div className="w-64 flex-shrink-0">
             <Sidebar />
           </div>
           {/* メインコンテンツ */}
-          <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800 relative z-10">
+          <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800 relative z-10 overflow-y-auto">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 relative z-40">
               <h1 className="text-xl font-bold">ホーム</h1>
@@ -309,8 +309,8 @@ export default function Home() {
             </div>
           </div>
           {/* 右サイドバー */}
-          <div className="w-80 flex-shrink-0 p-4">
-            <div className="sticky top-4 space-y-4">
+          <div className="w-80 flex-shrink-0 h-screen overflow-y-auto">
+            <div className="p-4 space-y-4">
               {/* 検索バー */}
               <div className="bg-gray-800 rounded-full p-3">
                 <input
@@ -408,7 +408,7 @@ export default function Home() {
               </div>
 
               {/* フッター情報 */}
-              <div className="text-xs text-gray-500 space-y-1">
+              <div className="text-xs text-gray-500 space-y-1 pb-4">
                 <div className="flex flex-wrap gap-2">
                   <span className="hover:underline cursor-pointer">
                     利用規約
