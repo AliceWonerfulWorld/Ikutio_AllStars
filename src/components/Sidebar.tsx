@@ -56,7 +56,7 @@ export default function Sidebar() {
         </div>
 
         {/* メニュー（スクロール可能） */}
-        <nav className="flex-1 px-4 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 px-4 overflow-y-auto overflow-x-hidden sidebar-scroll">
           <ul className="space-y-2 pb-4">
             {menuItems.map((item) => (
               <li key={item.label}>
@@ -160,7 +160,7 @@ export default function Sidebar() {
             </div>
 
             {/* メニュー（スクロール可能） */}
-            <nav className="flex-1 px-4 overflow-y-auto">
+            <nav className="flex-1 px-4 overflow-y-auto sidebar-scroll">
               <ul className="space-y-2 py-4">
                 {menuItems.map((item) => (
                   <li key={item.label}>
