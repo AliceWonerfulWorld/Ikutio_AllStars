@@ -102,7 +102,7 @@ function Starfield({ active }: { active: boolean }) {
 
       // 通常の星：左下→右上
       ctx.save();
-      for (let s of stars) {
+      for (const s of stars) {
         s.x += s.vx;
         s.y += s.vy;
         // 右か上にはけたら再スポーン
