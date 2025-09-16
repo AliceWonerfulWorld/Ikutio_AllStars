@@ -26,6 +26,7 @@ export interface Message {
   user_id: string;
   username: string;
   created_at: string;
+  isOwn?: boolean;
 }
 
 // 認証関連の型定義を追加
