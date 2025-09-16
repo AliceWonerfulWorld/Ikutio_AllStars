@@ -1,0 +1,39 @@
+{
+    "name": "Ikutio AllStars",
+    "short_name": "Ikutio",
+    "description": "Ikutio AllStars - ソーシャルメディアアプリ",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "orientation": "portrait-primary",
+    "icons": [
+      {
+        "src": "/android-launchericon-192-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "/android-launchericon-512-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "/android-launchericon-192-192.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "maskable"
+      },
+      {
+        "src": "/android-launchericon-512-512.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "maskable"
+      }
+    ],
+    "categories": ["social", "entertainment"],
+    "lang": "ja",
+    "dir": "ltr"
+  }
