@@ -128,11 +128,23 @@ export default function ReactionsPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.beginPath();
-    ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-    ctx.fillStyle = currentColor;
-    ctx.fill();
-    ctx.closePath();
+    if (activeTool === 'eraser') {
+      // 消しゴム機能：白い円で描画して消去
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.closePath();
+      ctx.globalCompositeOperation = 'source-over'; // 通常の描画モードに戻す
+    } else {
+      // ブラシ機能：通常の描画
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+      ctx.fillStyle = currentColor;
+      ctx.fill();
+      ctx.closePath();
+    }
   };
 
   const stopDrawing = () => {
@@ -275,7 +287,12 @@ export default function ReactionsPage() {
                   ref={canvasRef}
                   width={800}
                   height={600}
-                  className="w-full h-auto border border-gray-200 rounded-lg cursor-crosshair bg-white shadow-lg"
+                  className={`w-full h-auto border border-gray-200 rounded-lg shadow-lg ${
+                    activeTool === 'eraser' ? 'cursor-crosshair' : 'cursor-crosshair'
+                  }`}
+                  style={{
+                    cursor: activeTool === 'eraser' ? 'crosshair' : 'crosshair'
+                  }}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -451,6 +468,12 @@ export default function ReactionsPage() {
             <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 shadow-xl">
               <h3 className="text-lg font-semibold mb-4 text-white">現在の設定</h3>
               <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">ツール:</span>
+                  <span className="text-white font-semibold">
+                    {activeTool === 'brush' ? 'ブラシ' : '消しゴム'}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">色:</span>
                   <div className="flex items-center space-x-2">
