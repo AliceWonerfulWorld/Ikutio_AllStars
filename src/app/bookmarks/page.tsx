@@ -12,6 +12,7 @@ export default function BookmarksPage() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
+
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -271,6 +272,7 @@ export default function BookmarksPage() {
       setPosts(postsWithStatus);
     };
     fetchBookmarks();
+
   };
 
   return (
