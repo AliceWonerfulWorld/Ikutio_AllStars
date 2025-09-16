@@ -4,12 +4,31 @@
     </script>
     <meta charset="UTF-8"/>
     <link rel="stylesheet" href="canvas.css"/>
+    <style>
+      .home-btn {
+        background: #4CAF50;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-bottom: 20px;
+        text-decoration: none;
+        display: inline-block;
+      }
+      
+      .home-btn:hover {
+        background: #45a049;
+      }
+    </style>
   </head>
   <body>
+    <a href="/" class="home-btn">🏠 ホームに戻る</a>
     <h1>絵文字を作ろう！</h1>
     <canvas id="image" width="640" height="480"></canvas>
    
-  <button id="saveBtn" onclick="save()">保存</button>
-  <button id="saveBtn" onclick="color()">色変更</button>
+    <button id="saveBtn" onclick="save()">保存</button>
+    <button id="saveBtn" onclick="color()">色変更</button>
   </body>
 </html>

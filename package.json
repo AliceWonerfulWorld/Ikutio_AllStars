@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.887.0",
+    "@google/genai": "^1.19.0",
+    "@google/generative-ai": "^0.24.1",
     "@supabase/auth-helpers-react": "^0.5.0",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.263.1",
     "next": "15.5.2",
