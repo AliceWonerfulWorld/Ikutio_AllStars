@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   X,
+  Clock, // ← 追加
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -24,6 +25,7 @@ export default function Sidebar() {
     { icon: Bell, label: "通知", href: "/notifications" },
     { icon: Mail, label: "メッセージ", href: "/messages" },
     { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
+    { icon: Clock, label: "Grok", href: "/glok" }, // ← 追加（glokに注意）
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
