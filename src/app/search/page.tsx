@@ -127,210 +127,219 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="flex max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto flex h-screen">
         {/* 左サイドバー */}
-        <div className="w-64 flex-shrink-0 h-screen sticky top-0">
+        <div className="w-64 flex-shrink-0">
           <Sidebar />
         </div>
+        
         {/* メインコンテンツ */}
-        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800">
-          {/* ヘッダー */}
-          <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
-            <h1 className="text-xl font-bold">話題を検索</h1>
-          </div>
-          {/* 検索バー */}
-          <div className="p-4 border-b border-gray-800">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Q 検索"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setActiveTab("search");
-                }}
-                className="w-full bg-gray-800 border border-gray-700 rounded-full px-4 py-3 pl-10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              />
+        <div className="flex-1 min-w-0">
+          <div className="max-w-2xl mx-auto border-r border-gray-800 h-full overflow-y-auto">
+            {/* ヘッダー */}
+            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
+              <h1 className="text-xl font-bold">話題を検索</h1>
             </div>
-          </div>
-          {/* タブ */}
-          <div className="flex border-b border-gray-800">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "text-white border-b-2 border-blue-500"
-                    : "text-gray-500 hover:text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          {/* コンテンツエリア */}
-          <div className="p-4">
-            {activeTab === "recommended" && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold mb-4">あなたにおすすめ</h2>
-                {recommended.length === 0 ? (
-                  <div className="text-gray-400">おすすめ投稿がありません</div>
-                ) : (
-                  recommended.map((todo) => (
-                    <div
-                      key={todo.id}
-                      className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors"
-                    >
-                      <div className="font-semibold">{todo.title}</div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {(todo.tags || []).map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-sm text-gray-400 mt-1">
-                        いいね: {todo.likes}
-                      </div>
-                    </div>
-                  ))
-                )}
+            
+            {/* 検索バー */}
+            <div className="p-4 border-b border-gray-800">
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Q 検索"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setActiveTab("search");
+                  }}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-full px-4 py-3 pl-10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
               </div>
-            )}
-
-            {activeTab === "trends" && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold mb-4">
-                  トレンド（タグ×いいね数順）
-                </h2>
-                {trends.length === 0 ? (
-                  <div className="text-gray-400">
-                    トレンドデータがありません
-                  </div>
-                ) : (
-                  trends.map((trend) => (
-                    <div
-                      key={trend.tag}
-                      className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-lg">
-                          #{trend.tag}
+            </div>
+            
+            {/* タブ */}
+            <div className="flex border-b border-gray-800">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-6 py-4 text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? "text-white border-b-2 border-blue-500"
+                      : "text-gray-500 hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            
+            {/* コンテンツエリア */}
+            <div className="p-4">
+              {activeTab === "recommended" && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold mb-4">あなたにおすすめ</h2>
+                  {recommended.length === 0 ? (
+                    <div className="text-gray-400">おすすめ投稿がありません</div>
+                  ) : (
+                    recommended.map((todo) => (
+                      <div
+                        key={todo.id}
+                        className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors"
+                      >
+                        <div className="font-semibold">{todo.title}</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {(todo.tags || []).map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
                         </div>
-                        <div className="text-sm text-gray-400">
-                          投稿数: {trend.count} / 合計いいね: {trend.totalLikes}
+                        <div className="text-sm text-gray-400 mt-1">
+                          いいね: {todo.likes}
                         </div>
                       </div>
-                      <TrendingUp className="text-green-400" size={20} />
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+                    ))
+                  )}
+                </div>
+              )}
 
-            {activeTab === "search" && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold mb-4">検索結果</h2>
-                {filteredTodos.length === 0 ? (
-                  <div className="text-gray-400">該当する投稿がありません</div>
-                ) : (
-                  filteredTodos.map((todo) => (
-                    <div
-                      key={todo.id}
-                      className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors"
-                    >
-                      <div className="font-semibold">{todo.title}</div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {(todo.tags || []).map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-sm text-gray-400 mt-1">
-                        いいね: {todo.likes}
-                      </div>
+              {activeTab === "trends" && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold mb-4">
+                    トレンド（タグ×いいね数順）
+                  </h2>
+                  {trends.length === 0 ? (
+                    <div className="text-gray-400">
+                      トレンドデータがありません
                     </div>
-                  ))
-                )}
-              </div>
-            )}
+                  ) : (
+                    trends.map((trend) => (
+                      <div
+                        key={trend.tag}
+                        className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-lg">
+                            #{trend.tag}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            投稿数: {trend.count} / 合計いいね: {trend.totalLikes}
+                          </div>
+                        </div>
+                        <TrendingUp className="text-green-400" size={20} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {activeTab === "search" && (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold mb-4">検索結果</h2>
+                  {filteredTodos.length === 0 ? (
+                    <div className="text-gray-400">該当する投稿がありません</div>
+                  ) : (
+                    filteredTodos.map((todo) => (
+                      <div
+                        key={todo.id}
+                        className="border border-gray-800 rounded-lg p-4 hover:bg-gray-900 transition-colors"
+                      >
+                        <div className="font-semibold">{todo.title}</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {(todo.tags || []).map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="text-sm text-gray-400 mt-1">
+                          いいね: {todo.likes}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+        
         {/* 右サイドバー */}
-        <div className="w-80 flex-shrink-0 h-screen sticky top-0 p-4">
-          {/* ライブ放送 */}
-          <div className="bg-gray-800 rounded-2xl p-4 mb-6">
-            <h2 className="text-xl font-bold mb-4">Xでライブ放送する</h2>
-            <div className="space-y-4">
-              <div className="border border-gray-700 rounded-lg p-3 hover:bg-gray-700 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">🔴</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">後日談というか</div>
-                    <div className="text-xs text-gray-400">+26</div>
+        <div className="w-80 flex-shrink-0 h-screen overflow-y-auto">
+          <div className="p-4 space-y-6">
+            {/* ライブ放送 */}
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h2 className="text-xl font-bold mb-4">Xでライブ放送する</h2>
+              <div className="space-y-4">
+                <div className="border border-gray-700 rounded-lg p-3 hover:bg-gray-700 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🔴</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">後日談というか</div>
+                      <div className="text-xs text-gray-400">+26</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="border border-gray-700 rounded-lg p-3 hover:bg-gray-700 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">🔴</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">
-                      桐光@FANBOXさんがホストしています
+                <div className="border border-gray-700 rounded-lg p-3 hover:bg-gray-700 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">🔴</span>
                     </div>
-                    <div className="text-xs text-gray-400">
-                      16時まで塗る塗る
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">
+                        桐光@FANBOXさんがホストしています
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        16時まで塗る塗る
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* 本日のニュース */}
-          <div className="bg-gray-800 rounded-2xl p-4 mb-6">
-            <h2 className="text-xl font-bold mb-4">本日のニュース</h2>
-            <div className="space-y-3">
-              <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                <div className="text-sm font-semibold">
-                  ポケモンSV、色違いコライドンとミライドンの限定配布がスタート
+            {/* 本日のニュース */}
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h2 className="text-xl font-bold mb-4">本日のニュース</h2>
+              <div className="space-y-3">
+                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
+                  <div className="text-sm font-semibold">
+                    ポケモンSV、色違いコライドンとミライドンの限定配布がスタート
+                  </div>
                 </div>
-              </div>
-              <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                <div className="text-sm font-semibold">
-                  夜勤事件、実写映画化!永江二朗監督が恐怖を拡大
+                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
+                  <div className="text-sm font-semibold">
+                    夜勤事件、実写映画化!永江二朗監督が恐怖を拡大
+                  </div>
                 </div>
-              </div>
-              <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                <div className="text-sm font-semibold">
-                  でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い
+                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
+                  <div className="text-sm font-semibold">
+                    でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* おすすめメッセージ */}
-          <div className="bg-gray-800 rounded-2xl p-4">
-            <h2 className="text-xl font-bold mb-4">おすすめ メッセージ</h2>
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-4xl mb-2">💬</div>
-              <p className="text-sm">メッセージ機能は準備中です</p>
+            {/* おすすめメッセージ */}
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h2 className="text-xl font-bold mb-4">おすすめ メッセージ</h2>
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">💬</div>
+                <p className="text-sm">メッセージ機能は準備中です</p>
+              </div>
             </div>
           </div>
         </div>
