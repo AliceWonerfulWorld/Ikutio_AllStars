@@ -36,16 +36,16 @@ function ProfilePageContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     setID: "",
-    displayName: 'ユーザー',
-    username: 'user',
-    bio: 'プログラミングが好きです。Next.jsとReactを勉強中です。',
-    location: '東京, 日本',
-    website: 'https://example.com',
-    birthDate: '1990-01-01',
-    joinDate: '2024年1月',
+    displayName: "ユーザー",
+    username: "user",
+    bio: "プログラミングが好きです。Next.jsとReactを勉強中です。",
+    location: "東京, 日本",
+    website: "https://example.com",
+    birthDate: "1990-01-01",
+    joinDate: "2024年1月",
     following: 150,
     follower: 1200,
-    iconUrl: undefined
+    iconUrl: undefined,
   });
   const [uploading, setUploading] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -65,19 +65,20 @@ function ProfilePageContent() {
         } else if (userData) {
           setFormData({
             setID: userData.id || "",
-            displayName: userData.display_name || 'ユーザー',
-            username: userData.username || 'user',
-            bio: userData.bio || 'プログラミングが好きです。Next.jsとReactを勉強中です。',
-            location: userData.location || '東京, 日本',
-            website: userData.website || 'https://example.com',
-            birthDate: userData.birth_date || '1990-01-01',
-            joinDate: userData.join_date || '2024年1月',
+            displayName: userData.display_name || "ユーザー",
+            username: userData.username || "user",
+            bio:
+              userData.bio ||
+              "プログラミングが好きです。Next.jsとReactを勉強中です。",
+            location: userData.location || "東京, 日本",
+            website: userData.website || "https://example.com",
+            birthDate: userData.birth_date || "1990-01-01",
+            joinDate: userData.join_date || "2024年1月",
             following: userData.following || 150,
             follower: userData.follower || 1200,
-            iconUrl: userData.icon_url || undefined
+            iconUrl: userData.icon_url || undefined,
           });
         }
-
 
         setFormData((prev) => ({
           ...prev,
@@ -104,7 +105,6 @@ function ProfilePageContent() {
           console.error("投稿取得エラー:", postsError);
         }
         setPosts(userPosts ?? []);
-        
       }
     });
   }, []);
@@ -392,7 +392,9 @@ function ProfilePageContent() {
                   <input
                     type="url"
                     value={formData.website}
-                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("website", e.target.value)
+                    }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
