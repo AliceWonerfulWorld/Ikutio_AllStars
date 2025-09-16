@@ -14,11 +14,11 @@ function draw() {
     return false;
   }
   
-  context.beginPath();
-    context.fillStyle = 'rgb( 255, 255, 255)';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.strokeRect(0, 0, canvas.width, canvas.height);
-
+context.fillStyle = 'rgb(255,255,255)';
+   context.fillRect(0, 0, 640, 480);
+   context.fillStyle = 'black';
+   context.strokeRect(0,0, 640, 480);
+  
   canvas.addEventListener('mousedown', function(event){
     isDrawing = true;
   });
@@ -44,7 +44,7 @@ function draw() {
     context.closePath();
 });
 
-canvas.addEventListener('mouseup', function(event) {
+window.addEventListener('mouseup', function(event) {
     isDrawing = false;
 });
 }
@@ -58,11 +58,12 @@ a.click();
  
 }
 
-function color(){
+function clearStamp(){
   canvas = document.getElementById('image');
    context = canvas.getContext('2d');
-   var r = Math.floor(Math.random()*256);
-   var g = Math.floor(Math.random()*256);
-   var b = Math.floor(Math.random()*256);
-   context.fillStyle = 'rgb('+r+','+g+','+b+')';
+   context.fillStyle = 'rgb(255,255,255)';
+   context.fillRect(0, 0, 640, 480);
+   context.fillStyle = 'black';
+   context.strokeRect(0,0, 640, 480);
+
 }
