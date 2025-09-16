@@ -11,6 +11,7 @@ import {
   X,
   Clock,
   Heart, // ← リアクション用のアイコンを追加
+  CloudSun, // ← 天気用のアイコンを追加
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -28,6 +29,7 @@ export default function Sidebar() {
     { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
     { icon: Clock, label: "Grok", href: "/glok" },
     { icon: Heart, label: "リアクション", href: "/reactions" }, // ← 追加
+    { icon: CloudSun, label: "天気", href: "/weather" }, // ← 追加
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
