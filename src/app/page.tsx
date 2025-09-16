@@ -270,15 +270,15 @@ export default function Home() {
             <Sidebar />
           </div>
           {/* メインコンテンツ */}
-          <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800">
+          <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800 relative z-10">
             {/* ヘッダー */}
-            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
+            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 relative z-40">
               <h1 className="text-xl font-bold">ホーム</h1>
             </div>
             {/* 投稿フォーム */}
             <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
             {/* 投稿一覧表示 */}
-            <div>
+            <div className="relative z-10">
               {todos.map((todo) => (
                 <Post
                   key={todo.id}

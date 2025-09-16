@@ -172,3 +172,40 @@ body {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* サイドバーのz-indexを確実に設定 */
+.sidebar-container {
+  position: relative;
+  z-index: 30;
+  background: #000000;
+}
+
+/* メインコンテンツのz-indexを調整 */
+.main-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* ポップアップやモーダルのz-indexを調整 */
+.popup-overlay {
+  z-index: 40;
+}
+
+.modal-overlay {
+  z-index: 50;
+}
+
+/* リアクション要素のz-indexを調整 */
+.reaction-element {
+  z-index: 20;
+}
+
+/* 確実にサイドバーが最前面に来るように */
+.sidebar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 30;
+  background: #000000;
+}

@@ -49,20 +49,20 @@ export default function Sidebar() {
       </button>
 
       {/* デスクトップサイドバー */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden">
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden lg:z-30 lg:bg-black">
         {/* ロゴ */}
-        <div className="flex-shrink-0 p-4">
+        <div className="flex-shrink-0 p-4 relative z-10">
           <h1 className="text-2xl font-bold text-white">Ikutio</h1>
         </div>
 
         {/* メニュー（スクロール可能） */}
-        <nav className="flex-1 px-4 overflow-y-auto overflow-x-hidden sidebar-scroll">
+        <nav className="flex-1 px-4 overflow-y-auto overflow-x-hidden sidebar-scroll relative z-10">
           <ul className="space-y-2 pb-4">
             {menuItems.map((item) => (
               <li key={item.label}>
                 <Link
                   href={item.href}
-                  className={`flex items-center space-x-4 px-4 py-3 rounded-full transition-colors ${
+                  className={`flex items-center space-x-4 px-4 py-3 rounded-full transition-colors relative z-10 ${
                     item.active
                       ? "text-white font-semibold"
                       : "text-gray-500 hover:text-white hover:bg-gray-800"
@@ -77,7 +77,7 @@ export default function Sidebar() {
         </nav>
 
         {/* ユーザー情報（固定） */}
-        <div className="flex-shrink-0 p-4 border-t border-gray-800">
+        <div className="flex-shrink-0 p-4 border-t border-gray-800 relative z-10">
           {user ? (
             <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
               {/* アイコン画像表示 */}
@@ -147,7 +147,7 @@ export default function Sidebar() {
           />
 
           {/* サイドバー */}
-          <div className="relative w-80 h-full bg-black border-r border-gray-800 overflow-hidden">
+          <div className="relative w-80 h-full bg-black border-r border-gray-800 overflow-hidden z-50">
             {/* ヘッダー */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h1 className="text-2xl font-bold text-white">Ikutio</h1>
