@@ -32,7 +32,17 @@ export default function MessagePage() {
       const { data, error } = await supabase
         .from("usels")
         .select("user_id, username, icon_url, setID");
-      if (!error && data) setUsers(data);
+      if (!error && data) {
+        // 重複を除去（user_idでユニークにする）
+        const uniqueUsers = data.reduce((acc: UserType[], current) => {
+          const existingUser = acc.find(user => user.user_id === current.user_id);
+          if (!existingUser) {
+            acc.push(current);
+          }
+          return acc;
+        }, []);
+        setUsers(uniqueUsers);
+      }
     };
     fetchUsers();
   }, []);
@@ -49,107 +59,104 @@ export default function MessagePage() {
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-black text-white">
-        <div className="max-w-7xl mx-auto flex">
-          {/* サイドバー */}
-          <div className="w-64 flex-shrink-0">
-            <Sidebar />
-          </div>
-          {/* メインコンテンツ */}
-          <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800">
-            {/* ヘッダー */}
-            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Link
-                    href="/"
-                    className="hover:bg-gray-800 p-2 rounded-full transition-colors"
-                  >
-                    <ArrowLeft size={20} />
-                  </Link>
-                  <h1 className="text-xl font-bold">メッセージ</h1>
-                </div>
-                <button className="hover:bg-gray-800 p-2 rounded-full transition-colors">
-                  <Search size={20} />
-                </button>
-              </div>
-              {/* 検索バー */}
-              <div className="mt-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="ユーザー名で検索"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-full px-4 py-2 pl-10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                  />
-                  <Search
-                    size={16}
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-                  />
-                </div>
-              </div>
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-7xl mx-auto flex h-screen">
+        {/* 左サイドバー */}
+        <div className="w-64 flex-shrink-0">
+          <Sidebar />
+        </div>
+
+        {/* メインコンテンツ */}
+        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800">
+          {/* ヘッダー */}
+          <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </Link>
+              <h1 className="text-xl font-bold">メッセージ</h1>
             </div>
-            {/* ユーザー一覧 */}
-            <div className="divide-y divide-gray-800">
-              {filteredUsers.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <div className="text-6xl mb-4">💬</div>
-                  <h2 className="text-xl font-semibold mb-2">
-                    {searchQuery
-                      ? "検索結果が見つかりません"
-                      : "ユーザーがいません"}
-                  </h2>
-                  <p>
-                    {searchQuery
-                      ? "別のキーワードで検索してみてください。"
-                      : "メッセージを送りたいユーザーがここに表示されます。"}
-                  </p>
-                </div>
-              ) : (
-                filteredUsers.map((user) => (
-                  <div
-                    key={user.user_id}
-                    className="p-4 hover:bg-gray-900/50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      window.location.href = `/messages/${user.user_id}`;
-                    }}
-                  >
-                    <div className="flex space-x-3">
-                      {/* アバター */}
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold">
-                        {getAvatarLetter(user.username)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-semibold text-white hover:underline">
+          </div>
+
+          {/* 検索バー */}
+          <div className="p-4 border-b border-gray-800">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="ユーザーを検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-full px-4 py-3 pl-10 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* ユーザー一覧 */}
+          <div className="overflow-y-auto">
+            {filteredUsers.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-400">
+                  {searchQuery
+                    ? "別のキーワードで検索してみてください。"
+                    : "メッセージを送りたいユーザーがここに表示されます。"}
+                </p>
+              </div>
+            ) : (
+              filteredUsers.map((user, index) => (
+                <div
+                  key={`${user.user_id}-${index}`}
+                  className="p-4 hover:bg-gray-900/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    window.location.href = `/messages/${user.user_id}`;
+                  }}
+                >
+                  <div className="flex space-x-3">
+                    {/* アバター */}
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold">
+                      {getAvatarLetter(user.username)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-white truncate">
                           {user.username}
-                        </span>
+                        </h3>
                         {user.setID && (
-                          <span className="ml-2 text-gray-400 text-xs">
+                          <span className="text-gray-400 text-sm truncate">
                             @{user.setID}
                           </span>
                         )}
                       </div>
+                      <p className="text-gray-400 text-sm truncate">
+                        メッセージを送信
+                      </p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
-          {/* 右サイドバー */}
-          <div className="w-80 flex-shrink-0 p-4">
-            <div className="sticky top-4 space-y-4">
-              <div className="bg-gray-800 rounded-2xl p-4">
-                <h2 className="text-xl font-bold mb-4">メッセージについて</h2>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  ユーザーを選択してメッセージを送信できます。ユーザー名で検索も可能です。
-                </p>
+        </div>
+
+        {/* 右サイドバー - デスクトップのみ */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
+          <div className="sticky top-4">
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h2 className="text-xl font-bold mb-4">メッセージ機能</h2>
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">💬</div>
+                <p className="text-sm">メッセージ機能は準備中です</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
