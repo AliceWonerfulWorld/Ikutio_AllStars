@@ -1,112 +1,177 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef, use } from 'react'
-import { ArrowLeft, Send, MoreVertical } from 'lucide-react'
-import Link from 'next/link'
-import Sidebar from '@/components/Sidebar'
-import { mockMessages } from '@/data/mockMessageData'
+import { useState, useEffect, useRef, use } from "react";
+import { ArrowLeft, Send, MoreVertical } from "lucide-react";
+import Link from "next/link";
+import Sidebar from "@/components/Sidebar";
+import { supabase } from "@/utils/supabase/client";
 
 interface Message {
-  id: string
-  text: string
-  user_id: string
-  username: string
-  created_at: string
-  isOwn: boolean
+  id: string;
+  text: string;
+  sender_id: string;
+  receiver_id: string;
+  created_at: string;
+  isOwn: boolean;
 }
 
-export default function ChatPage({ params }: { params: Promise<{ userId: string }> }) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+interface User {
+  id: string;
+  username: string;
+  // 必要に応じて他のカラムも追加
+}
 
-  // React.use()を使ってparamsをアンラップ
-  const { userId } = use(params)
+// Message型をmessage型に統一
+type message = {
+  sender_id: string;
+  receiver_id: string;
+  text: string;
+  created_at: string;
+  id?: string;
+  isOwn?: boolean;
+};
 
+// Next.js 14以降では、paramsはPromiseで渡されるため、use(params)でアンラップするだけでOKです。
+// 型もReact.Usable<{ userId: string }>で統一し、分岐やtypeofチェックは不要です。
+
+export default function ChatPage({
+  params,
+}: {
+  params: React.Usable<{ userId: string }>;
+}) {
+  const { userId } = use(params);
+
+  const [messages, setMessages] = useState<message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ログインユーザー取得
   useEffect(() => {
-    // モックデータから該当ユーザーのメッセージを取得
-    const userMessages = mockMessages
-      .filter(msg => msg.user_id === userId)
-      .map(msg => ({
-        ...msg,
-        isOwn: false // 相手のメッセージ
-      }))
-
-    // 自分のメッセージも追加（モック）
-    const ownMessages: Message[] = [
-      {
-        id: 'own1',
-        text: 'こんにちは！',
-        user_id: 'current_user',
-        username: 'あなた',
-        created_at: '2024-01-15T10:00:00Z',
-        isOwn: true
-      },
-      {
-        id: 'own2',
-        text: 'お疲れ様です！',
-        user_id: 'current_user',
-        username: 'あなた',
-        created_at: '2024-01-15T10:05:00Z',
-        isOwn: true
+    const fetchCurrentUser = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const uid = authData?.user?.id;
+      if (!uid) return;
+      // uselsテーブルからユーザー情報取得
+      const { data: userData } = await supabase
+        .from("usels")
+        .select("user_id, username") // ← as句を外す
+        .eq("user_id", uid)
+        .single();
+      if (userData) {
+        setCurrentUser({
+          id: userData.user_id,
+          username: userData.username,
+        });
       }
-    ]
+    };
+    fetchCurrentUser();
+  }, []);
 
-    const allMessages = [...userMessages, ...ownMessages]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  // 相手ユーザー情報取得
+  useEffect(() => {
+    const fetchOtherUser = async () => {
+      if (!userId) return;
+      const { data: userData } = await supabase
+        .from("usels")
+        .select("user_id, username") // ← as句を外す
+        .eq("user_id", userId)
+        .single();
+      if (userData) {
+        setOtherUser({
+          id: userData.user_id,
+          username: userData.username,
+        });
+      }
+    };
+    fetchOtherUser();
+  }, [userId]);
 
-    setMessages(allMessages)
-  }, [userId])
+  // メッセージ取得
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!currentUser || !otherUser) return;
+      const { data: messagesData, error } = await supabase
+        .from("messages")
+        .select("*")
+        .or(
+          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${otherUser.id}),and(sender_id.eq.${otherUser.id},receiver_id.eq.${currentUser.id})`
+        )
+        .order("created_at", { ascending: true });
+      if (!error && messagesData) {
+        setMessages(
+          messagesData.map((msg: any) => ({
+            ...msg,
+            isOwn: msg.sender_id === currentUser.id,
+          }))
+        );
+      }
+    };
+    fetchMessages();
+    // ポーリングやリアルタイム化したい場合はここでintervalやsubscriptionを追加
+  }, [currentUser, otherUser]);
 
   useEffect(() => {
-    // メッセージが更新されたら最下部にスクロール
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || isLoading) return
+    if (!newMessage.trim() || isLoading || !currentUser || !otherUser) return;
 
-    setIsLoading(true)
-    
-    // 新しいメッセージを追加
-    const message: Message = {
-      id: Date.now().toString(),
-      text: newMessage,
-      user_id: 'current_user',
-      username: 'あなた',
-      created_at: new Date().toISOString(),
-      isOwn: true
+    setIsLoading(true);
+
+    // message型でinsert
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          text: newMessage,
+          sender_id: currentUser.id,
+          receiver_id: otherUser.id,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select("*")
+      .single();
+
+    if (error) {
+      alert("メッセージ送信エラー: " + error.message);
     }
 
-    setMessages(prev => [...prev, message])
-    setNewMessage('')
-
-    // 模擬的な送信遅延
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-  }
+    if (!error && data) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...data,
+          isOwn: true,
+        },
+      ]);
+      setNewMessage("");
+    }
+    setIsLoading(false);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
-  }
+  };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('ja-JP', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const getAvatarLetter = (username: string) => {
-    if (!username || username.length === 0) return 'U'
-    return username.charAt(0).toUpperCase()
-  }
+    if (!username || username.length === 0) return "U";
+    return username.charAt(0).toUpperCase();
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -115,26 +180,26 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
         <div className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">
           <Sidebar />
         </div>
-        
+
         {/* メインコンテンツ */}
         <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800 flex flex-col h-screen">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <Link 
-                  href="/messages" 
+                <Link
+                  href="/messages"
                   className="hover:bg-gray-800 p-2 rounded-full transition-colors"
                 >
                   <ArrowLeft size={20} />
                 </Link>
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {getAvatarLetter(messages[0]?.username || 'U')}
+                    {getAvatarLetter(otherUser?.username || "U")}
                   </div>
                   <div>
                     <h1 className="text-lg font-semibold">
-                      {messages[0]?.username || 'Unknown User'}
+                      {otherUser?.username || "Unknown User"}
                     </h1>
                     <p className="text-sm text-gray-500">オンライン</p>
                   </div>
@@ -145,29 +210,41 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
               </button>
             </div>
           </div>
-          
+
           {/* メッセージ一覧 */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${
+                  message.isOwn ? "justify-end" : "justify-start"
+                }`}
               >
-                <div className={`flex space-x-2 max-w-xs lg:max-w-md ${message.isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <div
+                  className={`flex space-x-2 max-w-xs lg:max-w-md ${
+                    message.isOwn ? "flex-row-reverse space-x-reverse" : ""
+                  }`}
+                >
                   {!message.isOwn && (
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                      {getAvatarLetter(message.username)}
+                      {getAvatarLetter(otherUser?.username || "")}
                     </div>
                   )}
-                  <div className={`rounded-2xl px-4 py-2 ${
-                    message.isOwn 
-                      ? 'bg-blue-500 text-white' 
-                      : 'bg-gray-800 text-white'
-                  }`}>
-                    <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.isOwn ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
+                  <div
+                    className={`rounded-2xl px-4 py-2 ${
+                      message.isOwn
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-800 text-white"
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">
+                      {message.text}
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        message.isOwn ? "text-blue-100" : "text-gray-500"
+                      }`}
+                    >
                       {formatTime(message.created_at)}
                     </p>
                   </div>
@@ -179,15 +256,21 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
                 <div className="bg-gray-800 rounded-2xl px-4 py-2">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
                   </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-          
+
           {/* メッセージ入力 */}
           <div className="sticky bottom-0 bg-black/80 backdrop-blur-md border-t border-gray-800 p-4">
             <div className="flex space-x-3">
@@ -199,7 +282,7 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
                   placeholder="メッセージを入力..."
                   className="w-full bg-gray-800 border border-gray-700 rounded-full px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
                   rows={1}
-                  style={{ minHeight: '48px', maxHeight: '120px' }}
+                  style={{ minHeight: "48px", maxHeight: "120px" }}
                 />
               </div>
               <button
@@ -212,7 +295,7 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
             </div>
           </div>
         </div>
-        
+
         {/* 右サイドバー - デスクトップのみ */}
         <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
           <div className="sticky top-4">
@@ -226,5 +309,5 @@ export default function ChatPage({ params }: { params: Promise<{ userId: string 
         </div>
       </div>
     </div>
-  )
+  );
 }
