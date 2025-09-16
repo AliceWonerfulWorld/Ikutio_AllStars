@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+// import { useSession } from "@supabase/auth-helpers-react"; // 削除
 type PostType = {
-  id: string;
+  id: string; // ← string型に戻す
   user_id: string;
   username: string;
   title: string;
@@ -11,32 +12,250 @@ type PostType = {
   likes: number;
   bookmarked: boolean;
   image_url?: string;
+  iconUrl?: string;
+  displayName?: string;
+  setID?: string;
+  liked?: boolean; // ← 追加
 };
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
 import Post from "@/components/Post";
 import { supabase } from "@/utils/supabase/client";
 
-export default function Home() {
-  // PostTypeの配列として型を指定
-  const [todos, setTodos] = useState<PostType[]>([]);
+// R2のパブリック開発URL
+const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
+// R2画像URL変換関数（profile画面と同じロジック）
+function getPublicIconUrl(iconUrl?: string) {
+  if (!iconUrl) return "";
+  if (iconUrl.includes("cloudflarestorage.com")) {
+    const filename = iconUrl.split("/").pop();
+    if (!filename) return "";
+    return `${R2_PUBLIC_URL}${filename}`;
+  }
+  return iconUrl;
+}
+
+export default function Home() {
+  const [todos, setTodos] = useState<PostType[]>([]);
+  const [userMap, setUserMap] = useState<
+    Record<
+      string,
+      {
+        iconUrl?: string; // ← これが必須
+        displayName?: string;
+        setID?: string;
+        username?: string;
+      }
+    >
+  >({});
+  const [userId, setUserId] = useState<string | null>(null); // 追加
+
+  useEffect(() => {
+    // ログインユーザーID取得
+    const fetchUserId = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      setUserId(userData?.user?.id ?? null);
+    };
+    fetchUserId();
+  }, []);
+
+  // 投稿取得 & ユーザー情報取得
   const fetchTodos = async () => {
-    //supabase.from("todos").select("*");で取得
-    const { data, error } = await supabase.from("todos").select("*");
-    if (error) {
-      console.error("Error fetching todos:", error);
-    } else if (data) {
-      setTodos(data);
+    const { data: todosData, error: todosError } = await supabase
+      .from("todos")
+      .select("*");
+    if (todosError) {
+      console.error("Error fetching todos:", todosError);
+      return;
     }
+    // 投稿に紐づくuser_id一覧
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const userIds = Array.from(
+      new Set(
+        (todosData ?? [])
+          .map((todo: any) => todo.user_id)
+          .filter(
+            (id: string | null | undefined) =>
+              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id) // UUIDのみ
+          )
+      )
+    );
+    // uselsから該当ユーザー情報をまとめて取得
+    let usersData: any[] = [];
+    let usersError: any = null;
+    if (userIds.length > 0) {
+      const { data, error } = await supabase
+        .from("usels") // ← ここがusels参照
+        .select("user_id, icon_url, username, setID")
+        .in("user_id", userIds);
+      usersData = data ?? [];
+      usersError = error;
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
+      }
+    }
+    // user_id→iconUrl, displayName, setIDのMap作成
+    const userMap: Record<
+      string,
+      {
+        iconUrl?: string;
+        displayName?: string;
+        setID?: string;
+        username?: string;
+      }
+    > = {};
+    (usersData ?? []).forEach((user: any) => {
+      userMap[user.user_id] = {
+        iconUrl: getPublicIconUrl(user.icon_url), // ← icon_urlカラムを参照
+        displayName: user.username || "User",
+        setID: user.setID || "",
+        username: user.username || "",
+      };
+    });
+    setUserMap(userMap);
+
+    // ログインユーザーID取得
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id ?? null;
+
+    // 投稿一覧取得
+    const todosWithStatus = await Promise.all(
+      (todosData ?? []).map(async (todo: any) => {
+        // いいね状態
+        const { data: likeData } = await supabase
+          .from("likes")
+          .select("on")
+          .eq("post_id", Number(todo.id))
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        // ブックマーク状態
+        const { data: bookmarkData } = await supabase
+          .from("bookmarks")
+          .select("on")
+          .eq("post_id", Number(todo.id))
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        return {
+          ...todo,
+          liked: likeData?.on === true,
+          bookmarked: bookmarkData?.on === true,
+        };
+      })
+    );
+    setTodos(todosWithStatus);
+  };
+
+  // いいね追加/削除
+  const handleLike = async (postId: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    const postIdNum = Number(postId);
+
+    // 既にいいね済みかチェック
+    const { data: likeData } = await supabase
+      .from("likes")
+      .select("id, on")
+      .eq("post_id", postIdNum)
+      .eq("user_id", userId)
+      .single();
+
+    // 現在のlikes取得
+    const { data: todoData } = await supabase
+      .from("todos")
+      .select("likes")
+      .eq("id", postIdNum)
+      .single();
+    const currentLikes = todoData?.likes ?? 0;
+
+    if (likeData?.on) {
+      // いいね解除（on: falseに更新、likesを-1）
+      await supabase
+        .from("likes")
+        .update({ on: false })
+        .eq("post_id", postIdNum)
+        .eq("user_id", userId);
+      await supabase
+        .from("todos")
+        .update({ likes: Math.max(currentLikes - 1, 0) })
+        .eq("id", postIdNum);
+    } else {
+      // いいね（新規 or 再いいね）
+      if (likeData) {
+        // 既存レコードがon: falseならon: trueに変更
+        await supabase
+          .from("likes")
+          .update({ on: true })
+          .eq("post_id", postIdNum)
+          .eq("user_id", userId);
+        await supabase
+          .from("todos")
+          .update({ likes: currentLikes + 1 })
+          .eq("id", postIdNum);
+      } else {
+        // 既存レコードがない場合のみinsert
+        await supabase.from("likes").insert({
+          post_id: postIdNum,
+          user_id: userId,
+          created_at: new Date().toISOString(),
+          on: true,
+        });
+        await supabase
+          .from("todos")
+          .update({ likes: currentLikes + 1 })
+          .eq("id", postIdNum);
+      }
+    }
+    fetchTodos(); // 状態更新
+  };
+
+  // ブックマーク追加/解除
+  const handleBookmark = async (postId: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    const postIdNum = Number(postId);
+
+    // 既にブックマーク済みかチェック
+    const { data: bookmarkData } = await supabase
+      .from("bookmarks")
+      .select("id, on")
+      .eq("post_id", postIdNum)
+      .eq("user_id", userId)
+      .single();
+
+    if (bookmarkData?.on) {
+      // ブックマーク解除
+      await supabase
+        .from("bookmarks")
+        .update({ on: false })
+        .eq("post_id", postIdNum)
+        .eq("user_id", userId);
+    } else {
+      // ブックマーク（新規 or 再ブックマーク）
+      if (bookmarkData) {
+        await supabase
+          .from("bookmarks")
+          .update({ on: true })
+          .eq("post_id", postIdNum)
+          .eq("user_id", userId);
+      } else {
+        await supabase.from("bookmarks").insert({
+          post_id: postIdNum,
+          user_id: userId,
+          created_at: new Date().toISOString(),
+          on: true,
+        });
+      }
+    }
+    fetchTodos(); // 状態更新
   };
 
   useEffect(() => {
     fetchTodos();
   }, []);
-
-  // R2のパブリック開発URL
-  const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -53,26 +272,31 @@ export default function Home() {
           </div>
           {/* 投稿フォーム */}
           <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
-          {/* todos一覧（Postコンポーネントで表示） */}
+          {/* 投稿一覧表示 */}
           <div>
             {todos.map((todo) => (
               <Post
                 key={todo.id}
                 post={{
                   id: todo.id,
-                  // ||は空だったら右側を入れる処理
                   user_id: todo.user_id || "",
-                  username: todo.username || "User",
+                  username:
+                    userMap[todo.user_id]?.username || todo.username || "User",
+                  setID: userMap[todo.user_id]?.setID || "",
                   title: todo.title,
                   created_at: todo.created_at || "",
                   tags: todo.tags || [],
                   replies: todo.replies || 0,
                   likes: todo.likes || 0,
                   bookmarked: todo.bookmarked || false,
-                  imageUrl: todo.image_url || "", // 画像URLを渡す
+                  imageUrl: todo.image_url || "",
+                  iconUrl: userMap[todo.user_id]?.iconUrl,
+                  displayName: userMap[todo.user_id]?.displayName,
                 }}
-                onLike={() => {}}
-                onBookmark={() => {}}
+                liked={todo.liked ?? false}
+                bookmarked={todo.bookmarked ?? false}
+                onLike={() => handleLike(todo.id)}
+                onBookmark={() => handleBookmark(todo.id)}
               />
             ))}
           </div>
@@ -161,6 +385,7 @@ export default function Home() {
                   <span className="text-white font-semibold">+8%</span>
                 </div>
               </div>
+
             </div>
 
             {/* フッター情報 */}
@@ -170,6 +395,7 @@ export default function Home() {
                 <span className="hover:underline cursor-pointer">プライバシーポリシー</span>
                 <span className="hover:underline cursor-pointer">クッキーポリシー</span>
               </div>
+
               <div className="flex flex-wrap gap-2">
                 <span className="hover:underline cursor-pointer">アクセシビリティ</span>
                 <span className="hover:underline cursor-pointer">広告情報</span>
