@@ -1,8 +1,8 @@
 // app/api/gemini-api/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 type Body = {
   prompt_post?: string;
@@ -103,14 +103,13 @@ export async function POST(req: Request) {
       prompt_post,
     ].join("\n");
 
-    const ai = new GoogleGenAI({ apiKey: geminiKey });
-    const resp = await ai.models.generateContent({
-      model: "gemini-2.0-flash-001",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
+    // Gemini APIの呼び出し
+    const ai = new GoogleGenerativeAI(geminiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+    const resp = await model.generateContent(prompt);
 
     return NextResponse.json({
-      response: resp.text ?? "",
+      response: resp.response.text() ?? "",
       used_titles: titles,
       user_id: userId, // デバッグ用に返す
     });

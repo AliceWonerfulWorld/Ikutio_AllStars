@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation'; // ← 追加
 
 type Msg = { role: 'user' | 'assistant'; text: string };
 type Thread = { id: string; title: string; messages: Msg[]; createdAt: number };
@@ -179,6 +180,7 @@ function Starfield({ active }: { active: boolean }) {
 /* ================== メインページ ================== */
 
 export default function GlokPage() {
+  const router = useRouter(); // ← 追加
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -273,7 +275,13 @@ export default function GlokPage() {
     }
   };
 
-  const goHome = () => {
+  // 修正: 実際のホームページに戻る
+  const goToAppHome = () => {
+    router.push('/');
+  };
+
+  // Grokページ内のホーム（新しいチャット開始）
+  const goToGrokHome = () => {
     setCurrentId(null);
     setPrompt('');
     setError(null);
@@ -299,14 +307,28 @@ export default function GlokPage() {
           height: 56,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between', // ← 修正: 左右に配置
           padding: '0 12px',
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0))',
           zIndex: 20,
         }}
       >
+        {/* 左側: アプリのホームに戻るボタン */}
+        <button 
+          onClick={goToAppHome} 
+          title="アプリのホームに戻る" 
+          style={{
+            ...chipBtnStyle,
+            background: '#1a1a1a',
+            border: '1px solid #333',
+          }}
+        >
+          ← ホーム
+        </button>
+        
+        {/* 右側: Grok機能のボタン */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={goHome} title="ホーム" style={chipBtnStyle}>ホーム</button>
+          <button onClick={goToGrokHome} title="新しいチャット" style={chipBtnStyle}>新しいチャット</button>
           <button onClick={() => setShowHistory(true)} title="履歴" style={chipBtnStyle}>履歴</button>
         </div>
       </header>
