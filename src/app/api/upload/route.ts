@@ -28,22 +28,23 @@ export async function POST(req: NextRequest) {
       Bucket: process.env.R2_TEMP_BUCKET_NAME,
       Key: fileName,
       Body: buffer,
-      ContentType: "image/jpeg",
+      ContentType: "image/png",
     });
     console.log("[UPLOAD API] PutObjectCommand作成", { fileName });
-    await s3.send(command);
-    console.log("[UPLOAD API] R2アップロード完了", { fileName });
-    // 画像URLを生成（R2の公開URL形式）
-    const endpoint = process.env.R2_TEMP_ENDPOINT;
-    const bucket = process.env.R2_TEMP_BUCKET_NAME;
-    // 末尾のスラッシュを除去
-    const endpointUrl = endpoint?.endsWith("/")
-      ? endpoint.slice(0, -1)
-      : endpoint;
-    const imageUrl = `${endpointUrl}/${bucket}/${fileName}`;
+    const putResult = await s3.send(command);
+    console.log("[UPLOAD API] R2アップロード完了", { fileName, putResult });
+    // 画像URLを生成（R2のパブリックURL形式）
+    const imageUrl = `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${fileName}`;
+    console.log("[UPLOAD API] 返却imageUrl", imageUrl);
     return NextResponse.json({ message: "Uploaded", imageUrl });
   } catch (e) {
     console.log("[UPLOAD API] エラー", e);
+    if (e instanceof Error) {
+      return NextResponse.json(
+        { error: e.message, stack: e.stack },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
