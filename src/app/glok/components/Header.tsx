@@ -63,23 +63,23 @@ export default function Header({
         <button
           onClick={onNewChat}
           style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            border: 'none',
+            background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)', // 黒ベースのグラデーション
+            border: '1px solid #444',
             borderRadius: 12,
             padding: '10px 20px',
             color: '#fff',
             cursor: 'pointer',
             fontWeight: 600,
             transition: 'all 0.3s ease',
-            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
           }}
         >
           新しいチャット

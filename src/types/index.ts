@@ -78,3 +78,21 @@ export interface NotificationSettings {
   bookmarks: boolean;
   system: boolean;
 }
+
+export interface WeatherPost {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  location: string;
+  weather: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'stormy';
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  visibility: number;
+  comment: string;
+  imageUrl?: string;
+  createdAt: Date;
+  likes: number;
+  isLiked: boolean;
+}
