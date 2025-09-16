@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { CheckCircle, Lock, ArrowRight } from 'lucide-react'
 import { supabase } from '@/utils/supabase/client'
 
-export default function ResetPasswordPage() {
+// メインコンポーネントを分離
+function ResetPasswordContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -187,5 +188,31 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ローディングコンポーネント
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="w-full max-w-md">
+        <div className="bg-gray-900 rounded-2xl p-8 text-center">
+          <div className="w-16 h-16 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8 text-blue-400 animate-pulse" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">読み込み中...</h2>
+          <p className="text-gray-400">パスワードリセットページを準備しています</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// メインのページコンポーネント
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
