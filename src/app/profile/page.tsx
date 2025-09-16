@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/utils/supabase/client";
@@ -19,36 +20,35 @@ import { supabase } from "@/utils/supabase/client";
 // 型定義
 interface FormData {
   setID: string;
-  username: string;
   displayName: string;
-  email: string;
+  username: string;
   bio: string;
   location: string;
-  site: string;
+  website: string;
   birthDate: string;
-  follow: number;
+  joinDate: string;
+  following: number;
   follower: number;
   iconUrl?: string; // 追加
 }
-
-const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
 function ProfilePageContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     setID: "",
-    username: "",
-    displayName: "",
-    email: "",
-    bio: "",
-    location: "",
-    site: "",
-    birthDate: "",
-    follow: 0,
-    follower: 0,
-    iconUrl: "",
+    displayName: 'ユーザー',
+    username: 'user',
+    bio: 'プログラミングが好きです。Next.jsとReactを勉強中です。',
+    location: '東京, 日本',
+    website: 'https://example.com',
+    birthDate: '1990-01-01',
+    joinDate: '2024年1月',
+    following: 150,
+    follower: 1200,
+    iconUrl: undefined
   });
   const [uploading, setUploading] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -56,15 +56,28 @@ function ProfilePageContent() {
       if (user) {
         const { data: userData, error } = await supabase
           .from("usels")
-          .select(
-            "setID, username, introduction, place, site, user_id, birth_date, follow, icon_url"
-          )
+          .select("*")
           .eq("user_id", user.id)
           .single();
 
         if (error) {
-          console.error("usels取得エラー:", error);
+          console.error("Error fetching user data:", error);
+        } else if (userData) {
+          setFormData({
+            setID: userData.id || "",
+            displayName: userData.display_name || 'ユーザー',
+            username: userData.username || 'user',
+            bio: userData.bio || 'プログラミングが好きです。Next.jsとReactを勉強中です。',
+            location: userData.location || '東京, 日本',
+            website: userData.website || 'https://example.com',
+            birthDate: userData.birth_date || '1990-01-01',
+            joinDate: userData.join_date || '2024年1月',
+            following: userData.following || 150,
+            follower: userData.follower || 1200,
+            iconUrl: userData.icon_url || undefined
+          });
         }
+
 
         setFormData((prev) => ({
           ...prev,
@@ -80,6 +93,18 @@ function ProfilePageContent() {
           follower: 0,
           iconUrl: userData?.icon_url || "",
         }));
+
+        // 投稿取得（自分のuser_idのみ）
+        const { data: userPosts, error: postsError } = await supabase
+          .from("todos")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (postsError) {
+          console.error("投稿取得エラー:", postsError);
+        }
+        setPosts(userPosts ?? []);
+        
       }
     });
   }, []);
@@ -110,9 +135,9 @@ function ProfilePageContent() {
       username: formData.displayName || "",
       introduction: formData.bio || "",
       place: formData.location || "",
-      site: formData.site || "",
+      site: formData.website || "",
       birth_date: formData.birthDate ? formData.birthDate : null,
-      follow: Number(formData.follow) || 0,
+      follow: Number(formData.following) || 0,
     };
     const { error } = await supabase
       .from("usels")
@@ -185,25 +210,6 @@ function ProfilePageContent() {
     reader.readAsDataURL(file);
   };
 
-  const mockPosts = [
-    {
-      id: 1,
-      content: "今日はNext.jsの勉強をしました！とても楽しいです。",
-      timestamp: "2時間前",
-      likes: 12,
-      replies: 3,
-      tags: ["Next.js", "プログラミング"],
-    },
-    {
-      id: 2,
-      content: "新しいプロジェクトを始めました。今度はSupabaseを使ってみます。",
-      timestamp: "1日前",
-      likes: 8,
-      replies: 1,
-      tags: ["Supabase", "開発"],
-    },
-  ];
-
   function getPublicIconUrl(iconUrl?: string) {
     if (!iconUrl) return "";
     // cloudflarestorage.com の場合 r2.dev に変換
@@ -241,7 +247,7 @@ function ProfilePageContent() {
                   {formData.displayName}
                 </h1>
                 <p className="text-sm text-gray-400">
-                  {formData.follow}件の投稿
+                  {formData.following}件の投稿
                 </p>
               </div>
             </div>
@@ -263,9 +269,11 @@ function ProfilePageContent() {
                   {/* 画像表示 */}
                   {formData.iconUrl &&
                   getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
-                    <img
+                    <Image
                       src={getPublicIconUrl(formData.iconUrl)}
                       alt="icon"
+                      width={128}
+                      height={128}
                       className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
@@ -383,8 +391,8 @@ function ProfilePageContent() {
                   </label>
                   <input
                     type="url"
-                    value={formData.site}
-                    onChange={(e) => handleInputChange("site", e.target.value)}
+                    value={formData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
@@ -420,14 +428,14 @@ function ProfilePageContent() {
                       <span>{formData.location}</span>
                     </div>
                   )}
-                  {formData.site && (
+                  {formData.website && (
                     <div className="flex items-center space-x-1">
                       <LinkIcon size={16} />
                       <a
-                        href={formData.site}
+                        href={formData.website}
                         className="text-blue-400 hover:underline"
                       >
-                        {formData.site}
+                        {formData.website}
                       </a>
                     </div>
                   )}
@@ -439,7 +447,7 @@ function ProfilePageContent() {
 
                 <div className="flex space-x-6 text-sm">
                   <div className="flex space-x-1">
-                    <span className="font-semibold">{formData.follow}</span>
+                    <span className="font-semibold">{formData.following}</span>
                     <span className="text-gray-400">フォロー中</span>
                   </div>
                   <div className="flex space-x-1">
@@ -469,7 +477,7 @@ function ProfilePageContent() {
 
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
-            {mockPosts.map((post) => (
+            {posts.map((post) => (
               <div
                 key={post.id}
                 className="p-4 hover:bg-gray-900/50 transition-colors"
@@ -478,9 +486,11 @@ function ProfilePageContent() {
                   {/* 投稿アイコン表示 */}
                   {formData.iconUrl &&
                   getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
-                    <img
+                    <Image
                       src={getPublicIconUrl(formData.iconUrl)}
                       alt="icon"
+                      width={128}
+                      height={128}
                       className="w-10 h-10 rounded-full object-cover"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
@@ -502,15 +512,15 @@ function ProfilePageContent() {
                       </span>
                       <span className="text-gray-400 text-sm">·</span>
                       <span className="text-gray-400 text-sm">
-                        {post.timestamp}
+                        {post.created_at
+                          ? new Date(post.created_at).toLocaleString("ja-JP")
+                          : ""}
                       </span>
                     </div>
-                    <p className="text-white mb-2 break-words">
-                      {post.content}
-                    </p>
-                    {post.tags.length > 0 && (
+                    <p className="text-white mb-2 break-words">{post.title}</p>
+                    {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-2">
-                        {post.tags.map((tag, index) => (
+                        {post.tags.map((tag: string, index: number) => (
                           <span
                             key={index}
                             className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
@@ -522,10 +532,10 @@ function ProfilePageContent() {
                     )}
                     <div className="flex items-center space-x-6 text-sm text-gray-400">
                       <button className="hover:text-blue-400 transition-colors">
-                        返信 {post.replies}
+                        返信 {post.replies ?? 0}
                       </button>
                       <button className="hover:text-red-400 transition-colors">
-                        いいね {post.likes}
+                        いいね {post.likes ?? 0}
                       </button>
                     </div>
                   </div>

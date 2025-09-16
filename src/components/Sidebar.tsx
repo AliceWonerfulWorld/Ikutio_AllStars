@@ -1,25 +1,36 @@
-import { Home, Search, Bell, Mail, Bookmark, User, Settings, LogOut, Menu, X } from 'lucide-react'
-import Link from 'next/link'
-import { useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import {
+  Home,
+  Search,
+  Bell,
+  Mail,
+  Bookmark,
+  User,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Sidebar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { user, signOut } = useAuth()
-  
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
   const menuItems = [
-    { icon: Home, label: 'ホーム', href: '/', active: true },
-    { icon: Search, label: '検索', href: '/search' },
-    { icon: Bell, label: '通知', href: '/notifications' },
-    { icon: Mail, label: 'メッセージ', href: '/messages' },
-    { icon: Bookmark, label: 'ブックマーク', href: '/bookmarks' },
-    { icon: User, label: 'プロフィール', href: '/profile' },
-    { icon: Settings, label: '設定', href: '/settings' },
-  ]
+    { icon: Home, label: "ホーム", href: "/", active: true },
+    { icon: Search, label: "検索", href: "/search" },
+    { icon: Bell, label: "通知", href: "/notifications" },
+    { icon: Mail, label: "メッセージ", href: "/messages" },
+    { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
+    { icon: User, label: "プロフィール", href: "/profile" },
+    { icon: Settings, label: "設定", href: "/settings" },
+  ];
 
   const handleSignOut = async () => {
-    await signOut()
-  }
+    await signOut();
+  };
 
   return (
     <>
@@ -47,8 +58,8 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center space-x-4 px-4 py-3 rounded-full transition-colors ${
                     item.active
-                      ? 'text-white font-semibold'
-                      : 'text-gray-500 hover:text-white hover:bg-gray-800'
+                      ? "text-white font-semibold"
+                      : "text-gray-500 hover:text-white hover:bg-gray-800"
                   }`}
                 >
                   <item.icon size={24} />
@@ -63,22 +74,36 @@ export default function Sidebar() {
         <div className="p-4 border-t border-gray-800">
           {user ? (
             <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                {user.user_metadata?.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
-              </div>
+              {/* アイコン画像表示 */}
+              {user.user_metadata?.iconUrl ? (
+                <img
+                  src={user.user_metadata.iconUrl}
+                  alt="ユーザーアイコン"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                  {user.user_metadata?.displayName?.charAt(0) ||
+                    user.email?.charAt(0) ||
+                    "U"}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-white font-semibold">
-                  {user.user_metadata?.displayName || 'ユーザー'}
+                  {user.user_metadata?.displayName || "ユーザー"}
                 </div>
                 <div className="text-gray-500 text-sm">
-                  @{user.user_metadata?.username || 'user'}
+                  @{user.user_metadata?.username || "user"}
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Link href="/settings" className="text-gray-500 hover:text-white transition-colors">
+                <Link
+                  href="/settings"
+                  className="text-gray-500 hover:text-white transition-colors"
+                >
                   <Settings size={18} />
                 </Link>
-                <button 
+                <button
                   onClick={handleSignOut}
                   className="text-gray-500 hover:text-white transition-colors"
                   title="ログアウト"
@@ -110,11 +135,11 @@ export default function Sidebar() {
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           {/* オーバーレイ */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          
+
           {/* サイドバー */}
           <div className="absolute left-0 top-0 w-64 h-full bg-black border-r border-gray-800 flex flex-col">
             {/* ヘッダー */}
@@ -138,8 +163,8 @@ export default function Sidebar() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center space-x-4 px-4 py-3 rounded-full transition-colors ${
                         item.active
-                          ? 'text-white font-semibold'
-                          : 'text-gray-500 hover:text-white hover:bg-gray-800'
+                          ? "text-white font-semibold"
+                          : "text-gray-500 hover:text-white hover:bg-gray-800"
                       }`}
                     >
                       <item.icon size={24} />
@@ -150,26 +175,40 @@ export default function Sidebar() {
               </ul>
             </nav>
 
-            {/* ユーザー情報 */}
+            {/* ユーザー情報（モバイル） */}
             <div className="p-4 border-t border-gray-800">
               {user ? (
                 <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                    {user.user_metadata?.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
-                  </div>
+                  {/* アイコン画像表示 */}
+                  {user.user_metadata?.iconUrl ? (
+                    <img
+                      src={user.user_metadata.iconUrl}
+                      alt="ユーザーアイコン"
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      {user.user_metadata?.displayName?.charAt(0) ||
+                        user.email?.charAt(0) ||
+                        "U"}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-white font-semibold">
-                      {user.user_metadata?.displayName || 'ユーザー'}
+                      {user.user_metadata?.displayName || "ユーザー"}
                     </div>
                     <div className="text-gray-500 text-sm">
-                      @{user.user_metadata?.username || 'user'}
+                      @{user.user_metadata?.username || "user"}
                     </div>
                   </div>
                   <div className="flex space-x-2">
-                    <Link href="/settings" className="text-gray-500 hover:text-white transition-colors">
+                    <Link
+                      href="/settings"
+                      className="text-gray-500 hover:text-white transition-colors"
+                    >
                       <Settings size={18} />
                     </Link>
-                    <button 
+                    <button
                       onClick={handleSignOut}
                       className="text-gray-500 hover:text-white transition-colors"
                       title="ログアウト"
@@ -201,5 +240,5 @@ export default function Sidebar() {
         </div>
       )}
     </>
-  )
+  );
 }
