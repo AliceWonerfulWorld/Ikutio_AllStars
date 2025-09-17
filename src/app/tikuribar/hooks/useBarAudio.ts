@@ -168,6 +168,27 @@ export function useBarAudio() {
     audioData: string;
     timestamp: number;
   }) => {
+    console.log(`🎵 音声チャンク受信: ${data.username} (データサイズ: ${data.audioData.length})`);
+    
+    // 自分の音声は再生しない（エコー防止）
+    const currentUserId = (window as any).currentUserId;
+    if (data.userId === currentUserId) {
+      console.log('自分の音声なので再生をスキップ');
+      return;
+    }
+
+    // スピーカーOFFチェック（二重チェック）
+    if (isDeafened) {
+      console.log('🔇 スピーカーOFFのため再生スキップ');
+      return;
+    }
+
+    // グローバル状態からも確認
+    if ((window as any).isDeafened) {
+      console.log('🔇 グローバル状態: スピーカーOFFのため再生スキップ');
+      return;
+    }
+
     // キューに追加
     audioQueueRef.current.push(data);
     
@@ -178,7 +199,7 @@ export function useBarAudio() {
     
     // キューから順次再生
     processAudioQueue();
-  }, [isDeafened, config.sampleRate]);
+  }, [isDeafened]);
 
   const processAudioQueue = async () => {
     if (audioQueueRef.current.length === 0) {
@@ -342,9 +363,18 @@ export function useBarAudio() {
     setIsDeafened(prev => {
       const newDeafened = !prev;
       console.log(`スピーカー無効: ${newDeafened ? 'ON' : 'OFF'}`);
+      
+      // グローバル状態に同期（WebSocketフックで参照するため）
+      (window as any).isDeafened = newDeafened;
+      
       return newDeafened;
     });
   }, []);
+
+  // 初期化時にもグローバル状態を設定
+  useEffect(() => {
+    (window as any).isDeafened = isDeafened;
+  }, [isDeafened]);
 
   // クリーンアップ
   useEffect(() => {

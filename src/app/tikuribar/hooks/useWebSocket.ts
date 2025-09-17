@@ -130,6 +130,11 @@ export function useWebSocket() {
         break;
       case 'audio_chunk':
         console.log(`🎧 音声チャンク受信: ${data.username} から`);
+        // スピーカーOFFの場合は音声処理をスキップ
+        if ((window as any).isDeafened) {
+          console.log('🔇 スピーカーOFFのため音声再生をスキップ');
+          return;
+        }
         // 音声フックに転送（音声フックがセットされている場合）
         if ((window as any).handleAudioChunk) {
           (window as any).handleAudioChunk(data);

@@ -99,8 +99,10 @@ export default function TikuriBarPage() {
     if (isConnected && (window as any).wsInstance) {
       setWebSocket((window as any).wsInstance);
       (window as any).handleAudioChunk = handleAudioChunk;
+      // スピーカー状態も同期
+      (window as any).isDeafened = isDeafened;
     }
-  }, [isConnected, setWebSocket, handleAudioChunk]);
+  }, [isConnected, setWebSocket, handleAudioChunk, isDeafened]);
 
   // BAR作成
   const handleCreateBar = () => {
