@@ -1,0 +1,7 @@
+ .vertical-center-table th,
+  .vertical-center-table td {
+    border: 1px solid #333;
+    padding: 20px;
+    text-align: center;
+    vertical-align: middle;
+  }

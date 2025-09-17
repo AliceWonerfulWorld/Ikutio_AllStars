@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <script src="weatherBot.js"></script>
+     <link rel="stylesheet" href="weatherBot.css">
+
+</head>
+<body>
+     <h1 style="font-size: 36px;">福岡県の天気予報</h1>
+      <div style="text-align: center;">
+        <img src="https://www.jma.go.jp/bosai/forecast/img/202.svg" width="100" height="100" id="img" alt="お天気画像">
+      </div>
+    
+     <table class="vertical-center-table" border="2" style="border-collapse: collapse" width="100%" >
+        
+         <tr id="publicTimeFormatted">
+            <th>予報の発表時刻</th>
+            <td></td>
+        </tr>
+         <tr id="date">
+            <th>予報日</th>
+            <td></td>
+        </tr>
+        <tr id="publishingOffice">
+            <th>発表者</th>
+            <td></td>
+        </tr>
+        <tr id="title">
+            <th>タイトル</th>
+            <td></td>
+        </tr>
+        <tr id="weatherType">
+            <th>天気</th>
+            <td></td>
+        </tr>
+        <tr id="text">
+            <th>詳細</th>
+            <td></td>
+        </tr>
+        <tr id="tempAverage">
+            <th>平均最高気温</th>
+            <td></td>
+        </tr>
+         <tr id="rainT00-06">
+            <th>降水確率（0時から6時まで）</th>
+            <td></td>
+        </tr>
+         <tr id="rainT06-12">
+            <th>降水確率（6時から12時まで）</th>
+            <td></td>
+        </tr>
+         <tr id="rainT12-18">
+            <th>降水確率（12時から18時まで）</th>
+            <td></td>
+        </tr>
+         <tr id="rainT18-24">
+            <th>降水確率（18時から24時まで）</th>
+            <td></td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -42,6 +43,7 @@ function getRemainingTime(createdAt: string) {
     .toString()
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
+
 
 type PostType = {
   id: string;
