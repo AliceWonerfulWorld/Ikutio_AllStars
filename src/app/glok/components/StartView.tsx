@@ -67,6 +67,16 @@ export default function StartView({
         }}>
           あなたのAIアシスタント
         </div>
+        {/* 流れ星のヒント */}
+        <div style={{
+          fontSize: 12,
+          color: '#666',
+          fontWeight: 300,
+          marginTop: 10,
+          opacity: 0.7,
+        }}>
+          💫 「S」キーで流れ星を呼び出せます
+        </div>
       </div>
 
       <div style={{ display: 'inline-flex', gap: 12, marginBottom: 40 }}>

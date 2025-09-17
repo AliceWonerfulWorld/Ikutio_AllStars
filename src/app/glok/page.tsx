@@ -76,16 +76,18 @@ export default function GlokPage() {
 
       console.log('Sending request to Gemini API...');
       console.log('User ID:', user.id);
-      console.log('User email:', user.email);
 
-      // API呼び出し（認証クッキーを含める）
+      // API呼び出し（ユーザーIDをボディに含める）
       const resp = await fetch('/api/gemini-api', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // 重要：認証クッキーを含める
-        body: JSON.stringify({ prompt_post: userMsg }),
+        credentials: 'include',
+        body: JSON.stringify({ 
+          prompt_post: userMsg,
+          user_id: user.id // フロントエンドから送信
+        }),
       });
 
       console.log('API Response status:', resp.status);
@@ -93,7 +95,6 @@ export default function GlokPage() {
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({ error: 'Unknown error' }));
         console.log('API Error data:', errorData);
-        
         if (resp.status === 401) {
           setError(`認証エラー: ${errorData.error || '認証が切れています。再度ログインしてください。'}`);
           if (errorData.debug) {
@@ -142,6 +143,32 @@ export default function GlokPage() {
     setCurrentId(null);
     setPrompt('');
     setError(null);
+  };
+
+  // 履歴削除機能
+  const onDeleteThread = (threadId: string) => {
+    const updatedThreads = threads.filter(t => t.id !== threadId);
+    setThreads(updatedThreads);
+    
+    // 削除されたスレッドが現在選択中の場合、選択を解除
+    if (currentId === threadId) {
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+    }
+    
+    console.log(`🗑️ スレッド "${threadId}" を削除しました`);
+  };
+
+  // 全履歴削除機能
+  const onClearAllHistory = () => {
+    if (confirm('すべての会話履歴を削除しますか？この操作は取り消せません。')) {
+      setThreads([]);
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+      console.log('🗑️ すべての履歴を削除しました');
+    }
   };
 
   // ユーザー別の履歴を保存
@@ -259,7 +286,7 @@ export default function GlokPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      <Starfield active={!currentThread} />
+      <Starfield active={true} />
       
       <Header
         currentId={currentId}
@@ -267,6 +294,7 @@ export default function GlokPage() {
         onNewChat={onNewChat}
         onShowHistory={() => setShowHistory(true)}
         showHistory={showHistory}
+        onClearAllHistory={onClearAllHistory} // 全削除機能をヘッダーに追加
       />
 
       <div style={{
@@ -302,6 +330,7 @@ export default function GlokPage() {
           threads={threads}
           currentId={currentId}
           onSelectThread={setCurrentId}
+          onDeleteThread={onDeleteThread} // 削除機能を追加
           onClose={() => setShowHistory(false)}
           historyQuery={historyQuery}
           setHistoryQuery={setHistoryQuery}
