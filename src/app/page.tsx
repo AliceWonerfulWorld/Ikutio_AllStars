@@ -20,9 +20,11 @@ type PostType = {
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
 import Post from "@/components/Post";
-import { supabase } from "@/utils/supabase/client";
+import { supabase } from "../utils/supabase/client";
 import PWAInstaller from "@/components/PWAInstaller";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { getDeviceType } from '../utils/device';
+
 
 // R2のパブリック開発URL
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
@@ -54,6 +56,23 @@ export default function Home() {
   const [userId, setUserId] = useState<string | null>(null); // 追加
 
   useEffect(() => {
+    const device = getDeviceType();
+    const root = document.documentElement;
+
+    switch (device) {
+      case 'smartphone':
+        root.style.setProperty('--scale-factor', '0.85');
+        break;
+      case 'tablet':
+        root.style.setProperty('--scale-factor', '0.95');
+        break;
+      case 'desktop':
+        root.style.setProperty('--scale-factor', '1');
+        break;
+      default:
+        root.style.setProperty('--scale-factor', '1');
+    }
+
     // ログインユーザーID取得
     const fetchUserId = async () => {
       const { data: userData } = await supabase.auth.getUser();
