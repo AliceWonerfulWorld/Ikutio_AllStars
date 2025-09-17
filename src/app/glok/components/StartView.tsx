@@ -5,10 +5,11 @@ interface StartViewProps {
   setPrompt: (v: string) => void;
   loading: boolean;
   onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export default function StartView({
-  prompt, setPrompt, loading, onSend,
+  prompt, setPrompt, loading, onSend, onKeyDown,
 }: StartViewProps) {
   return (
     <div style={{ 
@@ -66,13 +67,24 @@ export default function StartView({
         }}>
           あなたのAIアシスタント
         </div>
+        {/* 流れ星のヒント */}
+        <div style={{
+          fontSize: 12,
+          color: '#666',
+          fontWeight: 300,
+          marginTop: 10,
+          opacity: 0.7,
+        }}>
+          💫 「S」キーで流れ星を呼び出せます
+        </div>
       </div>
 
       <div style={{ display: 'inline-flex', gap: 12, marginBottom: 40 }}>
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="どんなことでもお尋ねください"
+          onKeyDown={onKeyDown}
+          placeholder="どんなことでもお尋ねください (Enterで送信)"
           style={{
             flex: 1,
             minWidth: 400,

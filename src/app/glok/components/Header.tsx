@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 
 interface HeaderProps {
   currentId: string | null;
@@ -8,10 +9,11 @@ interface HeaderProps {
   onNewChat: () => void;
   onShowHistory: () => void;
   showHistory: boolean;
+  onClearAllHistory: () => void; // 追加
 }
 
 export default function Header({
-  currentId, onGoHome, onNewChat, onShowHistory, showHistory,
+  currentId, onGoHome, onNewChat, onShowHistory, showHistory, onClearAllHistory,
 }: HeaderProps) {
   const router = useRouter();
 
@@ -28,12 +30,11 @@ export default function Header({
       height: 60,
       background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)',
       borderBottom: '1px solid #333',
+      zIndex: 100,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 20px',
-      zIndex: 1000,
-      backdropFilter: 'blur(10px)',
     }}>
       <button
         onClick={handleGoHome}
@@ -41,59 +42,108 @@ export default function Header({
           background: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
           borderRadius: 12,
-          padding: '8px 16px',
           color: '#fff',
+          padding: '8px 16px',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
+          fontSize: 14,
+          fontWeight: 500,
           transition: 'all 0.3s ease',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
         }}
       >
         ← ホーム
       </button>
 
       <div style={{ display: 'flex', gap: 12 }}>
+        {/* 全履歴削除ボタン */}
+        <button
+          onClick={onClearAllHistory}
+          style={{
+            background: 'rgba(220, 38, 38, 0.1)',
+            border: '1px solid rgba(220, 38, 38, 0.3)',
+            borderRadius: 12,
+            color: '#ef4444',
+            padding: '8px 12px',
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 500,
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
+            e.currentTarget.style.borderColor = 'rgba(220, 38, 38, 0.5)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+            e.currentTarget.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          title="すべての履歴を削除"
+        >
+          <Trash2 size={14} />
+          <span>全削除</span>
+        </button>
+
         <button
           onClick={onNewChat}
           style={{
-            background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)', // 黒ベースのグラデーション
-            border: '1px solid #444',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: 12,
-            padding: '10px 20px',
             color: '#fff',
+            padding: '8px 16px',
             cursor: 'pointer',
-            fontWeight: 600,
+            fontSize: 14,
+            fontWeight: 500,
             transition: 'all 0.3s ease',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
           }}
           onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
           }}
         >
           新しいチャット
         </button>
+
         <button
           onClick={onShowHistory}
           style={{
-            background: showHistory ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: showHistory ? 'rgba(102, 126, 234, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+            border: showHistory ? '1px solid rgba(102, 126, 234, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: 12,
-            padding: '10px 20px',
             color: '#fff',
+            padding: '8px 16px',
             cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 500,
             transition: 'all 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (!showHistory) {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showHistory) {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }
           }}
         >
           履歴
