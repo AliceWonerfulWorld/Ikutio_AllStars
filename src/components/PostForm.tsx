@@ -14,11 +14,51 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [canPost, setCanPost] = useState<boolean>(false);
+  const [postError, setPostError] = useState<string>("");
 
   useEffect(() => {
     // ログインユーザーのUID取得
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data?.user?.id ?? null);
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data?.user?.id ?? null;
+      setUserId(uid);
+      if (!uid) return;
+      // uselsからhas_posted取得
+      const { data: userRow } = await supabase
+        .from("usels")
+        .select("has_posted")
+        .eq("user_id", uid)
+        .single();
+      if (!userRow || userRow.has_posted === false) {
+        setCanPost(true); // 初回投稿OK
+        setPostError("");
+      } else {
+        // 2回目以降は24時間ルール
+        const { data: lastPost } = await supabase
+          .from("todos")
+          .select("created_at")
+          .eq("user_id", uid)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        if (!lastPost) {
+          setCanPost(true);
+          setPostError("");
+          return;
+        }
+        const last = new Date(lastPost.created_at);
+        const now = new Date();
+        const diffH = (now.getTime() - last.getTime()) / (1000 * 60 * 60);
+        if (diffH <= 24) {
+          setCanPost(true);
+          setPostError("");
+        } else {
+          setCanPost(false);
+          setPostError(
+            "前回投稿から24時間以上経過したため、これ以上投稿できません。"
+          );
+        }
+      }
     });
   }, []);
 
@@ -59,7 +99,7 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || !canPost) return;
 
     let imageUrl = null;
     if (imageFile) {
@@ -75,11 +115,25 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
       user_id: userId, // ←ここでUIDをセット
     };
 
-    await supabase.from("todos").insert([newPost]);
-    if (onPostAdded) onPostAdded();
-    setText("");
-    setTags([]);
-    setImageFile(null);
+    // 投稿処理
+    const { error } = await supabase.from("todos").insert([newPost]);
+    if (!error) {
+      // 初回投稿ならusels.has_postedをtrueに
+      await supabase
+        .from("usels")
+        .update({ has_posted: true })
+        .eq("user_id", userId);
+      if (onPostAdded) onPostAdded();
+      setText("");
+      setTags([]);
+      setImageFile(null);
+      setCanPost(false); // 2回目以降は24hルール
+      setPostError(
+        "前回投稿から24時間以内に再投稿しないと投稿できなくなります。"
+      );
+    } else {
+      setPostError("投稿に失敗しました: " + error.message);
+    }
   };
 
   const extractTags = (text: string) => {
@@ -94,6 +148,9 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
 
   return (
     <div className="border-b border-gray-800 p-4">
+      {!canPost && postError && (
+        <div className="text-red-400 mb-2 text-sm">{postError}</div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold">
