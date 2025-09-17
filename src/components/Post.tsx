@@ -80,7 +80,15 @@ export default function Post({
     fetchStanps();
   }, [post.id]);
 
-  // スタンプ追加
+  // ユーザーID取得
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data?.user?.id ?? null);
+    });
+  }, []);
+
+  // スタンプ追加・取り消し
   const handleAddStanp = async (stanp_url: string) => {
     setLoading(true);
     // ユーザー情報取得
@@ -91,13 +99,27 @@ export default function Post({
       setLoading(false);
       return;
     }
-    // 既に同じスタンプを押していれば何もしない
-    if (
-      stanps.some((s) => s.user_id === user_id && s.stanp_url === stanp_url)
-    ) {
+    // 既に自分が押していれば「取り消し」
+    const myStanp = stanps.find(
+      (s) => s.user_id === user_id && s.stanp_url === stanp_url
+    );
+    if (myStanp) {
+      // DBから削除
+      await supabase
+        .from("stamp")
+        .delete()
+        .eq("post_id", post.id)
+        .eq("user_id", user_id)
+        .eq("stanp_url", stanp_url);
+      setStanps((prev) =>
+        prev.filter(
+          (s) => !(s.user_id === user_id && s.stanp_url === stanp_url)
+        )
+      );
       setLoading(false);
       return;
     }
+    // 追加
     const { error } = await supabase.from("stamp").insert({
       post_id: post.id,
       user_id,
@@ -112,7 +134,6 @@ export default function Post({
       alert("スタンプ追加に失敗しました: " + error.message);
     }
     setLoading(false);
-    // setShowStampPicker(false); // ← ここは閉じない
   };
 
   // スタンプごとに集計
@@ -282,23 +303,40 @@ export default function Post({
             {/* 既存スタンプ表示 */}
             {stampList
               .filter((url) => stanpCountMap[url])
-              .map((url) => (
-                <div
-                  key={url}
-                  className="relative group"
-                  style={{ width: 28, height: 28 }}
-                >
-                  <img
-                    src={getImageUrl(url)}
-                    alt="stamp"
-                    className="w-7 h-7 object-contain rounded-full border border-gray-700 bg-black"
-                    style={{ opacity: 1 }}
-                  />
-                  <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-1 min-w-[18px] text-center">
-                    {stanpCountMap[url]}
-                  </span>
-                </div>
-              ))}
+              .map((url) => {
+                const isMine =
+                  !!userId &&
+                  stanps.some(
+                    (s) => s.user_id === userId && s.stanp_url === url
+                  );
+                return (
+                  <button
+                    key={url}
+                    className={`relative group focus:outline-none`}
+                    style={{ width: 44, height: 44 }}
+                    onClick={() => handleAddStanp(url)}
+                    tabIndex={0}
+                  >
+                    <img
+                      src={getImageUrl(url)}
+                      alt="stamp"
+                      className={`w-10 h-10 object-contain border bg-black ${
+                        isMine
+                          ? "ring-2 ring-blue-400 ring-offset-2"
+                          : "border-gray-700"
+                      }`}
+                      style={{
+                        borderRadius: 8,
+                        opacity: 1,
+                        boxShadow: isMine ? "0 0 8px 2px #60a5fa" : undefined,
+                      }}
+                    />
+                    <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-1 min-w-[18px] text-center">
+                      {stanpCountMap[url]}
+                    </span>
+                  </button>
+                );
+              })}
             {/* スタンプ追加ボタン */}
             <button
               className="w-7 h-7 flex items-center justify-center border border-gray-700 rounded-full bg-black hover:bg-gray-800"
@@ -310,20 +348,21 @@ export default function Post({
             </button>
             {/* スタンプ一覧ポップアップ */}
             {showStampPicker && (
-              <div className="absolute z-10 left-0 top-10 flex gap-4 p-2 bg-gray-900 border border-gray-700 rounded-xl shadow-lg items-center">
-                {/* スタンプ選択肢 */}
-                <div className="flex gap-2">
+              <div className="absolute z-10 left-0 top-10 p-2 bg-gray-900 border border-gray-700 rounded-xl shadow-lg items-center min-w-[200px]">
+                {/* スタンプ選択肢（グリッド表示） */}
+                <div className="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto p-1">
                   {stampList.map((url) => (
                     <button
                       key={url}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-gray-800 rounded-full"
+                      className="w-16 h-16 flex items-center justify-center hover:bg-gray-800"
                       onClick={() => handleAddStanp(url)}
                       disabled={loading}
                     >
                       <img
                         src={getImageUrl(url)}
                         alt="stamp"
-                        className="w-7 h-7 object-contain"
+                        className="w-14 h-14 object-contain border border-gray-700 bg-black"
+                        style={{ borderRadius: 8 }}
                       />
                     </button>
                   ))}
