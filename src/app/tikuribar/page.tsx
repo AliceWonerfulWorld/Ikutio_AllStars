@@ -84,9 +84,15 @@ export default function TikuriBarPage() {
 
   // WebSocket接続時に音声フックを設定
   useEffect(() => {
-    if (!isConnected) {
-      connect();
-    }
+    // ページ読み込み完了後に少し遅延してから接続
+    const timer = setTimeout(() => {
+      if (!isConnected) {
+        console.log('TikuriBAR: WebSocket接続を開始...');
+        connect();
+      }
+    }, 500); // 500ms遅延
+
+    return () => clearTimeout(timer);
   }, [isConnected, connect]);
 
   useEffect(() => {

@@ -36,39 +36,61 @@ export function useWebSocket() {
       return;
     }
 
-    const ws = new WebSocket('ws://localhost:8080');
-    wsRef.current = ws;
-    
-    // グローバルに保存（音声フック用）
-    (window as any).wsInstance = ws;
+    // 既存の接続を閉じる
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
 
-    ws.onopen = () => {
-      console.log('WebSocket接続成功');
-      setIsConnected(true);
-      // 接続後、利用可能なBAR一覧を取得
-      getBars();
-    };
+    console.log('WebSocket接続を試行中...');
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleMessage(data);
-      } catch (error) {
-        console.error('メッセージ解析エラー:', error);
-      }
-    };
+    try {
+      const ws = new WebSocket('ws://localhost:8080');
+      wsRef.current = ws;
+      
+      // グローバルに保存（音声フック用）
+      (window as any).wsInstance = ws;
 
-    ws.onclose = () => {
-      console.log('WebSocket接続が切断されました');
+      ws.onopen = () => {
+        console.log('WebSocket接続成功');
+        setIsConnected(true);
+        // 接続成功後に少し遅延してからBAR一覧を取得
+        setTimeout(() => {
+          getBars();
+        }, 100);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleMessage(data);
+        } catch (error) {
+          console.error('メッセージ解析エラー:', error);
+        }
+      };
+
+      ws.onclose = (event) => {
+        console.log('WebSocket接続が切断されました:', event.code, event.reason);
+        setIsConnected(false);
+        setCurrentBar(null);
+        setUsers([]);
+        setMessages([]);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocketエラー:', error);
+        setIsConnected(false);
+        
+        // エラー時は少し待ってから再試行
+        setTimeout(() => {
+          console.log('WebSocket再接続を試行...');
+          connect();
+        }, 2000);
+      };
+
+    } catch (error) {
+      console.error('WebSocket作成エラー:', error);
       setIsConnected(false);
-      setCurrentBar(null);
-      setUsers([]);
-      setMessages([]);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocketエラー:', error);
-    };
+    }
   }, []);
 
   // メッセージハンドリング
@@ -118,14 +140,24 @@ export function useWebSocket() {
 
   // BAR一覧取得
   const getBars = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.error('WebSocket未接続');
+    if (!wsRef.current) {
+      console.error('WebSocket未初期化');
+      return;
+    }
+    
+    if (wsRef.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket未接続 - 状態:', wsRef.current.readyState);
       return;
     }
 
-    wsRef.current.send(JSON.stringify({
-      type: 'get_bars'
-    }));
+    try {
+      wsRef.current.send(JSON.stringify({
+        type: 'get_bars'
+      }));
+      console.log('BAR一覧取得リクエスト送信');
+    } catch (error) {
+      console.error('BAR一覧取得エラー:', error);
+    }
   }, []);
 
   // BAR作成
