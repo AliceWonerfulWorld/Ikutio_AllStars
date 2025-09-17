@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { SignInData } from '@/types'
+import { supabase } from '@/utils/supabase/client'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState<SignInData>({
@@ -33,6 +34,34 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const redirectTo = typeof window !== 'undefined' 
+        ? `${window.location.origin}/` 
+        : undefined
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            // consent prompt を強制したい場合は以下を有効化
+            // prompt: 'consent'
+          }
+        }
+      })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      }
+      // OAuth フローでは Supabase により外部リダイレクトが発生するため、ここでの処理は基本不要
+    } catch (e: any) {
+      setError(e?.message ?? 'Google ログインでエラーが発生しました')
+      setLoading(false)
+    }
+  }
+
   const handleInputChange = (field: keyof SignInData, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -47,6 +76,27 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Ikutio</h1>
             <p className="text-gray-400">アカウントにログイン</p>
+          </div>
+
+          {/* OAuth サインイン */}
+          <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 rounded-full font-semibold hover:bg-gray-100 disabled:opacity-60 transition-colors"
+              aria-label="Google でログイン"
+            >
+              {/* Simple Google 'G' mark using emoji fallback; replace with icon if available */}
+              <span className="text-xl">G</span>
+              <span>Google でログイン</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4 my-6">
+            <span className="flex-1 h-px bg-gray-800" />
+            <span className="text-gray-500 text-sm">または</span>
+            <span className="flex-1 h-px bg-gray-800" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
