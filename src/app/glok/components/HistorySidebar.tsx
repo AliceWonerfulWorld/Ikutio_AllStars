@@ -2,24 +2,33 @@
 
 import { useMemo } from 'react';
 import { Thread } from '../types';
+import { Trash2 } from 'lucide-react';
 
 interface HistorySidebarProps {
   threads: Thread[];
   currentId: string | null;
   onSelectThread: (id: string) => void;
+  onDeleteThread: (id: string) => void; // 削除機能を追加
   onClose: () => void;
   historyQuery: string;
   setHistoryQuery: (q: string) => void;
 }
 
 export default function HistorySidebar({
-  threads, currentId, onSelectThread, onClose, historyQuery, setHistoryQuery,
+  threads, currentId, onSelectThread, onDeleteThread, onClose, historyQuery, setHistoryQuery,
 }: HistorySidebarProps) {
   const filteredThreads = useMemo(() => {
     if (!historyQuery.trim()) return threads;
     const q = historyQuery.toLowerCase();
     return threads.filter(t => t.title.toLowerCase().includes(q) || t.messages.some(m => m.text.toLowerCase().includes(q)));
   }, [threads, historyQuery]);
+
+  const handleDeleteClick = (e: React.MouseEvent, threadId: string) => {
+    e.stopPropagation(); // 親要素のクリックイベントを防止
+    if (confirm('この会話を削除しますか？')) {
+      onDeleteThread(threadId);
+    }
+  };
 
   return (
     <>
@@ -88,35 +97,85 @@ export default function HistorySidebar({
             <div style={{ color: '#888', padding: '16px', textAlign: 'center' }}>履歴がありません</div>
           )}
           {filteredThreads.map((t) => (
-            <button
+            <div
               key={t.id}
-              onClick={() => { onSelectThread(t.id); onClose(); }}
               style={{
-                textAlign: 'left',
-                padding: '16px',
+                position: 'relative',
                 background: currentId === t.id ? 'rgba(102, 126, 234, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                 border: currentId === t.id ? '1px solid rgba(102, 126, 234, 0.5)' : '1px solid #333',
                 borderRadius: 12,
-                color: '#fff',
-                cursor: 'pointer',
                 transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                if (currentId !== t.id) {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentId !== t.id) {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                }
+                overflow: 'hidden',
               }}
             >
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>{t.title}</div>
-              <div style={{ fontSize: 12, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {t.messages[0]?.text ?? ''}
-              </div>
-            </button>
+              <button
+                onClick={() => { onSelectThread(t.id); onClose(); }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '16px',
+                  paddingRight: '50px', // 削除ボタンのスペースを確保
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (currentId !== t.id) {
+                    e.currentTarget.parentElement!.style.background = 'rgba(255, 255, 255, 0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentId !== t.id) {
+                    e.currentTarget.parentElement!.style.background = 'rgba(255, 255, 255, 0.05)';
+                  }
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{t.title}</div>
+                <div style={{ fontSize: 12, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t.messages[0]?.text ?? ''}
+                </div>
+              </button>
+              
+              {/* 削除ボタン */}
+              <button
+                onClick={(e) => handleDeleteClick(e, t.id)}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: 12,
+                  transform: 'translateY(-50%)',
+                  width: 32,
+                  height: 32,
+                  background: 'rgba(220, 38, 38, 0.1)',
+                  border: '1px solid rgba(220, 38, 38, 0.3)',
+                  borderRadius: 8,
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease',
+                  opacity: 0.7,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(220, 38, 38, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(220, 38, 38, 0.5)';
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(220, 38, 38, 0.3)';
+                  e.currentTarget.style.opacity = '0.7';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                }}
+                title="この会話を削除"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           ))}
         </div>
       </aside>

@@ -2,21 +2,23 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Home, 
-  Download, 
-  Trash2, 
-  Palette, 
-  Undo, 
-  Redo, 
+import {
+  Home,
+  Download,
+  Trash2,
+  Palette,
+  Undo,
+  Redo,
   Brush,
   Sparkles,
   Layers,
   Settings,
   Save,
   RotateCcw,
-  RotateCw
+  RotateCw,
+  Hourglass,
 } from "lucide-react";
+import { supabase } from "@/utils/supabase/client";
 
 interface Point {
   x: number;
@@ -26,7 +28,7 @@ interface Point {
 }
 
 interface DrawingAction {
-  type: 'draw' | 'clear';
+  type: "draw" | "clear";
   points?: Point[];
   timestamp: number;
 }
@@ -40,29 +42,62 @@ export default function ReactionsPage() {
   const [history, setHistory] = useState<DrawingAction[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [activeTool, setActiveTool] = useState<'brush' | 'eraser'>('brush');
+  const [activeTool, setActiveTool] = useState<"brush" | "eraser">("brush");
 
   // より豊富な色の選択肢（グラデーション風）
   const colorPalettes = {
     vibrant: [
-      "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-      "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9"
+      "#FF6B6B",
+      "#4ECDC4",
+      "#45B7D1",
+      "#96CEB4",
+      "#FFEAA7",
+      "#DDA0DD",
+      "#98D8C8",
+      "#F7DC6F",
+      "#BB8FCE",
+      "#85C1E9",
     ],
     pastel: [
-      "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF",
-      "#E6B3FF", "#FFB3E6", "#B3FFE6", "#FFE6B3", "#E6FFB3"
+      "#FFB3BA",
+      "#FFDFBA",
+      "#FFFFBA",
+      "#BAFFC9",
+      "#BAE1FF",
+      "#E6B3FF",
+      "#FFB3E6",
+      "#B3FFE6",
+      "#FFE6B3",
+      "#E6FFB3",
     ],
     monochrome: [
-      "#000000", "#333333", "#666666", "#999999", "#CCCCCC",
-      "#FFFFFF", "#2C2C2C", "#4A4A4A", "#707070", "#A0A0A0"
+      "#000000",
+      "#333333",
+      "#666666",
+      "#999999",
+      "#CCCCCC",
+      "#FFFFFF",
+      "#2C2C2C",
+      "#4A4A4A",
+      "#707070",
+      "#A0A0A0",
     ],
     nature: [
-      "#8B4513", "#228B22", "#32CD32", "#87CEEB", "#F0E68C",
-      "#D2691E", "#2E8B57", "#20B2AA", "#FFA500", "#DC143C"
-    ]
+      "#8B4513",
+      "#228B22",
+      "#32CD32",
+      "#87CEEB",
+      "#F0E68C",
+      "#D2691E",
+      "#2E8B57",
+      "#20B2AA",
+      "#FFA500",
+      "#DC143C",
+    ],
   } as const;
 
-  const [selectedPalette, setSelectedPalette] = useState<keyof typeof colorPalettes>('vibrant');
+  const [selectedPalette, setSelectedPalette] =
+    useState<keyof typeof colorPalettes>("vibrant");
 
   // ブラシサイズの選択肢
   const brushSizes = [
@@ -70,7 +105,7 @@ export default function ReactionsPage() {
     { size: 8, label: "中", icon: "●" },
     { size: 15, label: "太い", icon: "●" },
     { size: 25, label: "極太", icon: "●" },
-    { size: 40, label: "特大", icon: "●" }
+    { size: 40, label: "特大", icon: "●" },
   ] as const;
 
   useEffect(() => {
@@ -89,8 +124,8 @@ export default function ReactionsPage() {
 
     // 初期状態を履歴に追加
     const initialAction: DrawingAction = {
-      type: 'clear',
-      timestamp: Date.now()
+      type: "clear",
+      timestamp: Date.now(),
     };
     setHistory([initialAction]);
     setHistoryIndex(0);
@@ -128,17 +163,17 @@ export default function ReactionsPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (activeTool === 'eraser') {
+    if (activeTool === "eraser") {
       // 消しゴム機能：白い円で描画して消去
-      ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalCompositeOperation = "destination-out";
       ctx.beginPath();
       ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.closePath();
-      ctx.globalCompositeOperation = 'source-over'; // 通常の描画モードに戻す
+      ctx.globalCompositeOperation = "source-over"; // 通常の描画モードに戻す
     } else {
       // ブラシ機能：通常の描画
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalCompositeOperation = "source-over";
       ctx.beginPath();
       ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
       ctx.fillStyle = currentColor;
@@ -162,13 +197,13 @@ export default function ReactionsPage() {
     if (!ctx) return;
 
     const newAction: DrawingAction = {
-      type: 'draw',
-      timestamp: Date.now()
+      type: "draw",
+      timestamp: Date.now(),
     };
 
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newAction);
-    
+
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
@@ -187,13 +222,13 @@ export default function ReactionsPage() {
     ctx.strokeRect(0, 0, 800, 600);
 
     const clearAction: DrawingAction = {
-      type: 'clear',
-      timestamp: Date.now()
+      type: "clear",
+      timestamp: Date.now(),
     };
-    
+
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(clearAction);
-    
+
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
@@ -245,9 +280,75 @@ export default function ReactionsPage() {
     setBrushSize(size);
   };
 
-  const handleToolChange = (tool: 'brush' | 'eraser') => {
+  const handleToolChange = (tool: "brush" | "eraser") => {
     setActiveTool(tool);
   };
+
+  // --- クラウド保存処理 ---
+  const saveAndUploadImage = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // 画像をbase64 PNGとして取得
+    const base64 = canvas.toDataURL("image/png", 1.0).split(",")[1];
+    console.log("[LOG] base64取得", base64.slice(0, 30));
+
+    // まずCloudflare R2にアップロード
+    const fileName = `stamp_${Date.now()}.png`;
+    console.log("[LOG] fileName", fileName);
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file: base64, fileName }),
+    });
+    console.log("[LOG] /api/upload status", res.status);
+    if (!res.ok) {
+      alert("画像アップロードに失敗しました");
+      return;
+    }
+    const { imageUrl } = await res.json();
+    console.log("[LOG] imageUrl", imageUrl);
+
+    // 画像URLをSupabaseに保存
+    const { error } = await supabase
+      .from("make_stamp")
+      .insert({ make_stanp_url: imageUrl });
+    console.log("[LOG] supabase insert error", error);
+    if (error) {
+      alert("Supabaseへの保存に失敗しました: " + error.message);
+      return;
+    }
+
+    alert("スタンプがクラウドに保存されました！");
+  };
+
+  // 24時間後までの残り時間を計算する関数
+  function getRemainingTime(createdAt: string): string {
+    const created = new Date(createdAt).getTime();
+    const expires = created + 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const diff = expires - now;
+    if (diff <= 0) return "00:00:00";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  // --- スタンプ一覧の取得と表示例（仮） ---
+  // ここではmake_stampテーブルのデータを取得し、砂時計＋残り時間を表示する例を追加します。
+  const [stamps, setStamps] = useState<any[]>([]);
+  useEffect(() => {
+    const fetchStamps = async () => {
+      const { data, error } = await supabase
+        .from("make_stamp")
+        .select("id, make_stanp_url, created_at");
+      if (!error && data) setStamps(data);
+    };
+    fetchStamps();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white relative overflow-hidden">
@@ -255,7 +356,7 @@ export default function ReactionsPage() {
       <div className="absolute inset-0 opacity-10">
         <div className="w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23FFFFFF%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto p-6">
         {/* ヘッダー */}
         <div className="flex items-center justify-between mb-8">
@@ -264,7 +365,10 @@ export default function ReactionsPage() {
               onClick={() => router.push("/")}
               className="group flex items-center space-x-3 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-gray-500/25 border border-gray-600"
             >
-              <Home size={20} className="group-hover:rotate-12 transition-transform duration-300" />
+              <Home
+                size={20}
+                className="group-hover:rotate-12 transition-transform duration-300"
+              />
               <span className="font-semibold">ホームに戻る</span>
             </button>
             <div className="flex items-center space-x-3">
@@ -288,10 +392,12 @@ export default function ReactionsPage() {
                   width={800}
                   height={600}
                   className={`w-full h-auto border border-gray-200 rounded-lg shadow-lg ${
-                    activeTool === 'eraser' ? 'cursor-crosshair' : 'cursor-crosshair'
+                    activeTool === "eraser"
+                      ? "cursor-crosshair"
+                      : "cursor-crosshair"
                   }`}
                   style={{
-                    cursor: activeTool === 'eraser' ? 'crosshair' : 'crosshair'
+                    cursor: activeTool === "eraser" ? "crosshair" : "crosshair",
                   }}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
@@ -312,22 +418,22 @@ export default function ReactionsPage() {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => handleToolChange('brush')}
+                  onClick={() => handleToolChange("brush")}
                   className={`p-4 rounded-xl transition-all duration-300 ${
-                    activeTool === 'brush'
-                      ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg scale-105 border border-gray-500'
-                      : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 hover:text-white border border-gray-700'
+                    activeTool === "brush"
+                      ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg scale-105 border border-gray-500"
+                      : "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 hover:text-white border border-gray-700"
                   }`}
                 >
                   <Brush size={24} className="mx-auto mb-2" />
                   <span className="text-sm font-medium">ブラシ</span>
                 </button>
                 <button
-                  onClick={() => handleToolChange('eraser')}
+                  onClick={() => handleToolChange("eraser")}
                   className={`p-4 rounded-xl transition-all duration-300 ${
-                    activeTool === 'eraser'
-                      ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg scale-105 border border-gray-500'
-                      : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 hover:text-white border border-gray-700'
+                    activeTool === "eraser"
+                      ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg scale-105 border border-gray-500"
+                      : "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 hover:text-white border border-gray-700"
                   }`}
                 >
                   <Trash2 size={24} className="mx-auto mb-2" />
@@ -346,17 +452,19 @@ export default function ReactionsPage() {
                 {Object.keys(colorPalettes).map((palette) => (
                   <button
                     key={palette}
-                    onClick={() => setSelectedPalette(palette as keyof typeof colorPalettes)}
+                    onClick={() =>
+                      setSelectedPalette(palette as keyof typeof colorPalettes)
+                    }
                     className={`p-2 rounded-lg text-xs font-medium transition-all duration-300 ${
                       selectedPalette === palette
-                        ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg border border-gray-500'
-                        : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-700'
+                        ? "bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg border border-gray-500"
+                        : "bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-700"
                     }`}
                   >
-                    {palette === 'vibrant' && '鮮やか'}
-                    {palette === 'pastel' && 'パステル'}
-                    {palette === 'monochrome' && 'モノクロ'}
-                    {palette === 'nature' && 'ナチュラル'}
+                    {palette === "vibrant" && "鮮やか"}
+                    {palette === "pastel" && "パステル"}
+                    {palette === "monochrome" && "モノクロ"}
+                    {palette === "nature" && "ナチュラル"}
                   </button>
                 ))}
               </div>
@@ -408,7 +516,10 @@ export default function ReactionsPage() {
                     <div className="flex items-center space-x-3">
                       <div
                         className="rounded-full bg-current flex items-center justify-center text-white"
-                        style={{ width: Math.min(size * 1.5, 30), height: Math.min(size * 1.5, 30) }}
+                        style={{
+                          width: Math.min(size * 1.5, 30),
+                          height: Math.min(size * 1.5, 30),
+                        }}
                       >
                         <span className="text-xs">{icon}</span>
                       </div>
@@ -445,7 +556,7 @@ export default function ReactionsPage() {
                     <span className="text-sm font-medium">やり直し</span>
                   </button>
                 </div>
-                
+
                 <button
                   onClick={clearCanvas}
                   className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/25 border border-red-500"
@@ -453,9 +564,9 @@ export default function ReactionsPage() {
                   <Trash2 size={16} />
                   <span className="font-medium">クリア</span>
                 </button>
-                
+
                 <button
-                  onClick={saveImage}
+                  onClick={saveAndUploadImage}
                   className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 border border-blue-500"
                 >
                   <Download size={16} />
@@ -466,12 +577,14 @@ export default function ReactionsPage() {
 
             {/* 現在の設定表示 */}
             <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-white">現在の設定</h3>
+              <h3 className="text-lg font-semibold mb-4 text-white">
+                現在の設定
+              </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">ツール:</span>
                   <span className="text-white font-semibold">
-                    {activeTool === 'brush' ? 'ブラシ' : '消しゴム'}
+                    {activeTool === "brush" ? "ブラシ" : "消しゴム"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -486,13 +599,45 @@ export default function ReactionsPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">ブラシサイズ:</span>
-                  <span className="text-white font-semibold">{brushSize}px</span>
+                  <span className="text-white font-semibold">
+                    {brushSize}px
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-300">履歴:</span>
-                  <span className="text-white font-semibold">{historyIndex + 1} / {history.length}</span>
+                  <span className="text-white font-semibold">
+                    {historyIndex + 1} / {history.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-300">残り時間:</span>
+                  <span className="text-white font-semibold">
+                    {getRemainingTime(new Date().toISOString())}
+                  </span>
                 </div>
               </div>
+            </div>
+
+            {/* スタンプ一覧表示例 */}
+            <div className="mt-8 space-y-4">
+              {stamps.map((stamp) => (
+                <div
+                  key={stamp.id}
+                  className="flex items-center space-x-3 bg-gray-800/60 rounded-xl p-3"
+                >
+                  <img
+                    src={stamp.make_stanp_url}
+                    alt="stamp"
+                    className="w-16 h-16 rounded-lg border border-gray-600"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <Hourglass size={20} className="text-yellow-400" />
+                    <span className="text-lg font-mono text-yellow-200">
+                      {getRemainingTime(stamp.created_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

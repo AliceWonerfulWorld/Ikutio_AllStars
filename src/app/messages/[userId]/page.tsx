@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, use } from "react";
-import { ArrowLeft, Send, MoreVertical } from "lucide-react";
+import { ArrowLeft, Send, MoreVertical, Hourglass } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/utils/supabase/client";
@@ -30,6 +30,21 @@ type message = {
   id?: string;
   isOwn?: boolean;
 };
+
+// 24時間後までの残り時間を計算する関数
+function getRemainingTime(createdAt: string): string {
+  const created = new Date(createdAt).getTime();
+  const expires = created + 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const diff = expires - now;
+  if (diff <= 0) return "00:00:00";
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
 
 // Next.js 14以降では、paramsはPromiseで渡されるため、use(params)でアンラップするだけでOKです。
 // 型もReact.Usable<{ userId: string }>で統一し、分岐やtypeofチェックは不要です。
@@ -89,7 +104,7 @@ export default function ChatPage({
     fetchOtherUser();
   }, [userId]);
 
-  // メッセージ取得
+  // メッセージ取得 & リアルタイム購読
   useEffect(() => {
     const fetchMessages = async () => {
       if (!currentUser || !otherUser) return;
@@ -110,7 +125,21 @@ export default function ChatPage({
       }
     };
     fetchMessages();
-    // ポーリングやリアルタイム化したい場合はここでintervalやsubscriptionを追加
+
+    // Supabaseリアルタイム購読
+    const channel = supabase
+      .channel("messages-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        (payload) => {
+          fetchMessages();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser, otherUser]);
 
   useEffect(() => {
@@ -240,13 +269,16 @@ export default function ChatPage({
                     <p className="text-sm whitespace-pre-wrap">
                       {message.text}
                     </p>
-                    <p
-                      className={`text-xs mt-1 ${
-                        message.isOwn ? "text-blue-100" : "text-gray-500"
-                      }`}
-                    >
-                      {formatTime(message.created_at)}
-                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Hourglass size={14} className="text-yellow-400" />
+                      <span
+                        className={`text-xs ${
+                          message.isOwn ? "text-blue-100" : "text-gray-400"
+                        }`}
+                      >
+                        {getRemainingTime(message.created_at)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,9 +1,52 @@
 "use client";
 
-import { useState, useEffect } from "react";
-// import { useSession } from "@supabase/auth-helpers-react"; // 削除
+import { useState, useEffect, useRef } from "react";
+import Sidebar from "@/components/Sidebar";
+import PostForm from "@/components/PostForm";
+import Post from "@/components/Post";
+import { supabase } from "@/utils/supabase/client";
+import PWAInstaller from "@/components/PWAInstaller";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { useAuth } from "@/contexts/AuthContext";
+
+// 砂時計アイコン（Lucide ReactのSVGをインラインで利用）
+function HourglassIcon({ className = "w-5 h-5 text-yellow-400 mr-1" }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 3h12M6 21h12M8 3v2a6 6 0 006 6v2a6 6 0 01-6 6v2m8-18v2a6 6 0 01-6 6v2a6 6 0 006 6v2"
+      />
+    </svg>
+  );
+}
+
+// 残り時間計算関数
+function getRemainingTime(createdAt: string) {
+  const created = new Date(createdAt).getTime();
+  const now = Date.now();
+  const expires = created + 24 * 60 * 60 * 1000;
+  const diff = expires - now;
+  if (diff <= 0) return null;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${hours.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+
 type PostType = {
-  id: string; // ← string型に戻す
+  id: string;
   user_id: string;
   username: string;
   title: string;
@@ -16,14 +59,8 @@ type PostType = {
   iconUrl?: string;
   displayName?: string;
   setID?: string;
-  liked?: boolean; // ← 追加
+  liked?: boolean;
 };
-import Sidebar from "@/components/Sidebar";
-import PostForm from "@/components/PostForm";
-import Post from "@/components/Post";
-import { supabase } from "@/utils/supabase/client";
-import PWAInstaller from "@/components/PWAInstaller";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // R2のパブリック開発URL
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
@@ -40,22 +77,42 @@ function getPublicIconUrl(iconUrl?: string) {
 }
 
 export default function Home() {
-  const [todos, setTodos] = useState<PostType[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [posts, setPosts] = useState<PostType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userMap, setUserMap] = useState<
     Record<
       string,
       {
-        iconUrl?: string; // ← これが必須
+        iconUrl?: string;
         displayName?: string;
         setID?: string;
         username?: string;
       }
     >
   >({});
-  const [userId, setUserId] = useState<string | null>(null); // 追加
-
+  const [userId, setUserId] = useState<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Supabaseリアルタイム購読
   useEffect(() => {
-    // ログインユーザーID取得
+    const channel = supabase
+      .channel("todos-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "todos" },
+        (payload) => {
+          fetchTodos();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // ログインユーザーID取得
+  useEffect(() => {
     const fetchUserId = async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUserId(userData?.user?.id ?? null);
@@ -81,7 +138,7 @@ export default function Home() {
           .map((todo: any) => todo.user_id)
           .filter(
             (id: string | null | undefined) =>
-              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id) // UUIDのみ
+              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
           )
       )
     );
@@ -90,7 +147,7 @@ export default function Home() {
     let usersError: any = null;
     if (userIds.length > 0) {
       const { data, error } = await supabase
-        .from("usels") // ← ここがusels参照
+        .from("usels")
         .select("user_id, icon_url, username, setID")
         .in("user_id", userIds);
       usersData = data ?? [];
@@ -111,7 +168,7 @@ export default function Home() {
     > = {};
     (usersData ?? []).forEach((user: any) => {
       userMap[user.user_id] = {
-        iconUrl: getPublicIconUrl(user.icon_url), // ← icon_urlカラムを参照
+        iconUrl: getPublicIconUrl(user.icon_url),
         displayName: user.username || "User",
         setID: user.setID || "",
         username: user.username || "",
@@ -149,13 +206,27 @@ export default function Home() {
         };
       })
     );
-    setTodos(todosWithStatus);
+    setPosts(todosWithStatus);
   };
+
+  // 1秒ごとに再レンダリングして残り時間を更新
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setPosts((prev) => [...prev]); // 強制再レンダリング
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   // いいね追加/削除
   const handleLike = async (postId: string) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    if (!user) {
+      alert("いいねするにはログインが必要です");
+      return;
+    }
+    const userId = user.id;
     const postIdNum = Number(postId);
 
     // 既にいいね済みかチェック
@@ -217,8 +288,11 @@ export default function Home() {
 
   // ブックマーク追加/解除
   const handleBookmark = async (postId: string) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    if (!user) {
+      alert("ブックマークするにはログインが必要です");
+      return;
+    }
+    const userId = user.id;
     const postIdNum = Number(postId);
 
     // 既にブックマーク済みかチェック
@@ -257,8 +331,89 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchTodos();
-  }, []);
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 基本的な投稿データを取得
+        const { data: todosData, error: todosError } = await supabase
+          .from("todos")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (todosError) {
+          throw todosError;
+        }
+
+        if (!todosData) {
+          setPosts([]);
+          return;
+        }
+
+        // 認証済みユーザーの場合のみ、いいね・ブックマーク状態を取得
+        if (user) {
+          const userId = user.id;
+          
+          const postsWithUserData = await Promise.all(
+            todosData.map(async (todo) => {
+              try {
+                // いいね状態
+                const { data: likeData } = await supabase
+                  .from("likes")
+                  .select("on")
+                  .eq("post_id", Number(todo.id))
+                  .eq("user_id", userId)
+                  .maybeSingle();
+
+                // ブックマーク状態
+                const { data: bookmarkData } = await supabase
+                  .from("bookmarks")
+                  .select("on")
+                  .eq("post_id", Number(todo.id))
+                  .eq("user_id", userId)
+                  .maybeSingle();
+
+                return {
+                  ...todo,
+                  liked: likeData?.on === true,
+                  bookmarked: bookmarkData?.on === true,
+                };
+              } catch (error) {
+                console.warn(`投稿 ${todo.id} のユーザーデータ取得エラー:`, error);
+                return {
+                  ...todo,
+                  liked: false,
+                  bookmarked: false,
+                };
+              }
+            })
+          );
+
+          setPosts(postsWithUserData);
+        } else {
+          // 未ログインの場合は、いいね・ブックマーク状態なしで表示
+          const postsWithoutUserData = todosData.map(todo => ({
+            ...todo,
+            liked: false,
+            bookmarked: false,
+          }));
+          setPosts(postsWithoutUserData);
+        }
+      } catch (error) {
+        console.error("投稿取得エラー:", error);
+        setError("投稿の読み込みに失敗しました");
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // 認証状態が確定してから実行
+    if (!authLoading) {
+      fetchPosts();
+    }
+  }, [user, authLoading]);
 
   return (
     <>
@@ -280,33 +435,46 @@ export default function Home() {
             <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
-              {todos.map((todo) => (
-                <Post
-                  key={todo.id}
-                  post={{
-                    id: todo.id,
-                    user_id: todo.user_id || "",
-                    username:
-                      userMap[todo.user_id]?.username ||
-                      todo.username ||
-                      "User",
-                    setID: userMap[todo.user_id]?.setID || "",
-                    title: todo.title,
-                    created_at: todo.created_at || "",
-                    tags: todo.tags || [],
-                    replies: todo.replies || 0,
-                    likes: todo.likes || 0,
-                    bookmarked: todo.bookmarked || false,
-                    image_url: todo.image_url || "", // ← 修正: imageUrl → image_url
-                    iconUrl: userMap[todo.user_id]?.iconUrl,
-                    displayName: userMap[todo.user_id]?.displayName,
-                  }}
-                  liked={todo.liked ?? false}
-                  bookmarked={todo.bookmarked ?? false}
-                  onLike={() => handleLike(todo.id)}
-                  onBookmark={() => handleBookmark(todo.id)}
-                />
-              ))}
+              {posts.map((todo) => {
+                const remaining = getRemainingTime(todo.created_at);
+                return (
+                  <div key={todo.id} className="relative">
+                    {/* 砂時計＋残り時間 */}
+                    {remaining && (
+                      <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
+                        <HourglassIcon />
+                        <span className="text-yellow-300 font-mono">
+                          {remaining}
+                        </span>
+                      </div>
+                    )}
+                    <Post
+                      post={{
+                        id: todo.id,
+                        user_id: todo.user_id || "",
+                        username:
+                          userMap[todo.user_id]?.username ||
+                          todo.username ||
+                          "User",
+                        setID: userMap[todo.user_id]?.setID || "",
+                        title: todo.title,
+                        created_at: todo.created_at || "",
+                        tags: todo.tags || [],
+                        replies: todo.replies || 0,
+                        likes: todo.likes || 0,
+                        bookmarked: todo.bookmarked || false,
+                        image_url: todo.image_url || "",
+                        iconUrl: userMap[todo.user_id]?.iconUrl,
+                        displayName: userMap[todo.user_id]?.displayName,
+                      }}
+                      liked={todo.liked ?? false}
+                      bookmarked={todo.bookmarked ?? false}
+                      onLike={() => handleLike(todo.id)}
+                      onBookmark={() => handleBookmark(todo.id)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
           {/* 右サイドバー */}
