@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Thread, LS_KEY } from './types';
-import Starfield from './components/Starfield';
+import Starfield, { StarfieldRef } from './components/Starfield';
 import Header from './components/Header';
 import HistorySidebar from './components/HistorySidebar';
 import StartView from './components/StartView';
@@ -17,6 +17,7 @@ export default function GlokPage() {
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyQuery, setHistoryQuery] = useState('');
+  const starfieldRef = useRef<StarfieldRef>(null);
 
   // ユーザー別の履歴キー
   const userHistoryKey = user ? `${LS_KEY}_${user.id}` : LS_KEY;
@@ -33,6 +34,34 @@ export default function GlokPage() {
   const currentThread = useMemo(() => {
     return threads.find(t => t.id === currentId) || null;
   }, [threads, currentId]);
+
+  // キーボードイベントの処理
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Sキーまたはsキーが押された場合
+      if (event.key.toLowerCase() === 's' || event.code === 'KeyS') {
+        // 入力フィールドにフォーカスがある場合は無視
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          return;
+        }
+        
+        event.preventDefault();
+        
+        if (starfieldRef.current) {
+          starfieldRef.current.triggerShootingStars();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const onSend = async () => {
     if (!prompt.trim() || loading) return;
@@ -83,7 +112,6 @@ export default function GlokPage() {
         headers: { 
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({ 
           prompt_post: userMsg,
           user_id: user.id // フロントエンドから送信
@@ -95,13 +123,6 @@ export default function GlokPage() {
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({ error: 'Unknown error' }));
         console.log('API Error data:', errorData);
-        if (resp.status === 401) {
-          setError(`認証エラー: ${errorData.error || '認証が切れています。再度ログインしてください。'}`);
-          if (errorData.debug) {
-            console.log('Debug info:', errorData.debug);
-          }
-          return;
-        }
         throw new Error(errorData.error || `APIエラー (${resp.status})`);
       }
 
@@ -233,7 +254,7 @@ export default function GlokPage() {
         color: 'white',
         position: 'relative',
       }}>
-        <Starfield active={true} />
+        <Starfield ref={starfieldRef} active={true} />
         
         <div style={{
           textAlign: 'center',
@@ -286,7 +307,7 @@ export default function GlokPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      <Starfield active={true} />
+      <Starfield ref={starfieldRef} active={true} />
       
       <Header
         currentId={currentId}
@@ -294,7 +315,7 @@ export default function GlokPage() {
         onNewChat={onNewChat}
         onShowHistory={() => setShowHistory(true)}
         showHistory={showHistory}
-        onClearAllHistory={onClearAllHistory} // 全削除機能をヘッダーに追加
+        onClearAllHistory={onClearAllHistory}
       />
 
       <div style={{
@@ -330,7 +351,7 @@ export default function GlokPage() {
           threads={threads}
           currentId={currentId}
           onSelectThread={setCurrentId}
-          onDeleteThread={onDeleteThread} // 削除機能を追加
+          onDeleteThread={onDeleteThread}
           onClose={() => setShowHistory(false)}
           historyQuery={historyQuery}
           setHistoryQuery={setHistoryQuery}
