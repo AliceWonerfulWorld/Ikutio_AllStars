@@ -18,8 +18,8 @@ type PostType = {
   replies: number;
   likes: number;
   bookmarked: boolean;
-  image_url?: string; // ← imageUrl → image_url に修正
-  iconUrl?: string;
+  image_url?: string;
+  user_icon_url?: string; // ← 非正規化されたユーザーアイコンURL
   displayName?: string;
   setID?: string;
 };
@@ -161,10 +161,10 @@ export default function Post({
   return (
     <div className="p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800">
       <div className="flex space-x-3">
-        {/* アバター */}
-        {post.iconUrl ? (
+        {/* アバター（usels遅延排除: 非正規化カラムを直接利用） */}
+        {post.user_icon_url ? (
           <img
-            src={post.iconUrl}
+            src={post.user_icon_url}
             alt="icon"
             className="w-10 h-10 rounded-full object-cover"
             referrerPolicy="no-referrer"

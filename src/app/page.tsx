@@ -44,7 +44,6 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-
 type PostType = {
   id: string;
   user_id: string;
@@ -354,7 +353,7 @@ export default function Home() {
         // 認証済みユーザーの場合のみ、いいね・ブックマーク状態を取得
         if (user) {
           const userId = user.id;
-          
+
           const postsWithUserData = await Promise.all(
             todosData.map(async (todo) => {
               try {
@@ -380,7 +379,10 @@ export default function Home() {
                   bookmarked: bookmarkData?.on === true,
                 };
               } catch (error) {
-                console.warn(`投稿 ${todo.id} のユーザーデータ取得エラー:`, error);
+                console.warn(
+                  `投稿 ${todo.id} のユーザーデータ取得エラー:`,
+                  error
+                );
                 return {
                   ...todo,
                   liked: false,
@@ -393,7 +395,7 @@ export default function Home() {
           setPosts(postsWithUserData);
         } else {
           // 未ログインの場合は、いいね・ブックマーク状態なしで表示
-          const postsWithoutUserData = todosData.map(todo => ({
+          const postsWithoutUserData = todosData.map((todo) => ({
             ...todo,
             liked: false,
             bookmarked: false,
@@ -464,7 +466,7 @@ export default function Home() {
                         likes: todo.likes || 0,
                         bookmarked: todo.bookmarked || false,
                         image_url: todo.image_url || "",
-                        iconUrl: userMap[todo.user_id]?.iconUrl,
+                        user_icon_url: userMap[todo.user_id]?.iconUrl, // ←ここをuser_icon_urlに統一
                         displayName: userMap[todo.user_id]?.displayName,
                       }}
                       liked={todo.liked ?? false}
