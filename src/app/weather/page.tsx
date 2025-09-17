@@ -29,17 +29,17 @@ export default function WeatherPage() {
   const handleSubmitPost = async () => {
     try {
       await submitPost(newPost, postCoords, user);
-      setNewPost({
-        location: "",
-        weather: "sunny",
-        temperature: 20,
-        humidity: 60,
-        windSpeed: 5,
-        visibility: 10,
-        comment: "",
-      });
-      setPostCoords(null);
-      setShowPostForm(false);
+    setNewPost({
+      location: "",
+      weather: "sunny",
+      temperature: 20,
+      humidity: 60,
+      windSpeed: 5,
+      visibility: 10,
+      comment: "",
+    });
+    setPostCoords(null);
+    setShowPostForm(false);
     } catch (error) {
       // エラーは useWeatherPosts 内で処理済み
     }

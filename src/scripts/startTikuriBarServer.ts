@@ -80,6 +80,12 @@ class TikuriBarWebSocketServer {
       case 'chat_message':
         this.handleChatMessage(ws, data);
         break;
+      case 'audio_chunk':
+        this.handleAudioChunk(ws, data);
+        break;
+      case 'toggle_mute':
+        this.handleToggleMute(ws, data);
+        break;
       default:
         this.sendError(ws, `Unknown message type: ${data.type}`);
     }
@@ -234,6 +240,69 @@ class TikuriBarWebSocketServer {
     this.userSessions.delete(ws);
   }
 
+  // 音声チャンク処理
+  private handleAudioChunk(ws: WebSocket, data: { audioData: string; timestamp: number; duration?: number }) {
+    const session = this.userSessions.get(ws);
+    if (!session) {
+      console.log('音声チャンク: セッションが見つかりません');
+      return;
+    }
+
+    const room = this.rooms.get(session.barId);
+    const user = room?.users.get(session.userId);
+    
+    if (!room || !user) {
+      console.log('音声チャンク: ルームまたはユーザーが見つかりません');
+      return;
+    }
+
+    if (user.isMuted) {
+      console.log(`${user.username} はミュート中のため音声をスキップ`);
+      return;
+    }
+
+    // 音声データを他のユーザーに中継（送信者は除く）
+    this.broadcastToRoom(session.barId, {
+      type: 'audio_chunk',
+      userId: user.id,
+      username: user.username,
+      audioData: data.audioData,
+      timestamp: data.timestamp,
+      duration: data.duration || 100
+    }, ws);
+
+    console.log(`${user.username} から音声チャンクを受信・転送しました`);
+  }
+
+  // ミュート状態変更
+  private handleToggleMute(ws: WebSocket, data: { isMuted: boolean }) {
+    const session = this.userSessions.get(ws);
+    if (!session) {
+      console.log('ミュート切り替え: セッションが見つかりません');
+      return;
+    }
+
+    const room = this.rooms.get(session.barId);
+    const user = room?.users.get(session.userId);
+    
+    if (!room || !user) {
+      console.log('ミュート切り替え: ルームまたはユーザーが見つかりません');
+      return;
+    }
+
+    user.isMuted = data.isMuted;
+
+    // 他のユーザーにミュート状態を通知
+    this.broadcastToRoom(session.barId, {
+      type: 'user_mute_changed',
+      userId: user.id,
+      username: user.username,
+      isMuted: data.isMuted
+    });
+
+    console.log(`${user.username} のミュート状態: ${data.isMuted ? 'ON' : 'OFF'}`);
+  }
+
   // ルーム内ブロードキャスト
   private broadcastToRoom(barId: string, message: any, excludeWs?: WebSocket) {
     const room = this.rooms.get(barId);
@@ -266,6 +335,7 @@ class TikuriBarWebSocketServer {
       console.log('TikuriBar WebSocketサーバーを停止しました');
     }
   }
+
 }
 
 // サーバーインスタンス作成と起動

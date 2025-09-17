@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useBarAudio } from '../hooks/useBarAudio';
+import { Mic, MicOff, Volume2, VolumeX, Radio } from 'lucide-react';
 
 export default function TikuriBarTestPage() {
   const [username, setUsername] = useState('');
@@ -22,6 +24,28 @@ export default function TikuriBarTestPage() {
     leaveBar,
     getBars
   } = useWebSocket();
+
+  const {
+    isRecording,
+    isMuted,
+    isDeafened,
+    audioLevel,
+    setWebSocket,
+    startRecording,
+    stopRecording,
+    toggleMute,
+    toggleDeafen,
+    handleAudioChunk
+  } = useBarAudio();
+
+  // WebSocketが接続されたら音声フックに設定
+  useEffect(() => {
+    if (isConnected && (window as any).wsInstance) {
+      setWebSocket((window as any).wsInstance);
+      // 音声ハンドラーもグローバルに登録
+      (window as any).handleAudioChunk = handleAudioChunk;
+    }
+  }, [isConnected, setWebSocket, handleAudioChunk]);
 
   const handleConnect = () => {
     if (!isConnected) {
@@ -51,11 +75,20 @@ export default function TikuriBarTestPage() {
     setMessage('');
   };
 
+  // 音声開始/停止
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center">
-          🍷 TikuriBAR WebSocket テスト
+          🍷 TikuriBAR WebSocket + 音声テスト
         </h1>
 
         {/* 接続状態 */}
@@ -79,6 +112,51 @@ export default function TikuriBarTestPage() {
             </button>
           </div>
         </div>
+
+        {/* 音声状態表示 */}
+        {currentBar && (
+          <div className="mb-6 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+            <h3 className="text-lg font-semibold mb-3">🎙️ 音声状態</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className={`text-2xl mb-1 ${isRecording ? 'text-green-400' : 'text-gray-400'}`}>
+                  {isRecording ? '🎤' : '🔇'}
+                </div>
+                <div className="text-sm">
+                  {isRecording ? '録音中' : '停止中'}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-2xl mb-1 ${isMuted ? 'text-red-400' : 'text-green-400'}`}>
+                  {isMuted ? '🔇' : '🎤'}
+                </div>
+                <div className="text-sm">
+                  {isMuted ? 'ミュート' : 'マイクON'}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className={`text-2xl mb-1 ${isDeafened ? 'text-red-400' : 'text-green-400'}`}>
+                  {isDeafened ? '🔇' : '🔊'}
+                </div>
+                <div className="text-sm">
+                  {isDeafened ? 'スピーカーOFF' : 'スピーカーON'}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl mb-1">📊</div>
+                <div className="text-sm">
+                  音声レベル: {audioLevel}%
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
+                  <div 
+                    className="bg-green-400 h-2 rounded-full transition-all duration-100"
+                    style={{ width: `${audioLevel}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ユーザー名入力 */}
         <div className="mb-6 p-4 bg-gray-800 rounded-lg">
@@ -173,6 +251,56 @@ export default function TikuriBarTestPage() {
               </div>
             </div>
 
+            {/* 音声コントロールパネル */}
+            <div className="p-4 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">🎙️ 音声コントロール</h3>
+              <div className="flex items-center justify-center space-x-4">
+                {/* 録音開始/停止 */}
+                <button
+                  onClick={handleToggleRecording}
+                  className={`p-4 rounded-full transition-all duration-300 ${
+                    isRecording 
+                      ? 'bg-red-600 hover:bg-red-700 animate-pulse' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                  title={isRecording ? '録音停止' : '録音開始'}
+                >
+                  <Radio size={24} />
+                </button>
+
+                {/* ミュート */}
+                <button
+                  onClick={toggleMute}
+                  className={`p-4 rounded-full transition-all duration-300 ${
+                    isMuted 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-gray-600 hover:bg-gray-700'
+                  }`}
+                  title={isMuted ? 'ミュート解除' : 'ミュート'}
+                >
+                  {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                </button>
+
+                {/* スピーカー */}
+                <button
+                  onClick={toggleDeafen}
+                  className={`p-4 rounded-full transition-all duration-300 ${
+                    isDeafened 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-gray-600 hover:bg-gray-700'
+                  }`}
+                  title={isDeafened ? 'スピーカー有効' : 'スピーカー無効'}
+                >
+                  {isDeafened ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                </button>
+              </div>
+              
+              {/* 操作説明 */}
+              <div className="mt-4 text-sm text-center text-amber-300">
+                <p>🎙️ 録音ボタンでマイク開始 → 🔇 ミュートで一時停止 → 🔊 スピーカーで受信ON/OFF</p>
+              </div>
+            </div>
+
             {/* 参加者一覧 */}
             <div className="p-4 bg-gray-800 rounded-lg">
               <h3 className="text-lg font-semibold mb-3">👥 参加者</h3>
@@ -184,6 +312,9 @@ export default function TikuriBarTestPage() {
                       {user.role === 'bartender' ? '🍸 バーテンダー' : 
                        user.role === 'speaker' ? '🎤 話し手' : '👂 リスナー'}
                     </div>
+                    {user.isMuted && (
+                      <div className="text-xs text-red-400 mt-1">🔇 ミュート中</div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -38,6 +38,9 @@ export function useWebSocket() {
 
     const ws = new WebSocket('ws://localhost:8080');
     wsRef.current = ws;
+    
+    // グローバルに保存（音声フック用）
+    (window as any).wsInstance = ws;
 
     ws.onopen = () => {
       console.log('WebSocket接続成功');
@@ -102,6 +105,13 @@ export function useWebSocket() {
       case 'error':
         console.error('サーバーエラー:', data.error);
         alert(`エラー: ${data.error}`);
+        break;
+      case 'audio_chunk':
+        console.log(`🎧 音声チャンク受信: ${data.username} から`);
+        // 音声フックに転送（音声フックがセットされている場合）
+        if ((window as any).handleAudioChunk) {
+          (window as any).handleAudioChunk(data);
+        }
         break;
     }
   }, []);
