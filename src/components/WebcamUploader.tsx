@@ -102,7 +102,8 @@ export default function WebcamToTable() {
     const clean = hex.startsWith("\\x") ? hex.slice(2) : hex;
     const len = clean.length / 2;
     const out = new Uint8Array(len);
-    for (let i = 0; i < len; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
+    // substr → substring に修正
+    for (let i = 0; i < len; i++) out[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
     return new Blob([out], { type: mime });
   };
 
@@ -171,20 +172,20 @@ export default function WebcamToTable() {
         body: formData,
       });
       const result = await res.json();
-      console.log("R2 upload result", result); // ← 追加
+      console.log("R2 upload result", result);
       if (!res.ok) throw new Error(result.error || "R2アップロード失敗");
       const imageUrl = result.url;
       // SupabaseにURL保存
       const { error, data } = await supabase.from("make_stamp").insert({
         make_stanp_url: imageUrl,
       });
-      console.log("Supabase insert", { error, data, imageUrl }); // ← 追加
+      console.log("Supabase insert", { error, data, imageUrl });
       if (error) throw error;
       setMsg("保存しました");
       await fetchRecent();
     } catch (e: any) {
       setMsg(`保存に失敗: ${e?.message ?? e}`);
-      console.error("保存エラー", e); // ← 追加
+      console.error("保存エラー", e);
     } finally {
       setUploading(false);
     }
