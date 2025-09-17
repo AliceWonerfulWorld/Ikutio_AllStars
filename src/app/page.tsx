@@ -80,6 +80,7 @@ export default function Home() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // usels全ユーザー情報を格納
   const [userMap, setUserMap] = useState<
     Record<
       string,
@@ -91,6 +92,38 @@ export default function Home() {
       }
     >
   >({});
+
+  // 初回マウント時にusels全件取得
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      const { data, error } = await supabase
+        .from("usels")
+        .select("user_id, icon_url, username, setID");
+      if (error) {
+        console.error("usels取得エラー", error);
+        return;
+      }
+      const map: Record<
+        string,
+        {
+          iconUrl?: string;
+          displayName?: string;
+          setID?: string;
+          username?: string;
+        }
+      > = {};
+      (data ?? []).forEach((user: any) => {
+        map[user.user_id] = {
+          iconUrl: getPublicIconUrl(user.icon_url),
+          displayName: user.username || "User",
+          setID: user.setID || "",
+          username: user.username || "",
+        };
+      });
+      setUserMap(map);
+    };
+    fetchAllUsers();
+  }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   // Supabaseリアルタイム購読
@@ -474,7 +507,7 @@ export default function Home() {
                         likes: todo.likes || 0,
                         bookmarked: todo.bookmarked || false,
                         image_url: todo.image_url || "",
-                        iconUrl: userMap[todo.user_id]?.iconUrl,
+                        user_icon_url: userMap[todo.user_id]?.iconUrl,
                         displayName: userMap[todo.user_id]?.displayName,
                       }}
                       liked={todo.liked ?? false}
