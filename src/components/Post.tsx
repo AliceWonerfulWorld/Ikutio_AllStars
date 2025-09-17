@@ -1,13 +1,24 @@
+import React, { useEffect, useState, useRef } from "react";
+import { supabase } from "@/utils/supabase/client";
 import {
+  Bookmark,
   Heart,
   MessageCircle,
-  Bookmark,
   Share,
   MoreHorizontal,
   Smile,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabase/client";
+
+// リプライ型
+type ReplyType = {
+  id: string;
+  post_id: number;
+  user_id: string;
+  text: string;
+  created_at: string;
+  username?: string;
+};
+
 type PostType = {
   id: string;
   user_id: string;
@@ -47,6 +58,102 @@ export default function Post({
   onLike,
   onBookmark,
 }: PostProps) {
+  // リプライ入力欄の表示制御
+  const [showReplyInput, setShowReplyInput] = useState<boolean>(false);
+  // ...既存のstateやuseEffect...
+
+  // リプライ一覧・入力欄
+  const [replies, setReplies] = useState<ReplyType[]>([]);
+  const [replyText, setReplyText] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+  const replyInputRef = useRef<HTMLInputElement>(null);
+
+  // リプライ取得（ユーザー名をフロントでマージ）
+  const fetchReplies = async () => {
+    // replies取得
+    const { data: repliesData, error: repliesError } = await supabase
+      .from("replies")
+      .select("*")
+      .eq("post_id", post.id)
+      .order("created_at", { ascending: true });
+    if (repliesError || !repliesData) {
+      setReplies([]);
+      return;
+    }
+    // user_id一覧を抽出
+    const userIds = Array.from(new Set(repliesData.map((r) => r.user_id)));
+    // uselsからuser_id→username取得
+    let userMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabase
+        .from("usels")
+        .select("user_id, username")
+        .in("user_id", userIds);
+      if (!usersError && usersData) {
+        userMap = Object.fromEntries(
+          usersData.map((u) => [u.user_id, u.username])
+        );
+      }
+    }
+    // usernameをマージ
+    const merged = repliesData.map((r) => ({
+      ...r,
+      username: userMap[r.user_id] || undefined,
+    }));
+    setReplies(merged);
+  };
+
+  // 初回・post.id変更時・リアルタイム購読
+  useEffect(() => {
+    fetchReplies();
+    // リアルタイム購読
+    const channel = supabase
+      .channel(`replies-changes-${post.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "replies",
+          filter: `post_id=eq.${post.id}`,
+        },
+        fetchReplies
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id]);
+
+  // リプライ送信
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    setReplyLoading(true);
+    // ユーザー情報取得
+    const { data: auth } = await supabase.auth.getUser();
+    const user_id = auth?.user?.id;
+    if (!user_id) {
+      alert("ログインが必要です");
+      setReplyLoading(false);
+      return;
+    }
+    const insertObj = {
+      post_id: Number(post.id), // ←必ず数値で渡す
+      user_id: user_id,
+      text: replyText,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("replies").insert(insertObj);
+    if (error) {
+      alert("リプライ送信に失敗しました: " + error.message);
+      console.error("replies insert error:", error, insertObj);
+    } else {
+      setReplyText("");
+      replyInputRef.current?.blur();
+    }
+    setReplyLoading(false);
+  };
+
   // スタンプ画像リスト
   const [stampList, setStampList] = useState<string[]>([]);
   useEffect(() => {
@@ -225,13 +332,19 @@ export default function Post({
             </div>
           )}
 
-          {/* アクションボタン */}
+          {/* アクションボタン＋リプライ数 */}
           <div className="flex items-center justify-between max-w-md">
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-400 transition-colors group">
+            <button
+              className="flex items-center space-x-2 text-gray-500 hover:text-blue-400 transition-colors group"
+              onClick={() => {
+                setShowReplyInput((v: boolean) => !v);
+                setTimeout(() => replyInputRef.current?.focus(), 100);
+              }}
+            >
               <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
                 <MessageCircle size={20} />
               </div>
-              <span className="text-sm">{post.replies || 0}</span>
+              <span className="text-sm">{replies.length}</span>
             </button>
 
             <button
@@ -276,6 +389,58 @@ export default function Post({
               </div>
             </button>
           </div>
+
+          {/* リプライ一覧 */}
+          <div className="mt-3 space-y-2">
+            {replies.map((reply) => (
+              <div key={reply.id} className="flex items-start gap-2 ml-2">
+                <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {reply.username?.charAt(0) ?? "?"}
+                </div>
+                <div className="bg-gray-800 rounded-xl px-3 py-2 text-sm text-white max-w-xs">
+                  <span className="font-semibold mr-2">
+                    {reply.username ?? "User"}
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <div className="mt-1 whitespace-pre-wrap">{reply.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* リプライ入力欄（リプライボタン押下時のみ表示） */}
+          {showReplyInput && (
+            <form
+              className="flex items-center gap-2 mt-2 ml-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleReply();
+              }}
+            >
+              <input
+                ref={replyInputRef}
+                type="text"
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-full px-3 py-2 text-white placeholder-gray-400 text-sm focus:outline-none"
+                placeholder="リプライを入力..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                disabled={replyLoading}
+                maxLength={200}
+              />
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold disabled:bg-gray-600"
+                disabled={replyLoading || !replyText.trim()}
+              >
+                送信
+              </button>
+            </form>
+          )}
 
           {/* スタンプ（リアクション）エリア */}
           <div className="flex items-center gap-2 mt-2 ml-2 relative">
