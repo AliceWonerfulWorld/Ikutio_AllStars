@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Thread, LS_KEY } from './types';
-import Starfield from './components/Starfield';
+import Starfield, { StarfieldRef } from './components/Starfield';
 import Header from './components/Header';
 import HistorySidebar from './components/HistorySidebar';
 import StartView from './components/StartView';
@@ -17,11 +17,15 @@ export default function GlokPage() {
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyQuery, setHistoryQuery] = useState('');
+  const starfieldRef = useRef<StarfieldRef>(null);
+
+  // ユーザー別の履歴キー
+  const userHistoryKey = user ? `${LS_KEY}_${user.id}` : LS_KEY;
 
   const [threads, setThreads] = useState<Thread[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
-      return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
     } catch {
       return [];
     }
@@ -31,10 +35,38 @@ export default function GlokPage() {
     return threads.find(t => t.id === currentId) || null;
   }, [threads, currentId]);
 
+  // キーボードイベントの処理
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Sキーまたはsキーが押された場合
+      if (event.key.toLowerCase() === 's' || event.code === 'KeyS') {
+        // 入力フィールドにフォーカスがある場合は無視
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          return;
+        }
+        
+        event.preventDefault();
+        
+        if (starfieldRef.current) {
+          starfieldRef.current.triggerShootingStars();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const onSend = async () => {
     if (!prompt.trim() || loading) return;
     
-    // 認証チェック（より厳密に）
+    // 認証チェック
     if (!user || authLoading) {
       setError('ログインが必要です。先にサインインしてください。');
       return;
@@ -71,26 +103,32 @@ export default function GlokPage() {
         setThreads(updatedThreads);
       }
 
-      // API呼び出し（認証ヘッダーを追加）
+      console.log('Sending request to Gemini API...');
+      console.log('User ID:', user.id);
+
+      // API呼び出し（ユーザーIDをボディに含める）
       const resp = await fetch('/api/gemini-api', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // クッキーを含める
-        body: JSON.stringify({ prompt_post: userMsg }),
+        body: JSON.stringify({ 
+          prompt_post: userMsg,
+          user_id: user.id // フロントエンドから送信
+        }),
       });
+
+      console.log('API Response status:', resp.status);
 
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({ error: 'Unknown error' }));
-        if (resp.status === 401) {
-          setError('認証が無効です。再度ログインしてください。');
-          return;
-        }
+        console.log('API Error data:', errorData);
         throw new Error(errorData.error || `APIエラー (${resp.status})`);
       }
 
       const data = await resp.json();
+      console.log('API Response data:', data);
+      
       const assistantMsg = data.response || '申し訳ありませんが、回答を生成できませんでした。';
 
       // アシスタントの返答を追加
@@ -128,9 +166,54 @@ export default function GlokPage() {
     setError(null);
   };
 
+  // 履歴削除機能
+  const onDeleteThread = (threadId: string) => {
+    const updatedThreads = threads.filter(t => t.id !== threadId);
+    setThreads(updatedThreads);
+    
+    // 削除されたスレッドが現在選択中の場合、選択を解除
+    if (currentId === threadId) {
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+    }
+    
+    console.log(`🗑️ スレッド "${threadId}" を削除しました`);
+  };
+
+  // 全履歴削除機能
+  const onClearAllHistory = () => {
+    if (confirm('すべての会話履歴を削除しますか？この操作は取り消せません。')) {
+      setThreads([]);
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+      console.log('🗑️ すべての履歴を削除しました');
+    }
+  };
+
+  // ユーザー別の履歴を保存
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(threads));
-  }, [threads]);
+    if (user) {
+      localStorage.setItem(userHistoryKey, JSON.stringify(threads));
+    }
+  }, [threads, userHistoryKey, user]);
+
+  // ユーザーが変わった時に履歴を読み込み直す
+  useEffect(() => {
+    if (user) {
+      try {
+        const userThreads = JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
+        setThreads(userThreads);
+      } catch {
+        setThreads([]);
+      }
+      // 現在のチャットをリセット
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+    }
+  }, [user?.id, userHistoryKey]);
 
   // 認証ローディング中
   if (authLoading) {
@@ -171,7 +254,7 @@ export default function GlokPage() {
         color: 'white',
         position: 'relative',
       }}>
-        <Starfield active={true} />
+        <Starfield ref={starfieldRef} active={true} />
         
         <div style={{
           textAlign: 'center',
@@ -185,7 +268,7 @@ export default function GlokPage() {
             ログインが必要です
           </h1>
           <p style={{ fontSize: '1.2em', marginBottom: '30px', color: '#aaa' }}>
-            Grokを使用するには、先にサインインしてください
+            Clockを使用するには、先にサインインしてください
           </p>
           <a 
             href="/auth/login" 
@@ -224,7 +307,7 @@ export default function GlokPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      <Starfield active={!currentThread} />
+      <Starfield ref={starfieldRef} active={true} />
       
       <Header
         currentId={currentId}
@@ -232,6 +315,7 @@ export default function GlokPage() {
         onNewChat={onNewChat}
         onShowHistory={() => setShowHistory(true)}
         showHistory={showHistory}
+        onClearAllHistory={onClearAllHistory}
       />
 
       <div style={{
@@ -257,6 +341,7 @@ export default function GlokPage() {
             setPrompt={setPrompt}
             loading={loading}
             onSend={onSend}
+            onKeyDown={onKeyDown}
           />
         )}
       </div>
@@ -266,6 +351,7 @@ export default function GlokPage() {
           threads={threads}
           currentId={currentId}
           onSelectThread={setCurrentId}
+          onDeleteThread={onDeleteThread}
           onClose={() => setShowHistory(false)}
           historyQuery={historyQuery}
           setHistoryQuery={setHistoryQuery}
