@@ -44,7 +44,7 @@ export function useWebSocket() {
     console.log('WebSocket接続を試行中...');
 
     try {
-      const ws = new WebSocket('ws://localhost:8080');
+      const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080');
       wsRef.current = ws;
       
       // グローバルに保存（音声フック用）

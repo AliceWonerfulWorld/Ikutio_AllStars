@@ -84,13 +84,12 @@ export default function TikuriBarPage() {
 
   // WebSocket接続時に音声フックを設定
   useEffect(() => {
-    // ページ読み込み完了後に少し遅延してから接続
     const timer = setTimeout(() => {
       if (!isConnected) {
         console.log('TikuriBAR: WebSocket接続を開始...');
         connect();
       }
-    }, 500); // 500ms遅延
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [isConnected, connect]);
@@ -99,12 +98,10 @@ export default function TikuriBarPage() {
     if (isConnected && (window as any).wsInstance) {
       setWebSocket((window as any).wsInstance);
       (window as any).handleAudioChunk = handleAudioChunk;
-      // スピーカー状態も同期
       (window as any).isDeafened = isDeafened;
     }
   }, [isConnected, setWebSocket, handleAudioChunk, isDeafened]);
 
-  // BAR作成
   const handleCreateBar = () => {
     if (!user || !newBarTitle.trim()) {
       alert("BAR名を入力してください");
@@ -117,7 +114,6 @@ export default function TikuriBarPage() {
     setShowCreateForm(false);
   };
 
-  // BAR参加
   const handleJoinBar = (barId: string) => {
     if (!user) {
       alert("ログインが必要です");
@@ -128,20 +124,17 @@ export default function TikuriBarPage() {
     joinBar(barId, username);
   };
 
-  // BAR退出
   const handleLeaveBar = () => {
     stopRecording();
     leaveBar();
   };
 
-  // チャット送信
   const handleSendMessage = () => {
     if (!chatMessage.trim()) return;
     sendMessage(chatMessage);
     setChatMessage("");
   };
 
-  // 音声録音の開始/停止
   const handleToggleRecording = () => {
     if (isRecording) {
       stopRecording();
