@@ -5,10 +5,11 @@ interface StartViewProps {
   setPrompt: (v: string) => void;
   loading: boolean;
   onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export default function StartView({
-  prompt, setPrompt, loading, onSend,
+  prompt, setPrompt, loading, onSend, onKeyDown,
 }: StartViewProps) {
   return (
     <div style={{ 
@@ -72,7 +73,8 @@ export default function StartView({
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="どんなことでもお尋ねください"
+          onKeyDown={onKeyDown}
+          placeholder="どんなことでもお尋ねください (Enterで送信)"
           style={{
             flex: 1,
             minWidth: 400,

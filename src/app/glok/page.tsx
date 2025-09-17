@@ -257,6 +257,7 @@ export default function GlokPage() {
             setPrompt={setPrompt}
             loading={loading}
             onSend={onSend}
+            onKeyDown={onKeyDown}
           />
         )}
       </div>
