@@ -1,3 +1,4 @@
+"use client";
 import {
   Home,
   Search,
@@ -15,14 +16,59 @@ import {
   Wine, // BARのコンセプトに合うアイコンに変更
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/utils/supabase/client";
+
+// R2のパブリック開発URL
+const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
+// 画像URLを生成（Post.tsxと同じロジック）
+const getImageUrl = (image_url?: string) => {
+  if (!image_url) return "";
+  // pub-...r2.dev 形式 or http(s) ならそのまま
+  if (image_url.startsWith("http://") || image_url.startsWith("https://pub-")) {
+    return image_url;
+  }
+  // r2.cloudflarestorage.com 形式ならファイル名部分だけ抽出
+  if (image_url.includes("r2.cloudflarestorage.com")) {
+    // 末尾のファイル名部分を抽出
+    const parts = image_url.split("/");
+    const filename = parts[parts.length - 1];
+    return `${R2_PUBLIC_URL}${filename}`;
+  }
+  // ファイル名のみ
+  const trimmed = image_url.trim();
+  return `${R2_PUBLIC_URL}${trimmed}`;
+};
 
 export default function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const pathname = usePathname();
+
+  // uselsテーブルから追加情報を取得
+  const [userMeta, setUserMeta] = useState<{
+    setID?: string;
+    icon_url?: string;
+    username?: string;
+  } | null>(null);
+  useEffect(() => {
+    const fetchUserMeta = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from("usels")
+        .select("setID, icon_url, username")
+        .eq("user_id", user.id)
+        .single();
+      if (!error && data) {
+        setUserMeta(data);
+      } else {
+        setUserMeta(null);
+      }
+    };
+    fetchUserMeta();
+  }, [user]);
 
   const menuItems = [
     { icon: Home, label: "ホーム", href: "/" },
@@ -102,25 +148,56 @@ export default function Sidebar() {
               {user ? (
                 <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
                   {/* アイコン画像表示 */}
-                  {user.user_metadata?.iconUrl ? (
+                  {userMeta?.icon_url ? (
+                    (() => {
+                      const url = getImageUrl(userMeta.icon_url);
+                      return (
+                        <img
+                          src={url}
+                          alt="ユーザーアイコン"
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                          }}
+                        />
+                      );
+                    })()
+                  ) : user.user_metadata?.iconUrl ? (
                     <img
                       src={user.user_metadata.iconUrl}
                       alt="ユーザーアイコン"
                       className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
                     />
                   ) : (
                     <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {user.user_metadata?.displayName?.charAt(0) ||
+                      {userMeta?.username?.charAt(0) ||
+                        user.user_metadata?.displayName?.charAt(0) ||
+                        user.user_metadata?.username?.charAt(0) ||
                         user.email?.charAt(0) ||
                         "U"}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-white font-semibold truncate">
-                      {user.user_metadata?.displayName || "ユーザー"}
+                      {userMeta?.username ||
+                        user.user_metadata?.displayName ||
+                        user.user_metadata?.username ||
+                        user.email ||
+                        "ユーザー"}
                     </div>
                     <div className="text-gray-400 text-sm truncate">
-                      @{user.user_metadata?.username || "user"}
+                      @
+                      {userMeta?.setID ||
+                        userMeta?.username ||
+                        user.user_metadata?.username ||
+                        user.email ||
+                        "user"}
                     </div>
                   </div>
                 </div>
@@ -160,7 +237,9 @@ export default function Sidebar() {
                   }`}
                 >
                   <item.icon size={24} />
-                  <span className="text-lg whitespace-nowrap">{item.label}</span>
+                  <span className="text-lg whitespace-nowrap">
+                    {item.label}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -172,25 +251,55 @@ export default function Sidebar() {
           {user ? (
             <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
               {/* アイコン画像表示 */}
-              {user.user_metadata?.iconUrl ? (
+              {userMeta?.icon_url ? (
+                (() => {
+                  const url = getImageUrl(userMeta.icon_url);
+                  return (
+                    <img
+                      src={url}
+                      alt="ユーザーアイコン"
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  );
+                })()
+              ) : user.user_metadata?.iconUrl ? (
                 <img
                   src={user.user_metadata.iconUrl}
                   alt="ユーザーアイコン"
                   className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
               ) : (
                 <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                  {user.user_metadata?.displayName?.charAt(0) ||
+                  {userMeta?.username?.charAt(0) ||
+                    user.user_metadata?.displayName?.charAt(0) ||
+                    user.user_metadata?.username?.charAt(0) ||
                     user.email?.charAt(0) ||
                     "U"}
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-white font-semibold truncate">
-                  {user.user_metadata?.displayName || "ユーザー"}
+                  {userMeta?.username ||
+                    user.user_metadata?.displayName ||
+                    user.user_metadata?.username ||
+                    user.email ||
+                    "ユーザー"}
                 </div>
                 <div className="text-gray-400 text-sm truncate">
-                  @{user.user_metadata?.username || "user"}
+                  @
+                  {userMeta?.setID ||
+                    userMeta?.username ||
+                    user.user_metadata?.username ||
+                    user.email ||
+                    "user"}
                 </div>
               </div>
             </div>
