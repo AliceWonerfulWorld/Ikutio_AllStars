@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -6,6 +7,7 @@ import Post from "@/components/Post";
 import { supabase } from "@/utils/supabase/client";
 import PWAInstaller from "@/components/PWAInstaller";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 砂時計アイコン（Lucide ReactのSVGをインラインで利用）
 function HourglassIcon({ className = "w-5 h-5 text-yellow-400 mr-1" }) {
@@ -42,6 +44,7 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
+
 type PostType = {
   id: string;
   user_id: string;
@@ -74,7 +77,10 @@ function getPublicIconUrl(iconUrl?: string) {
 }
 
 export default function Home() {
-  const [todos, setTodos] = useState<PostType[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [posts, setPosts] = useState<PostType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userMap, setUserMap] = useState<
     Record<
       string,
@@ -200,14 +206,14 @@ export default function Home() {
         };
       })
     );
-    setTodos(todosWithStatus);
+    setPosts(todosWithStatus);
   };
 
   // 1秒ごとに再レンダリングして残り時間を更新
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setTodos((prev) => [...prev]); // 強制再レンダリング
+      setPosts((prev) => [...prev]); // 強制再レンダリング
     }, 1000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -216,8 +222,11 @@ export default function Home() {
 
   // いいね追加/削除
   const handleLike = async (postId: string) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    if (!user) {
+      alert("いいねするにはログインが必要です");
+      return;
+    }
+    const userId = user.id;
     const postIdNum = Number(postId);
 
     // 既にいいね済みかチェック
@@ -279,8 +288,11 @@ export default function Home() {
 
   // ブックマーク追加/解除
   const handleBookmark = async (postId: string) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    if (!user) {
+      alert("ブックマークするにはログインが必要です");
+      return;
+    }
+    const userId = user.id;
     const postIdNum = Number(postId);
 
     // 既にブックマーク済みかチェック
@@ -319,8 +331,89 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchTodos();
-  }, []);
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 基本的な投稿データを取得
+        const { data: todosData, error: todosError } = await supabase
+          .from("todos")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (todosError) {
+          throw todosError;
+        }
+
+        if (!todosData) {
+          setPosts([]);
+          return;
+        }
+
+        // 認証済みユーザーの場合のみ、いいね・ブックマーク状態を取得
+        if (user) {
+          const userId = user.id;
+          
+          const postsWithUserData = await Promise.all(
+            todosData.map(async (todo) => {
+              try {
+                // いいね状態
+                const { data: likeData } = await supabase
+                  .from("likes")
+                  .select("on")
+                  .eq("post_id", Number(todo.id))
+                  .eq("user_id", userId)
+                  .maybeSingle();
+
+                // ブックマーク状態
+                const { data: bookmarkData } = await supabase
+                  .from("bookmarks")
+                  .select("on")
+                  .eq("post_id", Number(todo.id))
+                  .eq("user_id", userId)
+                  .maybeSingle();
+
+                return {
+                  ...todo,
+                  liked: likeData?.on === true,
+                  bookmarked: bookmarkData?.on === true,
+                };
+              } catch (error) {
+                console.warn(`投稿 ${todo.id} のユーザーデータ取得エラー:`, error);
+                return {
+                  ...todo,
+                  liked: false,
+                  bookmarked: false,
+                };
+              }
+            })
+          );
+
+          setPosts(postsWithUserData);
+        } else {
+          // 未ログインの場合は、いいね・ブックマーク状態なしで表示
+          const postsWithoutUserData = todosData.map(todo => ({
+            ...todo,
+            liked: false,
+            bookmarked: false,
+          }));
+          setPosts(postsWithoutUserData);
+        }
+      } catch (error) {
+        console.error("投稿取得エラー:", error);
+        setError("投稿の読み込みに失敗しました");
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // 認証状態が確定してから実行
+    if (!authLoading) {
+      fetchPosts();
+    }
+  }, [user, authLoading]);
 
   return (
     <>
@@ -342,7 +435,7 @@ export default function Home() {
             <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
-              {todos.map((todo) => {
+              {posts.map((todo) => {
                 const remaining = getRemainingTime(todo.created_at);
                 return (
                   <div key={todo.id} className="relative">

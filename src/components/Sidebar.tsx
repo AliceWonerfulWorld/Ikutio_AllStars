@@ -12,6 +12,7 @@ import {
   Clock,
   Heart,
   CloudSun,
+  Wine, // BARのコンセプトに合うアイコンに変更
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -32,6 +33,7 @@ export default function Sidebar() {
     { icon: Clock, label: "Clock", href: "/glok" },
     { icon: Heart, label: "リアクション", href: "/reactions" },
     { icon: CloudSun, label: "天気", href: "/weather" },
+    { icon: Wine, label: "TikuriBAR", href: "/tikuribar" }, // Wineアイコンに変更
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
   ];
