@@ -18,10 +18,13 @@ export default function GlokPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyQuery, setHistoryQuery] = useState('');
 
+  // ユーザー別の履歴キー
+  const userHistoryKey = user ? `${LS_KEY}_${user.id}` : LS_KEY;
+
   const [threads, setThreads] = useState<Thread[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
-      return JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
     } catch {
       return [];
     }
@@ -34,7 +37,7 @@ export default function GlokPage() {
   const onSend = async () => {
     if (!prompt.trim() || loading) return;
     
-    // 認証チェック（より厳密に）
+    // 認証チェック
     if (!user || authLoading) {
       setError('ログインが必要です。先にサインインしてください。');
       return;
@@ -71,26 +74,39 @@ export default function GlokPage() {
         setThreads(updatedThreads);
       }
 
-      // API呼び出し（認証ヘッダーを追加）
+      console.log('Sending request to Gemini API...');
+      console.log('User ID:', user.id);
+      console.log('User email:', user.email);
+
+      // API呼び出し（認証クッキーを含める）
       const resp = await fetch('/api/gemini-api', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // クッキーを含める
+        credentials: 'include', // 重要：認証クッキーを含める
         body: JSON.stringify({ prompt_post: userMsg }),
       });
 
+      console.log('API Response status:', resp.status);
+
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({ error: 'Unknown error' }));
+        console.log('API Error data:', errorData);
+        
         if (resp.status === 401) {
-          setError('認証が無効です。再度ログインしてください。');
+          setError(`認証エラー: ${errorData.error || '認証が切れています。再度ログインしてください。'}`);
+          if (errorData.debug) {
+            console.log('Debug info:', errorData.debug);
+          }
           return;
         }
         throw new Error(errorData.error || `APIエラー (${resp.status})`);
       }
 
       const data = await resp.json();
+      console.log('API Response data:', data);
+      
       const assistantMsg = data.response || '申し訳ありませんが、回答を生成できませんでした。';
 
       // アシスタントの返答を追加
@@ -128,9 +144,28 @@ export default function GlokPage() {
     setError(null);
   };
 
+  // ユーザー別の履歴を保存
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(threads));
-  }, [threads]);
+    if (user) {
+      localStorage.setItem(userHistoryKey, JSON.stringify(threads));
+    }
+  }, [threads, userHistoryKey, user]);
+
+  // ユーザーが変わった時に履歴を読み込み直す
+  useEffect(() => {
+    if (user) {
+      try {
+        const userThreads = JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
+        setThreads(userThreads);
+      } catch {
+        setThreads([]);
+      }
+      // 現在のチャットをリセット
+      setCurrentId(null);
+      setPrompt('');
+      setError(null);
+    }
+  }, [user?.id, userHistoryKey]);
 
   // 認証ローディング中
   if (authLoading) {
@@ -185,7 +220,7 @@ export default function GlokPage() {
             ログインが必要です
           </h1>
           <p style={{ fontSize: '1.2em', marginBottom: '30px', color: '#aaa' }}>
-            Grokを使用するには、先にサインインしてください
+            Clockを使用するには、先にサインインしてください
           </p>
           <a 
             href="/auth/login" 
