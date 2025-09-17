@@ -481,8 +481,8 @@ export default function Home() {
             <div className="relative z-10">
               {posts.map((todo) => {
                 const remaining = getRemainingTime(todo.created_at);
-                let result = todo.title;
-                let hours = Math.floor((new Date().getTime() - new Date(todo.created_at).getTime()) / 3600000);
+                const result = todo.title;
+                const hours = Math.floor((new Date().getTime() - new Date(todo.created_at).getTime()) / 3600000);
                 let temp = result.slice(0, result.length - hours * 2);
                 if(result.length >= 24)
                 {
