@@ -141,6 +141,7 @@ export default function Home() {
               !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
           )
       )
+      
     );
     // uselsから該当ユーザー情報をまとめて取得
     let usersData: any[] = [];
@@ -437,8 +438,18 @@ export default function Home() {
             <div className="relative z-10">
               {posts.map((todo) => {
                 const remaining = getRemainingTime(todo.created_at);
+                let result = todo.title;
+                let hours = Math.floor((new Date().getTime() - new Date(todo.created_at).getTime()) / 3600000);
+                let temp = result.slice(0, result.length - hours * 2);
+                if(result.length >= 24)
+                {
+                  temp = result.slice(0, result.length - hours * 3);
+                }
+                
+
                 return (
                   <div key={todo.id} className="relative">
+                    
                     {/* 砂時計＋残り時間 */}
                     {remaining && (
                       <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
@@ -447,7 +458,9 @@ export default function Home() {
                           {remaining}
                         </span>
                       </div>
-                    )}
+                    )
+                    }
+                  
                     <Post
                       post={{
                         id: todo.id,
@@ -457,7 +470,7 @@ export default function Home() {
                           todo.username ||
                           "User",
                         setID: userMap[todo.user_id]?.setID || "",
-                        title: todo.title,
+                        title: temp,
                         created_at: todo.created_at || "",
                         tags: todo.tags || [],
                         replies: todo.replies || 0,
