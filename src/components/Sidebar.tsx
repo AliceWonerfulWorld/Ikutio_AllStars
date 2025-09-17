@@ -29,7 +29,7 @@ export default function Sidebar() {
     { icon: Bell, label: "通知", href: "/notifications" },
     { icon: Mail, label: "メッセージ", href: "/messages" },
     { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
-    { icon: Clock, label: "Grok", href: "/glok" },
+    { icon: Clock, label: "Clock", href: "/glok" },
     { icon: Heart, label: "リアクション", href: "/reactions" },
     { icon: CloudSun, label: "天気", href: "/weather" },
     { icon: User, label: "プロフィール", href: "/profile" },
@@ -64,7 +64,7 @@ export default function Sidebar() {
           <div className="w-80 h-full bg-black border-r border-gray-800 flex flex-col">
             {/* ヘッダー */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h1 className="text-2xl font-bold text-white">Ikutio</h1>
+              <h1 className="text-2xl font-bold text-white">Tikuru24</h1>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-gray-400 hover:text-white"
@@ -141,7 +141,7 @@ export default function Sidebar() {
       <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden lg:z-30 lg:bg-black">
         {/* ロゴ */}
         <div className="flex-shrink-0 p-4 relative z-10">
-          <h1 className="text-2xl font-bold text-white">Ikutio</h1>
+          <h1 className="text-2xl font-bold text-white">Tikuru24</h1>
         </div>
 
         {/* メニュー（スクロール可能） */}
