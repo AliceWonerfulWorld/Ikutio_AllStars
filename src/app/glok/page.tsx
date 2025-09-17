@@ -217,12 +217,12 @@ export default function GlokPage() {
 
   // 認証ローディング中
   if (authLoading) {
-    return (
+  return (
       <div style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)',
-        display: 'flex',
-        alignItems: 'center',
+          display: 'flex',
+          alignItems: 'center',
         justifyContent: 'center',
         color: 'white',
       }}>
@@ -238,7 +238,7 @@ export default function GlokPage() {
           }} />
           <p>認証状態を確認中...</p>
         </div>
-      </div>
+        </div>
     );
   }
 
@@ -246,11 +246,11 @@ export default function GlokPage() {
   if (!user) {
     return (
       <div style={{
-        minHeight: '100vh',
+          minHeight: '100vh',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)',
-        display: 'flex',
+          display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+          justifyContent: 'center',
         color: 'white',
         position: 'relative',
       }}>
@@ -344,7 +344,7 @@ export default function GlokPage() {
             onKeyDown={onKeyDown}
           />
         )}
-      </div>
+            </div>
 
       {showHistory && (
         <HistorySidebar
