@@ -62,6 +62,29 @@ export default function LoginPage() {
     }
   }
 
+  const handleXSignIn = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const redirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}/`
+        : undefined
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo,
+        }
+      })
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'X ログインでエラーが発生しました')
+      setLoading(false)
+    }
+  }
+
   const handleInputChange = (field: keyof SignInData, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -80,6 +103,17 @@ export default function LoginPage() {
 
           {/* OAuth サインイン */}
           <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={handleXSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-white/10 text-white py-3 rounded-full font-semibold hover:bg-white/15 disabled:opacity-60 transition-colors border border-white/20"
+              aria-label="X でログイン"
+            >
+              {/* X logo (text glyph). Replace with svg if available */}
+              <span className="text-xl">𝕏</span>
+              <span>X でログイン</span>
+            </button>
             <button
               type="button"
               onClick={handleGoogleSignIn}
