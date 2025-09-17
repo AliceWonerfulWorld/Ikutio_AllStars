@@ -7,14 +7,18 @@ function hexToUint8(hex: string) {
   const clean = hex.startsWith('\\x') ? hex.slice(2) : hex;
   const len = clean.length / 2;
   const out = new Uint8Array(len);
-  for (let i = 0; i < len; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
+  // substr → substring に修正
+  for (let i = 0; i < len; i++) out[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
   return out;
 }
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  // params を await で解決
+  const params = await context.params;
+  
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
