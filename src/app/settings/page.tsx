@@ -15,6 +15,7 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/utils/supabase/client";
+import NotificationSettings from '@/components/NotificationSettings';
 
 // 型定義を追加
 interface NotificationSettings {
@@ -328,17 +329,23 @@ function SettingsPageContent() {
                   onChange={(e) =>
                     handleNestedInputChange(
                       "notifications",
-                      key,
+                      key as keyof NotificationSettings,
                       e.target.checked
                     )
                   }
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* プッシュ通知設定コンポーネントを追加 */}
+      <div className="border-t border-gray-800 pt-6">
+        <h3 className="text-lg font-semibold mb-4">プッシュ通知の管理</h3>
+        <NotificationSettings />
       </div>
     </div>
   );
