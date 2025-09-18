@@ -27,6 +27,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No notification needed for self-like' });
     }
 
+    // 重複通知チェック（過去5分以内に同じ通知が送信されていないか確認）
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: recentNotification } = await supabaseAdmin
+      .from('notifications')
+      .select('id')
+      .eq('user_id', postOwnerId)
+      .eq('type', 'like')
+      .eq('data->postId', postId)
+      .eq('data->likerId', likerId)
+      .gte('created_at', fiveMinutesAgo)
+      .single();
+
+    if (recentNotification) {
+      console.log('Duplicate notification prevented:', recentNotification);
+      return NextResponse.json({ message: 'Duplicate notification prevented' });
+    }
+
     // いいねしたユーザーの情報を取得
     console.log('Fetching liker data...');
     const { data: likerData, error: likerError } = await supabaseAdmin

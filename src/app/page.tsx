@@ -263,10 +263,8 @@ export default function Home() {
 
   // いいね追加/削除
   const handleLike = async (postId: string) => {
-    if (!user) {
-      alert("いいねするにはログインが必要です");
-      return;
-    }
+    if (!user) return;
+    
     const userId = user.id;
     const postIdNum = Number(postId);
 
@@ -276,7 +274,7 @@ export default function Home() {
       .select("id, on")
       .eq("post_id", postIdNum)
       .eq("user_id", userId)
-      .maybeSingle(); // single() → maybeSingle() に変更
+      .maybeSingle();
 
     if (likeError) {
       console.error('Error checking like status:', likeError);
@@ -286,14 +284,14 @@ export default function Home() {
     // 現在のlikes取得
     const { data: todoData } = await supabase
       .from("todos")
-      .select("likes, user_id") // user_idも取得
+      .select("likes, user_id")
       .eq("id", postIdNum)
       .single();
     const currentLikes = todoData?.likes ?? 0;
     const postOwnerId = todoData?.user_id;
 
     if (likeData?.on) {
-      // いいね解除（on: falseに更新、likesを-1）
+      // いいね解除
       await supabase
         .from("likes")
         .update({ on: false })
@@ -304,9 +302,11 @@ export default function Home() {
         .update({ likes: Math.max(currentLikes - 1, 0) })
         .eq("id", postIdNum);
     } else {
-      // いいね（新規 or 再いいね）
+      // いいね処理
+      const isNewLike = !likeData; // 新規いいねかどうかを判定
+      
       if (likeData) {
-        // 既存レコードがon: falseならon: trueに変更
+        // 再いいね（通知は送信しない）
         await supabase
           .from("likes")
           .update({ on: true })
@@ -317,7 +317,7 @@ export default function Home() {
           .update({ likes: currentLikes + 1 })
           .eq("id", postIdNum);
       } else {
-        // 既存レコードがない場合のみinsert
+        // 新規いいね（通知を送信）
         await supabase.from("likes").insert({
           post_id: postIdNum,
           user_id: userId,
@@ -331,7 +331,7 @@ export default function Home() {
       }
 
       // いいね通知を送信（新規いいねの場合のみ）
-      if (postOwnerId && postOwnerId !== userId) {
+      if (isNewLike && postOwnerId && postOwnerId !== userId) {
         try {
           await fetch('/api/send-like-notification', {
             method: 'POST',
@@ -346,11 +346,12 @@ export default function Home() {
           });
         } catch (error) {
           console.error('Error sending like notification:', error);
-          // 通知送信エラーはユーザーに影響しないように静かに処理
         }
       }
     }
-    fetchTodos(); // 状態更新
+
+    // 投稿データを再取得
+    await fetchTodos();
   };
 
   // ブックマーク追加/解除
