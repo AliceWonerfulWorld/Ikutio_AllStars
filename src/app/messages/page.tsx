@@ -60,14 +60,14 @@ export default function MessagePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto flex h-screen">
+      <div className="max-w-7xl mx-auto flex h-dvh overflow-hidden">
         {/* 左サイドバー */}
         <div className="w-64 flex-shrink-0">
           <Sidebar />
         </div>
 
         {/* メインコンテンツ */}
-        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800">
+        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800 flex flex-col bg-black">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center space-x-4">
@@ -99,7 +99,7 @@ export default function MessagePage() {
           </div>
 
           {/* ユーザー一覧 */}
-          <div className="overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overscroll-contain bg-black">
             {filteredUsers.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-gray-400">
