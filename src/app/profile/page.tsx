@@ -29,7 +29,8 @@ interface FormData {
   joinDate: string;
   following: number;
   follower: number;
-  iconUrl?: string; // 追加
+  iconUrl?: string;
+  isBunkatsu?: boolean; // 追加
 }
 
 function ProfilePageContent() {
@@ -46,6 +47,7 @@ function ProfilePageContent() {
     following: 150,
     follower: 1200,
     iconUrl: undefined,
+    isBunkatsu: false, // 追加
   });
   const [uploading, setUploading] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -79,6 +81,7 @@ function ProfilePageContent() {
             following: userData.following || 150,
             follower: userData.follower || 1200,
             iconUrl: userData.icon_url || undefined,
+            isBunkatsu: userData.isBunkatsu ?? false, // 追加
           });
         }
 
@@ -95,6 +98,7 @@ function ProfilePageContent() {
           follow: userData?.follow || 0,
           follower: 0,
           iconUrl: userData?.icon_url || "",
+          isBunkatsu: userData?.isBunkatsu ?? false, // 追加
         }));
 
         // 投稿取得（自分のuser_idのみ）
@@ -152,6 +156,7 @@ function ProfilePageContent() {
       site: formData.website || "",
       birth_date: formData.birthDate ? formData.birthDate : null,
       follow: Number(formData.following) || 0,
+      isBunkatsu: formData.isBunkatsu ?? false, // 追加
     };
     const { error } = await supabase
       .from("usels")
@@ -424,6 +429,34 @@ function ProfilePageContent() {
                     }
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
+                </div>
+                {/* プライバシー設定 */}
+                <div className="bg-gray-900 rounded-xl p-4 mt-6">
+                  <h3 className="text-lg font-bold mb-4">プライバシー設定</h3>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-white">
+                          24分割モード
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          投稿を時間経過で分割表示する
+                        </div>
+                      </div>
+                      <label className="inline-flex items-center cursor-pointer relative">
+                        <input
+                          type="checkbox"
+                          checked={formData.isBunkatsu ?? false}
+                          onChange={(e) =>
+                            handleInputChange("isBunkatsu", e.target.checked)
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:bg-blue-600 transition-colors"></div>
+                        <div className="absolute left-0 top-0 w-6 h-6 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
