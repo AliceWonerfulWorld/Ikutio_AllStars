@@ -12,10 +12,10 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/utils/supabase/client";
+import Image from "next/image";
 
 // 型定義
 interface FormData {
@@ -49,6 +49,8 @@ function ProfilePageContent() {
   });
   const [uploading, setUploading] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
+  const [followingCount, setFollowingCount] = useState<number>(0);
+  const [followerCount, setFollowerCount] = useState<number>(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -105,6 +107,18 @@ function ProfilePageContent() {
           console.error("投稿取得エラー:", postsError);
         }
         setPosts(userPosts ?? []);
+
+        // フォロー数・フォロワー数取得
+        supabase
+          .from("follows")
+          .select("id", { count: "exact", head: true })
+          .eq("follower_id", user.id)
+          .then(({ count }) => setFollowingCount(count ?? 0));
+        supabase
+          .from("follows")
+          .select("id", { count: "exact", head: true })
+          .eq("followed_id", user.id)
+          .then(({ count }) => setFollowerCount(count ?? 0));
       }
     });
   }, []);
@@ -416,11 +430,18 @@ function ProfilePageContent() {
               <div className="space-y-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold">
-                    {formData.displayName}
+                    {formData.username
+                      ? formData.username
+                      : (() => {
+                          console.log(
+                            "[プロフィール] usernameが空です",
+                            formData
+                          );
+                          return "";
+                        })()}
                   </h2>
                   <p className="text-gray-400">@{formData.setID}</p>
                 </div>
-
                 <p className="text-white">{formData.bio}</p>
 
                 <div className="flex flex-wrap gap-4 text-sm text-gray-400">
@@ -449,11 +470,11 @@ function ProfilePageContent() {
 
                 <div className="flex space-x-6 text-sm">
                   <div className="flex space-x-1">
-                    <span className="font-semibold">{formData.following}</span>
+                    <span className="font-semibold">{followingCount}</span>
                     <span className="text-gray-400">フォロー中</span>
                   </div>
                   <div className="flex space-x-1">
-                    <span className="font-semibold">{formData.follower}</span>
+                    <span className="font-semibold">{followerCount}</span>
                     <span className="text-gray-400">フォロワー</span>
                   </div>
                 </div>
@@ -479,71 +500,92 @@ function ProfilePageContent() {
 
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="p-4 hover:bg-gray-900/50 transition-colors"
-              >
-                <div className="flex space-x-3">
-                  {/* 投稿アイコン表示 */}
-                  {formData.iconUrl &&
-                  getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
-                    <Image
-                      src={getPublicIconUrl(formData.iconUrl)}
-                      alt="icon"
-                      width={128}
-                      height={128}
-                      className="w-10 h-10 rounded-full object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                      {formData.displayName.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold">
-                        {formData.displayName}
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        @{formData.setID}
-                      </span>
-                      <span className="text-gray-400 text-sm">·</span>
-                      <span className="text-gray-400 text-sm">
-                        {post.created_at
-                          ? new Date(post.created_at).toLocaleString("ja-JP")
-                          : ""}
-                      </span>
-                    </div>
-                    <p className="text-white mb-2 break-words">{post.title}</p>
-                    {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {post.tags.map((tag: string, index: number) => (
-                          <span
-                            key={index}
-                            className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
+            {posts.map((post) => {
+              // デバッグ用ログ出力
+              const rawIconUrl = post.icon_url;
+              const publicIconUrl = getPublicIconUrl(post.icon_url);
+              console.log("[投稿アイコン] post.icon_url:", rawIconUrl);
+              console.log(
+                "[投稿アイコン] getPublicIconUrl(post.icon_url):",
+                publicIconUrl
+              );
+
+              return (
+                <div
+                  key={post.id}
+                  className="p-4 hover:bg-gray-900/50 transition-colors"
+                >
+                  <div className="flex space-x-3">
+                    {/* 投稿アイコン表示 */}
+                    <Link
+                      href={`/profile/${post.user_id ?? ""}`}
+                      className="block"
+                    >
+                      {post.icon_url &&
+                      getPublicIconUrl(post.icon_url).startsWith("https://") ? (
+                        <Image
+                          src={getPublicIconUrl(post.iconUrl)}
+                          alt="icon"
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {(post.display_name || post.username || "U").charAt(
+                            0
+                          )}
+                        </div>
+                      )}
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="font-semibold">
+                          {formData.displayName}
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          @{formData.setID}
+                        </span>
+                        <span className="text-gray-400 text-sm">·</span>
+                        <span className="text-gray-400 text-sm">
+                          {post.created_at
+                            ? new Date(post.created_at).toLocaleString("ja-JP")
+                            : ""}
+                        </span>
                       </div>
-                    )}
-                    <div className="flex items-center space-x-6 text-sm text-gray-400">
-                      <button className="hover:text-blue-400 transition-colors">
-                        返信 {post.replies ?? 0}
-                      </button>
-                      <button className="hover:text-red-400 transition-colors">
-                        いいね {post.likes ?? 0}
-                      </button>
+                      <p className="text-white mb-2 break-words">
+                        {post.title}
+                      </p>
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {post.tags.map((tag: string, index: number) => (
+                            <span
+                              key={index}
+                              className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-6 text-sm text-gray-400">
+                        <button className="hover:text-blue-400 transition-colors">
+                          返信 {post.replies ?? 0}
+                        </button>
+                        <button className="hover:text-red-400 transition-colors">
+                          いいね {post.likes ?? 0}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
