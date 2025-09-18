@@ -89,6 +89,7 @@ export default function Home() {
         displayName?: string;
         setID?: string;
         username?: string;
+        isBunkatsu?: boolean; // 追加
       }
     >
   >({});
@@ -98,7 +99,7 @@ export default function Home() {
     const fetchAllUsers = async () => {
       const { data, error } = await supabase
         .from("usels")
-        .select("user_id, icon_url, username, setID");
+        .select("user_id, icon_url, username, setID, isBunkatsu"); // 追加
       if (error) {
         console.error("usels取得エラー", error);
         return;
@@ -110,6 +111,7 @@ export default function Home() {
           displayName?: string;
           setID?: string;
           username?: string;
+          isBunkatsu?: boolean;
         }
       > = {};
       (data ?? []).forEach((user: any) => {
@@ -118,6 +120,7 @@ export default function Home() {
           displayName: user.username || "User",
           setID: user.setID || "",
           username: user.username || "",
+          isBunkatsu: user.isBunkatsu ?? false, // 追加
         };
       });
       setUserMap(map);
@@ -173,7 +176,6 @@ export default function Home() {
               !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
           )
       )
-      
     );
     // uselsから該当ユーザー情報をまとめて取得
     let usersData: any[] = [];
@@ -181,7 +183,7 @@ export default function Home() {
     if (userIds.length > 0) {
       const { data, error } = await supabase
         .from("usels")
-        .select("user_id, icon_url, username, setID")
+        .select("user_id, icon_url, username, setID, isBunkatsu") // ← isBunkatsuを追加
         .in("user_id", userIds);
       usersData = data ?? [];
       usersError = error;
@@ -197,6 +199,7 @@ export default function Home() {
         displayName?: string;
         setID?: string;
         username?: string;
+        isBunkatsu?: boolean; // ← 追加
       }
     > = {};
     (usersData ?? []).forEach((user: any) => {
@@ -205,6 +208,7 @@ export default function Home() {
         displayName: user.username || "User",
         setID: user.setID || "",
         username: user.username || "",
+        isBunkatsu: user.isBunkatsu ?? false, // ← 追加
       };
     });
     setUserMap(userMap);
@@ -482,17 +486,28 @@ export default function Home() {
               {posts.map((todo) => {
                 const remaining = getRemainingTime(todo.created_at);
                 const result = todo.title;
-                const hours = Math.floor((new Date().getTime() - new Date(todo.created_at).getTime()) / 3600000);
-                let temp = result.slice(0, result.length - hours * 2);
-                if(result.length >= 24)
-                {
-                  temp = result.slice(0, result.length - hours * 3);
+                const hours = Math.floor(
+                  (new Date().getTime() - new Date(todo.created_at).getTime()) /
+                    3600000
+                );
+                // isBunkatsu取得
+                const isBunkatsu = userMap[todo.user_id]?.isBunkatsu;
+                console.log(
+                  "isBunkatsu:",
+                  isBunkatsu,
+                  "user_id:",
+                  todo.user_id
+                ); // 追加
+                let temp = result;
+                if (isBunkatsu) {
+                  temp = result.slice(0, result.length - hours * 2);
+                  if (result.length >= 24) {
+                    temp = result.slice(0, result.length - hours * 3);
+                  }
                 }
-                
 
                 return (
                   <div key={todo.id} className="relative">
-                    
                     {/* 砂時計＋残り時間 */}
                     {remaining && (
                       <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
@@ -501,9 +516,8 @@ export default function Home() {
                           {remaining}
                         </span>
                       </div>
-                    )
-                    }
-                  
+                    )}
+
                     <Post
                       post={{
                         id: todo.id,
