@@ -1,35 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Notification from '@/components/Notification';
-import { mockNotifications } from '@/data/mockNotificationData';
 import { Notification as NotificationType } from '@/types';
+import { supabase } from '@/utils/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationType[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
+  // 通知データの取得
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching notifications:', error);
+          return;
+        }
+
+        setNotifications(data || []);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+
+    // リアルタイム購読
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('New notification received:', payload);
+          setNotifications(prev => [payload.new as NotificationType, ...prev]);
+        }
       )
-    );
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const handleMarkAllAsRead = async () => {
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user?.id);
+
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
+  const handleClearAll = async () => {
+    try {
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user?.id);
+
+      setNotifications([]);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
   };
 
   const filteredNotifications = notifications.filter(notification => {
@@ -38,6 +118,14 @@ export default function NotificationsPage() {
   });
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">

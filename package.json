@@ -24,6 +24,7 @@
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "web-push": "^3.6.7",
     "ws": "^8.18.3"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "supabase": "^2.40.7",

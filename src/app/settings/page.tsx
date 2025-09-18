@@ -15,6 +15,8 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/utils/supabase/client";
+import NotificationSettings from '@/components/NotificationSettings';
+import { useAuth } from "@/contexts/AuthContext";
 
 // 型定義を追加
 interface NotificationSettings {
@@ -78,7 +80,7 @@ function SettingsPageContent() {
       email: true,
       push: true,
       mentions: true,
-      likes: false,
+      likes: true,
       retweets: false,
       follows: true,
     },
@@ -92,6 +94,88 @@ function SettingsPageContent() {
     follower: 0,
   });
   const [isNewUser, setIsNewUser] = useState(false);
+
+  const { user } = useAuth();
+
+  // 通知設定の読み込み
+  useEffect(() => {
+    if (!user) return;
+
+    const loadNotificationSettings = async () => {
+      try {
+        console.log('Loading notification settings for user:', user?.id);
+        
+        const { data: settings, error } = await supabase
+          .from('notification_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        console.log('Settings query result:', { settings, error });
+
+        if (settings && !error) {
+          const newNotificationSettings = {
+            email: settings.email_notifications ?? true,
+            push: settings.push_notifications ?? true,
+            mentions: settings.mention_notifications ?? true,
+            likes: settings.like_notifications ?? true,
+            retweets: settings.retweet_notifications ?? false,
+            follows: settings.follow_notifications ?? true,
+          };
+          
+          console.log('Loaded notification settings:', newNotificationSettings);
+          
+          setFormData(prev => ({
+            ...prev,
+            notifications: newNotificationSettings
+          }));
+        } else {
+          console.log('No settings found, using defaults');
+        }
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
+    };
+
+    loadNotificationSettings();
+  }, [user]);
+
+  // 通知設定の保存
+  const saveNotificationSettings = async (settings: NotificationSettings) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notification_settings')
+        .upsert({
+          user_id: user.id,
+          email_notifications: settings.email,
+          push_notifications: settings.push,
+          mention_notifications: settings.mentions,
+          like_notifications: settings.likes,
+          retweet_notifications: settings.retweets,
+          follow_notifications: settings.follows,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id' // user_idでUPSERT
+        });
+
+      if (error) {
+        console.error('Error saving notification settings:', error);
+      } else {
+        console.log('Notification settings saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+    }
+  };
+
+  // 通知設定の変更ハンドラー
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
+    const newSettings = { ...formData.notifications, [key]: value };
+    setFormData(prev => ({ ...prev, notifications: newSettings }));
+    saveNotificationSettings(newSettings);
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -325,20 +409,26 @@ function SettingsPageContent() {
                 <input
                   type="checkbox"
                   checked={value}
-                  onChange={(e) =>
-                    handleNestedInputChange(
-                      "notifications",
-                      key,
-                      e.target.checked
-                    )
-                  }
+                  onChange={(e) => handleNotificationChange(
+                    key as keyof NotificationSettings,
+                    e.target.checked
+                  )}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* プッシュ通知設定コンポーネントを追加 */}
+      <div className="border-t border-gray-800 pt-6">
+        <h3 className="text-lg font-semibold mb-4">プッシュ通知の管理</h3>
+        <NotificationSettings 
+          onNotificationChange={handleNotificationChange}
+          initialSettings={formData.notifications}
+        />
       </div>
     </div>
   );
