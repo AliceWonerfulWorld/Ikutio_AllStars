@@ -294,7 +294,7 @@ export default function Home() {
   // いいね追加/削除
   const handleLike = async (postId: string) => {
     if (!user) return;
-    
+
     const userId = user.id;
     const postIdNum = Number(postId);
 
@@ -307,7 +307,7 @@ export default function Home() {
       .maybeSingle();
 
     if (likeError) {
-      console.error('Error checking like status:', likeError);
+      console.error("Error checking like status:", likeError);
       return;
     }
 
@@ -334,7 +334,7 @@ export default function Home() {
     } else {
       // いいね処理
       const isNewLike = !likeData; // 新規いいねかどうかを判定
-      
+
       if (likeData) {
         // 再いいね（通知は送信しない）
         await supabase
@@ -363,10 +363,10 @@ export default function Home() {
       // いいね通知を送信（新規いいねの場合のみ）
       if (isNewLike && postOwnerId && postOwnerId !== userId) {
         try {
-          await fetch('/api/send-like-notification', {
-            method: 'POST',
+          await fetch("/api/send-like-notification", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               postId: postIdNum,
@@ -375,7 +375,7 @@ export default function Home() {
             }),
           });
         } catch (error) {
-          console.error('Error sending like notification:', error);
+          console.error("Error sending like notification:", error);
         }
       }
     }
