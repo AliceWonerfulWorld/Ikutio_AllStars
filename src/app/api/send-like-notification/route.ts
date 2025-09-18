@@ -12,6 +12,11 @@ webpush.setVapidDetails(
 export async function POST(request: NextRequest) {
   try {
     const { postId, likerId, postOwnerId } = await request.json();
+    
+    console.log('=== Like Notification API Called ===');
+    console.log('postId:', postId);
+    console.log('likerId:', likerId);
+    console.log('postOwnerId:', postOwnerId);
 
     if (!postId || !likerId || !postOwnerId) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -23,16 +28,28 @@ export async function POST(request: NextRequest) {
     }
 
     // いいねしたユーザーの情報を取得
-    const { data: likerData } = await supabaseAdmin // supabaseAdminを使用
+    console.log('Fetching liker data...');
+    const { data: likerData, error: likerError } = await supabaseAdmin
       .from('usels')
-      .select('username, displayName')
+      .select('username, displayName, user_id')
       .eq('user_id', likerId)
-      .single();
+      .maybeSingle();
 
-    const likerName = likerData?.displayName || likerData?.username || 'ユーザー';
+    console.log('Liker query result:', { data: likerData, error: likerError });
+
+    // ユーザー名の決定ロジック
+    let likerName = 'ユーザー';
+    if (likerData) {
+      likerName = likerData.displayName || likerData.username || `ユーザー${likerId.slice(-4)}`;
+    } else {
+      // uselsテーブルにデータがない場合、likerIdの一部を使用
+      likerName = `ユーザー${likerId.slice(-4)}`;
+    }
+
+    console.log('Final liker name:', likerName);
 
     // 投稿内容の一部を取得
-    const { data: postData } = await supabaseAdmin // supabaseAdminを使用
+    const { data: postData } = await supabaseAdmin
       .from('todos')
       .select('title')
       .eq('id', postId)
@@ -43,7 +60,7 @@ export async function POST(request: NextRequest) {
       '投稿';
 
     // データベースに通知を保存
-    const { error: insertError } = await supabaseAdmin.from('notifications').insert({ // supabaseAdminを使用
+    const { error: insertError } = await supabaseAdmin.from('notifications').insert({
       user_id: postOwnerId,
       type: 'like',
       title: 'いいねされました',
@@ -52,6 +69,7 @@ export async function POST(request: NextRequest) {
         postId: postId,
         likerId: likerId,
         postPreview: postPreview,
+        likerName: likerName, // 追加：通知データにも名前を保存
       },
     });
 
@@ -60,8 +78,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save notification' }, { status: 500 });
     }
 
+    console.log('Notification saved successfully');
+
     // プッシュ通知の送信
-    const { data: subscriptions } = await supabaseAdmin // supabaseAdminを使用
+    const { data: subscriptions } = await supabaseAdmin
       .from('push_subscriptions')
       .select('*')
       .eq('user_id', postOwnerId);
@@ -83,6 +103,7 @@ export async function POST(request: NextRequest) {
       await Promise.all(promises);
     }
 
+    console.log('=== Like Notification API Completed Successfully ===');
     return NextResponse.json({ message: 'Like notification sent successfully' });
 
   } catch (error) {
