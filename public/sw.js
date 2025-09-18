@@ -51,6 +51,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   console.log('🔔 Push event received:', event);
 
+  // 通知権限の確認
+  if (!self.registration.showNotification) {
+    console.error('❌ showNotification not available');
+    return;
+  }
+
   // デフォルト通知データ
   let notificationData = {
     title: 'Ikutio AllStars',
@@ -90,28 +96,57 @@ self.addEventListener('push', (event) => {
   console.log('📱 Showing notification with data:', notificationData);
 
   event.waitUntil(
-    // 通知表示前に許可状態を確認
-    self.registration.showNotification(notificationData.title, {
-      body: notificationData.body,
-      icon: notificationData.icon,
-      badge: notificationData.badge,
-      requireInteraction: notificationData.requireInteraction,
-      silent: notificationData.silent,
-      data: notificationData.data,
-      actions: [
-        {
-          action: 'open',
-          title: '開く'
-        },
-        {
-          action: 'close',
-          title: '閉じる'
+    // 権限チェック付き通知表示
+    Promise.resolve().then(async () => {
+      try {
+        // Service Worker内で権限状態を確認
+        const permission = await self.registration.pushManager.permissionState({
+          userVisibleOnly: true
+        });
+        
+        console.log('🔐 Permission state:', permission);
+        
+        if (permission !== 'granted') {
+          console.error('❌ Push permission not granted:', permission);
+          return;
         }
-      ]
-    }).then(() => {
-      console.log('✅ Notification shown successfully');
-    }).catch((error) => {
-      console.error('❌ Failed to show notification:', error);
+
+        // 通知表示
+        await self.registration.showNotification(notificationData.title, {
+          body: notificationData.body,
+          icon: notificationData.icon,
+          badge: notificationData.badge,
+          requireInteraction: notificationData.requireInteraction,
+          silent: notificationData.silent,
+          data: notificationData.data,
+          actions: [
+            {
+              action: 'open',
+              title: '開く'
+            },
+            {
+              action: 'close', 
+              title: '閉じる'
+            }
+          ]
+        });
+        
+        console.log('✅ Notification shown successfully');
+        
+      } catch (error) {
+        console.error('❌ Failed to show notification:', error);
+        
+        // フォールバック: シンプルな通知
+        try {
+          await self.registration.showNotification(notificationData.title, {
+            body: notificationData.body,
+            icon: notificationData.icon
+          });
+          console.log('✅ Fallback notification shown');
+        } catch (fallbackError) {
+          console.error('❌ Fallback notification also failed:', fallbackError);
+        }
+      }
     })
   );
 });
