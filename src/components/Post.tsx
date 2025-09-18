@@ -270,19 +270,23 @@ export default function Post({
       <div className="flex space-x-3">
         {/* アバター（usels遅延排除: 非正規化カラムを直接利用） */}
         {post.user_icon_url ? (
-          <img
-            src={post.user_icon_url}
-            alt="icon"
-            className="w-10 h-10 rounded-full object-cover"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+          <a href={`/profile/${post.user_id}`}>
+            <img
+              src={post.user_icon_url}
+              alt="icon"
+              className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </a>
         ) : (
-          <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-            {post.displayName?.charAt(0) ?? post.username?.charAt(0) ?? "?"}
-          </div>
+          <a href={`/profile/${post.user_id}`}>
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer hover:opacity-80">
+              {post.displayName?.charAt(0) ?? post.username?.charAt(0) ?? "?"}
+            </div>
+          </a>
         )}
 
         <div className="flex-1 min-w-0">

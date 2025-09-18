@@ -89,6 +89,7 @@ export default function Home() {
         displayName?: string;
         setID?: string;
         username?: string;
+        isBunkatsu?: boolean; // 追加
       }
     >
   >({});
@@ -98,7 +99,7 @@ export default function Home() {
     const fetchAllUsers = async () => {
       const { data, error } = await supabase
         .from("usels")
-        .select("user_id, icon_url, username, setID");
+        .select("user_id, icon_url, username, setID, isBunkatsu"); // 追加
       if (error) {
         console.error("usels取得エラー", error);
         return;
@@ -110,6 +111,7 @@ export default function Home() {
           displayName?: string;
           setID?: string;
           username?: string;
+          isBunkatsu?: boolean;
         }
       > = {};
       (data ?? []).forEach((user: any) => {
@@ -118,6 +120,7 @@ export default function Home() {
           displayName: user.username || "User",
           setID: user.setID || "",
           username: user.username || "",
+          isBunkatsu: user.isBunkatsu ?? false, // 追加
         };
       });
       setUserMap(map);
@@ -173,7 +176,6 @@ export default function Home() {
               !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
           )
       )
-      
     );
     // uselsから該当ユーザー情報をまとめて取得
     let usersData: any[] = [];
@@ -181,7 +183,7 @@ export default function Home() {
     if (userIds.length > 0) {
       const { data, error } = await supabase
         .from("usels")
-        .select("user_id, icon_url, username, setID")
+        .select("user_id, icon_url, username, setID, isBunkatsu") // ← isBunkatsuを追加
         .in("user_id", userIds);
       usersData = data ?? [];
       usersError = error;
@@ -197,6 +199,7 @@ export default function Home() {
         displayName?: string;
         setID?: string;
         username?: string;
+        isBunkatsu?: boolean; // ← 追加
       }
     > = {};
     (usersData ?? []).forEach((user: any) => {
@@ -205,6 +208,7 @@ export default function Home() {
         displayName: user.username || "User",
         setID: user.setID || "",
         username: user.username || "",
+        isBunkatsu: user.isBunkatsu ?? false, // ← 追加
       };
     });
     setUserMap(userMap);
@@ -263,31 +267,35 @@ export default function Home() {
 
   // いいね追加/削除
   const handleLike = async (postId: string) => {
-    if (!user) {
-      alert("いいねするにはログインが必要です");
-      return;
-    }
+    if (!user) return;
+    
     const userId = user.id;
     const postIdNum = Number(postId);
 
     // 既にいいね済みかチェック
-    const { data: likeData } = await supabase
+    const { data: likeData, error: likeError } = await supabase
       .from("likes")
       .select("id, on")
       .eq("post_id", postIdNum)
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
+
+    if (likeError) {
+      console.error('Error checking like status:', likeError);
+      return;
+    }
 
     // 現在のlikes取得
     const { data: todoData } = await supabase
       .from("todos")
-      .select("likes")
+      .select("likes, user_id")
       .eq("id", postIdNum)
       .single();
     const currentLikes = todoData?.likes ?? 0;
+    const postOwnerId = todoData?.user_id;
 
     if (likeData?.on) {
-      // いいね解除（on: falseに更新、likesを-1）
+      // いいね解除
       await supabase
         .from("likes")
         .update({ on: false })
@@ -298,9 +306,11 @@ export default function Home() {
         .update({ likes: Math.max(currentLikes - 1, 0) })
         .eq("id", postIdNum);
     } else {
-      // いいね（新規 or 再いいね）
+      // いいね処理
+      const isNewLike = !likeData; // 新規いいねかどうかを判定
+      
       if (likeData) {
-        // 既存レコードがon: falseならon: trueに変更
+        // 再いいね（通知は送信しない）
         await supabase
           .from("likes")
           .update({ on: true })
@@ -311,7 +321,7 @@ export default function Home() {
           .update({ likes: currentLikes + 1 })
           .eq("id", postIdNum);
       } else {
-        // 既存レコードがない場合のみinsert
+        // 新規いいね（通知を送信）
         await supabase.from("likes").insert({
           post_id: postIdNum,
           user_id: userId,
@@ -323,8 +333,29 @@ export default function Home() {
           .update({ likes: currentLikes + 1 })
           .eq("id", postIdNum);
       }
+
+      // いいね通知を送信（新規いいねの場合のみ）
+      if (isNewLike && postOwnerId && postOwnerId !== userId) {
+        try {
+          await fetch('/api/send-like-notification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              postId: postIdNum,
+              likerId: userId,
+              postOwnerId: postOwnerId,
+            }),
+          });
+        } catch (error) {
+          console.error('Error sending like notification:', error);
+        }
+      }
     }
-    fetchTodos(); // 状態更新
+
+    // 投稿データを再取得
+    await fetchTodos();
   };
 
   // ブックマーク追加/解除
@@ -482,17 +513,28 @@ export default function Home() {
               {posts.map((todo) => {
                 const remaining = getRemainingTime(todo.created_at);
                 const result = todo.title;
-                const hours = Math.floor((new Date().getTime() - new Date(todo.created_at).getTime()) / 3600000);
-                let temp = result.slice(0, result.length - hours * 2);
-                if(result.length >= 24)
-                {
-                  temp = result.slice(0, result.length - hours * 3);
+                const hours = Math.floor(
+                  (new Date().getTime() - new Date(todo.created_at).getTime()) /
+                    3600000
+                );
+                // isBunkatsu取得
+                const isBunkatsu = userMap[todo.user_id]?.isBunkatsu;
+                console.log(
+                  "isBunkatsu:",
+                  isBunkatsu,
+                  "user_id:",
+                  todo.user_id
+                ); // 追加
+                let temp = result;
+                if (isBunkatsu) {
+                  temp = result.slice(0, result.length - hours * 2);
+                  if (result.length >= 24) {
+                    temp = result.slice(0, result.length - hours * 3);
+                  }
                 }
-                
 
                 return (
                   <div key={todo.id} className="relative">
-                    
                     {/* 砂時計＋残り時間 */}
                     {remaining && (
                       <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
@@ -501,9 +543,8 @@ export default function Home() {
                           {remaining}
                         </span>
                       </div>
-                    )
-                    }
-                  
+                    )}
+
                     <Post
                       post={{
                         id: todo.id,
