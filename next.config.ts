@@ -8,23 +8,19 @@ const nextConfig: NextConfig = {
       // 他に許可したいドメインがあればここに追加
     ],
   },
+  // Service Workerの適切な配信設定
   async headers() {
     return [
       {
-        source: "/sw.js",
+        source: '/sw.js',
         headers: [
           {
-            key: "Cache-Control",
-            value: "public, max-age=0, must-revalidate",
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
           },
-        ],
-      },
-      {
-        source: "/manifest.json",
-        headers: [
           {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
+            key: 'Service-Worker-Allowed',
+            value: '/',
           },
         ],
       },

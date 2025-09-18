@@ -554,12 +554,6 @@ export default function Home() {
                 );
                 // isBunkatsu取得
                 const isBunkatsu = userMap[todo.user_id]?.isBunkatsu;
-                console.log(
-                  "isBunkatsu:",
-                  isBunkatsu,
-                  "user_id:",
-                  todo.user_id
-                ); // 追加
                 let temp = result;
                 if (isBunkatsu) {
                   temp = result.slice(0, result.length - hours * 2);

@@ -49,47 +49,70 @@ self.addEventListener('activate', (event) => {
 
 // プッシュ通知の受信処理
 self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
+  console.log('🔔 Push event received:', event);
 
-  const options = {
-    body: event.data ? event.data.text() : '新しい通知があります',
+  // デフォルト通知データ
+  let notificationData = {
+    title: 'Ikutio AllStars',
+    body: '新しい通知があります',
     icon: '/android-launchericon-192-192.png',
     badge: '/android-launchericon-48-48.png',
-    vibrate: [200, 100, 200],
+    requireInteraction: false,
+    silent: false,
     data: {
       dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
-    actions: [
-      {
-        action: 'explore',
-        title: '確認する',
-        icon: '/android-launchericon-48-48.png'
-      },
-      {
-        action: 'close',
-        title: '閉じる',
-        icon: '/android-launchericon-48-48.png'
-      }
-    ]
+      primaryKey: 1,
+      url: '/'
+    }
   };
 
-  // プッシュデータがJSONの場合の処理
-  let pushData = {};
+  // プッシュデータの解析
   if (event.data) {
     try {
-      pushData = event.data.json();
-      options.body = pushData.body || options.body;
-      options.title = pushData.title || 'Ikutio AllStars';
-      options.icon = pushData.icon || options.icon;
-      options.data = { ...options.data, ...pushData.data };
+      const pushData = event.data.json();
+      console.log('📨 Push data received:', pushData);
+      
+      notificationData = {
+        title: pushData.title || notificationData.title,
+        body: pushData.body || notificationData.body,
+        icon: pushData.icon || notificationData.icon,
+        badge: pushData.badge || notificationData.badge,
+        requireInteraction: false,
+        silent: false,
+        data: { ...notificationData.data, ...pushData.data }
+      };
     } catch (e) {
-      console.log('Push data is not JSON:', e);
+      console.warn('⚠️ Push data not JSON, using text:', e);
+      notificationData.body = event.data.text() || notificationData.body;
     }
   }
 
+  console.log('📱 Showing notification with data:', notificationData);
+
   event.waitUntil(
-    self.registration.showNotification(options.title || 'Ikutio AllStars', options)
+    // 通知表示前に許可状態を確認
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      requireInteraction: notificationData.requireInteraction,
+      silent: notificationData.silent,
+      data: notificationData.data,
+      actions: [
+        {
+          action: 'open',
+          title: '開く'
+        },
+        {
+          action: 'close',
+          title: '閉じる'
+        }
+      ]
+    }).then(() => {
+      console.log('✅ Notification shown successfully');
+    }).catch((error) => {
+      console.error('❌ Failed to show notification:', error);
+    })
   );
 });
 
