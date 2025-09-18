@@ -40,7 +40,8 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
           .eq("user_id", uid)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          // 0件の場合に 406 (Not Acceptable) を出さないよう single -> maybeSingle
+          .maybeSingle();
         if (!lastPost) {
           setCanPost(true);
           setPostError("");
