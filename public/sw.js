@@ -72,81 +72,64 @@ self.addEventListener('push', (event) => {
     }
   };
 
-  // プッシュデータの解析
+  // プッシュデータの解析（修正版）
   if (event.data) {
     try {
-      const pushData = event.data.json();
-      console.log('📨 Push data received:', pushData);
+      // まずテキストとして取得
+      const textData = event.data.text();
+      console.log('📨 Push data as text:', textData);
+      
+      // JSONとして解析を試行
+      const pushData = JSON.parse(textData);
+      console.log('📨 Push data parsed as JSON:', pushData);
       
       notificationData = {
         title: pushData.title || notificationData.title,
         body: pushData.body || notificationData.body,
         icon: pushData.icon || notificationData.icon,
         badge: pushData.badge || notificationData.badge,
-        requireInteraction: false,
-        silent: false,
+        requireInteraction: pushData.requireInteraction || false,
+        silent: pushData.silent || false,
         data: { ...notificationData.data, ...pushData.data }
       };
     } catch (e) {
-      console.warn('⚠️ Push data not JSON, using text:', e);
-      notificationData.body = event.data.text() || notificationData.body;
+      console.warn('⚠️ Push data not valid JSON, using as plain text:', e);
+      // JSONでない場合はテキストをbodyとして使用
+      const textData = event.data.text();
+      notificationData.body = textData || notificationData.body;
     }
   }
 
   console.log('📱 Showing notification with data:', notificationData);
 
   event.waitUntil(
-    // 権限チェック付き通知表示
-    Promise.resolve().then(async () => {
-      try {
-        // Service Worker内で権限状態を確認
-        const permission = await self.registration.pushManager.permissionState({
-          userVisibleOnly: true
-        });
-        
-        console.log('🔐 Permission state:', permission);
-        
-        if (permission !== 'granted') {
-          console.error('❌ Push permission not granted:', permission);
-          return;
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      requireInteraction: notificationData.requireInteraction,
+      silent: notificationData.silent,
+      data: notificationData.data,
+      actions: [
+        {
+          action: 'open',
+          title: '開く'
+        },
+        {
+          action: 'close', 
+          title: '閉じる'
         }
-
-        // 通知表示
-        await self.registration.showNotification(notificationData.title, {
-          body: notificationData.body,
-          icon: notificationData.icon,
-          badge: notificationData.badge,
-          requireInteraction: notificationData.requireInteraction,
-          silent: notificationData.silent,
-          data: notificationData.data,
-          actions: [
-            {
-              action: 'open',
-              title: '開く'
-            },
-            {
-              action: 'close', 
-              title: '閉じる'
-            }
-          ]
-        });
-        
-        console.log('✅ Notification shown successfully');
-        
-      } catch (error) {
-        console.error('❌ Failed to show notification:', error);
-        
-        // フォールバック: シンプルな通知
-        try {
-          await self.registration.showNotification(notificationData.title, {
-            body: notificationData.body,
-            icon: notificationData.icon
-          });
-          console.log('✅ Fallback notification shown');
-        } catch (fallbackError) {
-          console.error('❌ Fallback notification also failed:', fallbackError);
-        }
-      }
+      ]
+    }).then(() => {
+      console.log('✅ Notification shown successfully');
+    }).catch((error) => {
+      console.error('❌ Failed to show notification:', error);
+      
+      // フォールバック: 最小限の通知
+      return self.registration.showNotification(notificationData.title, {
+        body: notificationData.body,
+        icon: notificationData.icon
+      });
     })
   );
 });
