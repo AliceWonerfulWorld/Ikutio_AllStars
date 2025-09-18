@@ -80,6 +80,7 @@ export default function Home() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   // usels全ユーザー情報を格納
   const [userMap, setUserMap] = useState<
     Record<
@@ -129,6 +130,7 @@ export default function Home() {
   }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isValidUserId = (id: any) => typeof id === 'string' && id.length > 0 && id !== 'null' && id !== 'undefined';
   // Supabaseリアルタイム購読
   useEffect(() => {
     const channel = supabase
@@ -150,9 +152,26 @@ export default function Home() {
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData?.user?.id ?? null);
+      const raw = userData?.user?.id ?? null;
+      if (isValidUserId(raw)) setUserId(raw as string); else setUserId(null);
     };
     fetchUserId();
+  }, []);
+
+  // 認証リダイレクト後の ?error=server_error などをユーザーに可視化
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    const desc = params.get('error_description');
+    if (err) {
+      let msg = `OAuth エラー (${err})`;
+      if (desc) msg += `: ${decodeURIComponent(desc)}`;
+      if (err === 'server_error') {
+        msg += '\nTwitter プロバイダ設定 (Client ID/Secret または API Key/Secret) の不一致や X Portal の User authentication settings 未保存が原因の可能性があります。Supabase ダッシュボードで Twitter Provider のフィールド種別とキーを再確認し、X 側で Callback URL / Scope を保存して再試行してください。';
+      }
+      setAuthError(msg);
+    }
   }, []);
 
   // 投稿取得 & ユーザー情報取得
@@ -217,30 +236,37 @@ export default function Home() {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id ?? null;
 
-    // 投稿一覧取得
+    // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
     const todosWithStatus = await Promise.all(
       (todosData ?? []).map(async (todo: any) => {
-        // いいね状態
-        const { data: likeData } = await supabase
-          .from("likes")
-          .select("on")
-          .eq("post_id", Number(todo.id))
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        // ブックマーク状態
-        const { data: bookmarkData } = await supabase
-          .from("bookmarks")
-          .select("on")
-          .eq("post_id", Number(todo.id))
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        return {
-          ...todo,
-          liked: likeData?.on === true,
-          bookmarked: bookmarkData?.on === true,
-        };
+        if (!isValidUserId(userId)) {
+          return { ...todo, liked: false, bookmarked: false };
+        }
+        try {
+          const postIdNum = Number(todo.id);
+          const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
+            supabase
+              .from("likes")
+              .select("on")
+              .eq("post_id", postIdNum)
+              .eq("user_id", userId as string)
+              .maybeSingle(),
+            supabase
+              .from("bookmarks")
+              .select("on")
+              .eq("post_id", postIdNum)
+              .eq("user_id", userId as string)
+              .maybeSingle(),
+          ]);
+          return {
+            ...todo,
+            liked: likeData?.on === true,
+            bookmarked: bookmarkData?.on === true,
+          };
+        } catch (e) {
+          console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
+          return { ...todo, liked: false, bookmarked: false };
+        }
       })
     );
     setPosts(todosWithStatus);
@@ -503,8 +529,17 @@ export default function Home() {
           {/* メインコンテンツ */}
           <div className="flex-1 max-w-2xl mx-auto border-r border-gray-800 relative z-10 overflow-y-auto">
             {/* ヘッダー */}
-            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 relative z-40">
+            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
               <h1 className="text-xl font-bold">ホーム</h1>
+              {authError && (
+                <div className="mt-2 bg-red-900/40 border border-red-700 text-red-200 text-sm p-3 rounded">
+                  <p className="font-semibold mb-1">サインインエラー</p>
+                  <pre className="whitespace-pre-wrap break-all text-xs leading-relaxed">{authError}</pre>
+                  <p className="mt-2">
+                    手順: 1) Supabase {'>'} Auth {'>'} Providers {'>'} Twitter のフィールド種別とキー再保存 2) X Developer Portal の User authentication settings を再保存 (Callback / Scope) 3) 再ログイン。
+                  </p>
+                </div>
+              )}
             </div>
             {/* 投稿フォーム */}
             <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />

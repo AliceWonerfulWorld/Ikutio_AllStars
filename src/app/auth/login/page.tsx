@@ -8,88 +8,48 @@ import { SignInData } from '@/types'
 import { supabase } from '@/utils/supabase/client'
 
 export default function LoginPage() {
-  const [formData, setFormData] = useState<SignInData>({
-    email: '',
-    password: '',
-  })
+  const [formData, setFormData] = useState<SignInData>({ email: '', password: '' })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  
   const { signIn } = useAuth()
   const router = useRouter()
+
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-
     const { error } = await signIn(formData)
-    
-    if (error) {
-      setError(error.message)
-    } else {
-      router.push('/')
-    }
-    
+    if (error) setError(error.message)
+    else router.push('/')
     setLoading(false)
   }
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuth = async (provider: 'google' | 'twitter') => {
     try {
       setLoading(true)
       setError(null)
-      const redirectTo = typeof window !== 'undefined' 
-        ? `${window.location.origin}/` 
-        : undefined
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
           redirectTo,
-          queryParams: {
-            // consent prompt を強制したい場合は以下を有効化
-            // prompt: 'consent'
-          }
+          // 追加の queryParams が必要ならここで provider 判定して付与
         }
       })
       if (error) {
         setError(error.message)
         setLoading(false)
       }
-      // OAuth フローでは Supabase により外部リダイレクトが発生するため、ここでの処理は基本不要
+      // 成功時は外部遷移 → 戻ってきた後 AuthContext が SIGNED_IN を捕捉
     } catch (e: any) {
-      setError(e?.message ?? 'Google ログインでエラーが発生しました')
-      setLoading(false)
-    }
-  }
-
-  const handleXSignIn = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const redirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/`
-        : undefined
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
-        options: {
-          redirectTo,
-        }
-      })
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      }
-    } catch (e: any) {
-      setError(e?.message ?? 'X ログインでエラーが発生しました')
+      setError(e?.message ?? `${provider} ログインでエラーが発生しました`)
       setLoading(false)
     }
   }
 
   const handleInputChange = (field: keyof SignInData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   return (
@@ -101,27 +61,24 @@ export default function LoginPage() {
             <p className="text-gray-400">アカウントにログイン</p>
           </div>
 
-          {/* OAuth サインイン */}
           <div className="space-y-3 mb-6">
             <button
               type="button"
-              onClick={handleXSignIn}
+              onClick={() => handleOAuth('twitter')}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white/10 text-white py-3 rounded-full font-semibold hover:bg-white/15 disabled:opacity-60 transition-colors border border-white/20"
               aria-label="X でログイン"
             >
-              {/* X logo (text glyph). Replace with svg if available */}
               <span className="text-xl">𝕏</span>
               <span>X でログイン</span>
             </button>
             <button
               type="button"
-              onClick={handleGoogleSignIn}
+              onClick={() => handleOAuth('google')}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 rounded-full font-semibold hover:bg-gray-100 disabled:opacity-60 transition-colors"
               aria-label="Google でログイン"
             >
-              {/* Simple Google 'G' mark using emoji fallback; replace with icon if available */}
               <span className="text-xl">G</span>
               <span>Google でログイン</span>
             </button>
@@ -135,15 +92,10 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-900/20 border border-red-800 text-red-400 px-4 py-3 rounded-lg">
-                {error}
-              </div>
+              <div className="bg-red-900/20 border border-red-800 text-red-400 px-4 py-3 rounded-lg">{error}</div>
             )}
-
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                メールアドレス
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">メールアドレス</label>
               <input
                 type="email"
                 value={formData.email}
@@ -153,11 +105,8 @@ export default function LoginPage() {
                 required
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                パスワード
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">パスワード</label>
               <input
                 type="password"
                 value={formData.password}
@@ -167,7 +116,6 @@ export default function LoginPage() {
                 required
               />
             </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -176,13 +124,10 @@ export default function LoginPage() {
               {loading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
-
           <div className="mt-6 text-center">
             <p className="text-gray-400">
               アカウントをお持ちでない方は{' '}
-              <Link href="/auth/signup" className="text-blue-400 hover:underline">
-                新規登録
-              </Link>
+              <Link href="/auth/signup" className="text-blue-400 hover:underline">新規登録</Link>
             </p>
           </div>
         </div>

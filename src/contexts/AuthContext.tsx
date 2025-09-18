@@ -130,9 +130,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 初期認証状態を取得
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthDebug] initial session', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+      }
       setUser(session?.user as AuthUser || null)
       if (session?.user) {
-        // 初回ロード時にもプロビジョニング
         ensureProfileWithRandomUsername(session.user as AuthUser)
       }
       setLoading(false)
@@ -143,10 +145,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[AuthDebug] onAuthStateChange', event, 'user:', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+        }
         setUser(session?.user as AuthUser || null)
         if (event === 'SIGNED_IN' && session?.user) {
-          // サインイン直後にもプロビジョニング
           ensureProfileWithRandomUsername(session.user as AuthUser)
+        }
+        if (event === 'SIGNED_OUT') {
+          // 念のためユーザーを明示的に null
+          setUser(null)
         }
         setLoading(false)
       }
