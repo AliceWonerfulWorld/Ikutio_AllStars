@@ -11,7 +11,74 @@ interface NewsArticle {
   imageUrl: string | null;
 }
 
-// 日本のニュースサイトのRSSフィード（確実にアクセス可能なもの）
+// ログレベル定義
+enum LogLevel {
+  ERROR = 0,
+  WARN = 1,
+  INFO = 2,
+  DEBUG = 3
+}
+
+// ログ管理クラス
+class Logger {
+  private static instance: Logger;
+  private logLevel: LogLevel;
+
+  private constructor() {
+    const envLogLevel = process.env.LOG_LEVEL?.toUpperCase();
+    this.logLevel = envLogLevel ? LogLevel[envLogLevel as keyof typeof LogLevel] ?? LogLevel.INFO : LogLevel.INFO;
+    
+    if (process.env.NODE_ENV === 'production' && this.logLevel > LogLevel.WARN) {
+      this.logLevel = LogLevel.WARN;
+    }
+  }
+
+  static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
+    }
+    return Logger.instance;
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    return level <= this.logLevel;
+  }
+
+  private formatMessage(level: string, message: string, context?: any): string {
+    const timestamp = new Date().toISOString();
+    const contextStr = context ? ` [${JSON.stringify(context)}` : '';
+    return `[${timestamp}] [${level}] ${message}${contextStr}`;
+  }
+
+  error(message: string, context?: any): void {
+    if (this.shouldLog(LogLevel.ERROR)) {
+      console.error(this.formatMessage('ERROR', message, context));
+    }
+  }
+
+  warn(message: string, context?: any): void {
+    if (this.shouldLog(LogLevel.WARN)) {
+      console.warn(this.formatMessage('WARN', message, context));
+    }
+  }
+
+  info(message: string, context?: any): void {
+    if (this.shouldLog(LogLevel.INFO)) {
+      console.log(this.formatMessage('INFO', message, context));
+    }
+  }
+
+  debug(message: string, context?: any): void {
+    if (this.shouldLog(LogLevel.DEBUG)) {
+      console.log(this.formatMessage('DEBUG', message, context));
+    }
+  }
+}
+
+// ロガーインスタンス
+const logger = Logger.getInstance();
+
+// 日本のニュースサイトのRSSフィード
 const RSS_FEEDS = [
   {
     url: 'https://www3.nhk.or.jp/rss/news/cat0.xml',
@@ -35,14 +102,124 @@ const RSS_FEEDS = [
   }
 ];
 
-// RSSフィードをパースする関数
+// XMLパース結果の型定義
+interface ParsedRSSItem {
+  title?: string[];
+  description?: string[];
+  link?: string[];
+  pubDate?: string[];
+  'media:content'?: Array<{ $: { url: string } }>;
+}
+
+interface ParsedRSSChannel {
+  item?: ParsedRSSItem[];
+}
+
+interface ParsedRSSResult {
+  rss?: {
+    channel?: ParsedRSSChannel[];
+  };
+}
+
+// RSSアイテムをNewsArticleに変換するヘルパー関数
+function convertRSSItemToArticle(item: ParsedRSSItem, sourceName: string): NewsArticle | null {
+  try {
+    // 必須フィールドの検証
+    if (!item.title?.[0] || !item.link?.[0]) {
+      return null;
+    }
+
+    return {
+      title: item.title[0],
+      description: item.description?.[0] || '',
+      url: item.link[0],
+      publishedAt: item.pubDate?.[0] || new Date().toISOString(),
+      source: sourceName,
+      imageUrl: item['media:content']?.[0]?.$.url || null
+    };
+  } catch (error) {
+    logger.debug(`アイテム変換エラー`, { 
+      source: sourceName, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return null;
+  }
+}
+
+// パースされたXMLデータから記事を抽出するヘルパー関数
+function extractArticlesFromParsedXML(parsedData: ParsedRSSResult, sourceName: string): NewsArticle[] {
+  const articles: NewsArticle[] = [];
+  
+  try {
+    // RSS 2.0形式のチェック
+    const items = parsedData.rss?.channel?.[0]?.item;
+    if (!items || !Array.isArray(items)) {
+      logger.debug(`RSSアイテムが見つかりません`, { source: sourceName });
+      return articles;
+    }
+
+    // 各アイテムを変換（最大2件まで）
+    const limitedItems = items.slice(0, 2);
+    for (const item of limitedItems) {
+      const article = convertRSSItemToArticle(item, sourceName);
+      if (article) {
+        articles.push(article);
+      }
+    }
+
+    logger.debug(`記事抽出完了`, { 
+      source: sourceName, 
+      extractedCount: articles.length,
+      totalItems: items.length 
+    });
+
+  } catch (error) {
+    logger.error(`記事抽出エラー`, { 
+      source: sourceName, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+
+  return articles;
+}
+
+// XMLパースを実行するヘルパー関数
+function parseXMLContent(xmlText: string, sourceName: string): Promise<NewsArticle[]> {
+  return new Promise((resolve) => {
+    parseString(xmlText, (err, result) => {
+      if (err) {
+        logger.error(`XML解析エラー`, { 
+          source: sourceName, 
+          error: err.message 
+        });
+        resolve([]);
+        return;
+      }
+
+      try {
+        const articles = extractArticlesFromParsedXML(result, sourceName);
+        resolve(articles);
+      } catch (parseErr) {
+        logger.error(`パース処理エラー`, { 
+          source: sourceName, 
+          error: parseErr instanceof Error ? parseErr.message : 'Unknown error' 
+        });
+        resolve([]);
+      }
+    });
+  });
+}
+
+// RSSフィードを取得してパースする関数
 async function parseRSSFeed(feedUrl: string, sourceName: string): Promise<NewsArticle[]> {
   try {
-    console.log(`RSSフィードを取得中: ${sourceName} (${feedUrl})`);
+    logger.debug(`RSSフィードを取得開始`, { source: sourceName, url: feedUrl });
     
+    // タイムアウト設定
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒でタイムアウト
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
+    // RSSフィードを取得
     const response = await fetch(feedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -56,85 +233,125 @@ async function parseRSSFeed(feedUrl: string, sourceName: string): Promise<NewsAr
     
     clearTimeout(timeoutId);
     
+    // レスポンス検証
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const xmlText = await response.text();
     
+    // 空のレスポンスチェック
     if (!xmlText || xmlText.trim().length === 0) {
-      console.warn(`${sourceName}: 空のレスポンスを受信`);
+      logger.warn(`空のレスポンスを受信`, { source: sourceName });
       return [];
     }
     
-    return new Promise<NewsArticle[]>((resolve, reject) => {
-      parseString(xmlText, (err, result) => {
-        if (err) {
-          console.error(`XML parse error for ${sourceName}:`, err.message);
-          resolve([]);
-          return;
-        }
-        
-        try {
-          const items: NewsArticle[] = [];
-          
-          // RSS 2.0形式の場合
-          if (result.rss && result.rss.channel && result.rss.channel[0].item) {
-            const rssItems = result.rss.channel[0].item.slice(0, 2); // 各カテゴリから2件まで
-            
-            for (const item of rssItems) {
-              try {
-                if (item.title && item.title[0] && item.link && item.link[0]) {
-                  items.push({
-                    title: item.title[0],
-                    description: item.description ? item.description[0] : '',
-                    url: item.link[0],
-                    publishedAt: item.pubDate ? item.pubDate[0] : new Date().toISOString(),
-                    source: sourceName,
-                    imageUrl: item['media:content'] ? item['media:content'][0].$.url : null
-                  });
-                }
-              } catch (itemErr) {
-                console.warn(`${sourceName}: アイテム処理エラー:`, itemErr);
-                continue;
-              }
-            }
-          }
-          
-          console.log(`${sourceName}から${items.length}件の記事を取得しました`);
-          resolve(items);
-          
-        } catch (parseErr) {
-          console.error(`${sourceName}: パース処理エラー:`, parseErr);
-          resolve([]);
-        }
-      });
+    // XMLパース実行
+    const articles = await parseXMLContent(xmlText, sourceName);
+    
+    logger.debug(`RSSフィード処理完了`, { 
+      source: sourceName, 
+      articleCount: articles.length 
     });
     
+    return articles;
+    
   } catch (error) {
+    // エラーハンドリング
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        console.warn(`${sourceName}: タイムアウト (${feedUrl})`);
+        logger.warn(`タイムアウト`, { source: sourceName, url: feedUrl });
       } else if (error.message.includes('ENOTFOUND')) {
-        console.warn(`${sourceName}: DNS解決失敗 (${feedUrl})`);
+        logger.warn(`DNS解決失敗`, { source: sourceName, url: feedUrl });
       } else if (error.message.includes('TLS')) {
-        console.warn(`${sourceName}: TLS接続エラー (${feedUrl})`);
+        logger.warn(`TLS接続エラー`, { source: sourceName, url: feedUrl });
       } else {
-        console.warn(`${sourceName}: ネットワークエラー: ${error.message}`);
+        logger.warn(`ネットワークエラー`, { 
+          source: sourceName, 
+          url: feedUrl, 
+          error: error.message 
+        });
       }
     } else {
-      console.warn(`${sourceName}: 不明なエラー`);
+      logger.warn(`不明なエラー`, { source: sourceName, url: feedUrl });
     }
+    
     return [];
   }
 }
 
+// モックデータ生成関数
+function generateMockArticles(): NewsArticle[] {
+  const baseDate = new Date().toISOString();
+  
+  return [
+    {
+      title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
+      description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
+      url: "https://example.com/pokemon-news",
+      publishedAt: baseDate,
+      source: "ゲームニュース",
+      imageUrl: null
+    },
+    {
+      title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
+      description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
+      url: "https://example.com/horror-movie",
+      publishedAt: baseDate,
+      source: "映画ニュース",
+      imageUrl: null
+    },
+    {
+      title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
+      description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
+      url: "https://example.com/denjara-news",
+      publishedAt: baseDate,
+      source: "エンタメニュース",
+      imageUrl: null
+    },
+    {
+      title: "日本の経済指標、好調な回復基調を維持",
+      description: "最新の経済統計によると、日本の経済は堅調な回復基調を維持しており、個人消費の回復が特に顕著です。",
+      url: "https://example.com/economy-news",
+      publishedAt: baseDate,
+      source: "経済ニュース",
+      imageUrl: null
+    },
+    {
+      title: "新技術開発で日本の競争力向上に期待",
+      description: "国内企業による新技術の開発が進み、日本の国際競争力向上への期待が高まっています。",
+      url: "https://example.com/tech-news",
+      publishedAt: baseDate,
+      source: "技術ニュース",
+      imageUrl: null
+    }
+  ];
+}
+
+// レスポンス作成ヘルパー関数
+function createNewsResponse(articles: NewsArticle[], lastUpdated: string): NextResponse {
+  const response = NextResponse.json({ 
+    articles: articles.slice(0, 10),
+    lastUpdated 
+  });
+  
+  response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  response.headers.set('X-News-Count', articles.length.toString());
+  
+  return response;
+}
+
+// メインのGET関数
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  
   try {
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.get('refresh') === 'true';
     
-    console.log('日本のニュースを取得中...', forceRefresh ? '(強制更新)' : '');
+    logger.info(`ニュース取得開始`, { forceRefresh });
     
     // 複数のRSSフィードから並行して記事を取得
     const feedPromises = RSS_FEEDS.map(feed => 
@@ -152,7 +369,7 @@ export async function GET(request: Request) {
         allArticles.push(...result.value);
         successCount++;
       } else {
-        console.warn(`${RSS_FEEDS[index].source}: 記事取得失敗または0件`);
+        logger.debug(`フィード取得失敗`, { source: RSS_FEEDS[index].source });
       }
     });
     
@@ -163,113 +380,30 @@ export async function GET(request: Request) {
       return dateB.getTime() - dateA.getTime();
     });
     
-    console.log(`成功: ${successCount}/${RSS_FEEDS.length}フィード, 合計${allArticles.length}件の記事を取得`);
+    const processingTime = Date.now() - startTime;
+    logger.info(`ニュース取得完了`, { 
+      successFeeds: successCount, 
+      totalFeeds: RSS_FEEDS.length, 
+      articleCount: allArticles.length,
+      processingTime: `${processingTime}ms`
+    });
     
     // 記事が0件の場合はモックデータを返す
     if (allArticles.length === 0) {
-      console.log('記事が0件のため、モックデータを返します');
-      const mockResponse = NextResponse.json({
-        articles: [
-          {
-            title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
-            description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
-            url: "https://example.com/pokemon-news",
-            publishedAt: new Date().toISOString(),
-            source: "ゲームニュース",
-            imageUrl: null
-          },
-          {
-            title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
-            description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
-            url: "https://example.com/horror-movie",
-            publishedAt: new Date().toISOString(),
-            source: "映画ニュース",
-            imageUrl: null
-          },
-          {
-            title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
-            description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
-            url: "https://example.com/denjara-news",
-            publishedAt: new Date().toISOString(),
-            source: "エンタメニュース",
-            imageUrl: null
-          },
-          {
-            title: "日本の経済指標、好調な回復基調を維持",
-            description: "最新の経済統計によると、日本の経済は堅調な回復基調を維持しており、個人消費の回復が特に顕著です。",
-            url: "https://example.com/economy-news",
-            publishedAt: new Date().toISOString(),
-            source: "経済ニュース",
-            imageUrl: null
-          },
-          {
-            title: "新技術開発で日本の競争力向上に期待",
-            description: "国内企業による新技術の開発が進み、日本の国際競争力向上への期待が高まっています。",
-            url: "https://example.com/tech-news",
-            publishedAt: new Date().toISOString(),
-            source: "技術ニュース",
-            imageUrl: null
-          },
-        ],
-        lastUpdated: new Date().toISOString()
-      });
-      
-      mockResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      mockResponse.headers.set('Pragma', 'no-cache');
-      mockResponse.headers.set('Expires', '0');
-      return mockResponse;
+      logger.warn(`記事が0件のためモックデータを返します`);
+      return createNewsResponse(generateMockArticles(), new Date().toISOString());
     }
     
-    // 最大10件を返す
-    const response = NextResponse.json({ 
-      articles: allArticles.slice(0, 10),
-      lastUpdated: new Date().toISOString()
-    });
-    
-    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    response.headers.set('X-News-Count', allArticles.length.toString());
-    
-    return response;
+    return createNewsResponse(allArticles, new Date().toISOString());
 
   } catch (error) {
-    console.error('News API error:', error);
-    
-    // エラー時はモックデータを返す
-    const errorResponse = NextResponse.json({
-      articles: [
-        {
-          title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
-          description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
-          url: "#",
-          publishedAt: new Date().toISOString(),
-          source: "ゲームニュース",
-          imageUrl: null
-        },
-        {
-          title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
-          description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
-          url: "#",
-          publishedAt: new Date().toISOString(),
-          source: "映画ニュース",
-          imageUrl: null
-        },
-        {
-          title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
-          description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
-          url: "#",
-          publishedAt: new Date().toISOString(),
-          source: "エンタメニュース",
-          imageUrl: null
-        },
-      ],
-      lastUpdated: new Date().toISOString()
+    const processingTime = Date.now() - startTime;
+    logger.error(`ニュース取得エラー`, { 
+      error: error instanceof Error ? error.message : 'Unknown error', 
+      processingTime: `${processingTime}ms` 
     });
     
-    errorResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    errorResponse.headers.set('Pragma', 'no-cache');
-    errorResponse.headers.set('Expires', '0');
-    return errorResponse;
+    // エラー時はモックデータを返す
+    return createNewsResponse(generateMockArticles(), new Date().toISOString());
   }
 }
