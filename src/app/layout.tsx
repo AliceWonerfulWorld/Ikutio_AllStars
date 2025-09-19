@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ikutio AllStars",
-  description: "Ikutio AllStars - ソーシャルメディアアプリ",
+  title: "Tikuru24",
+  description: "Tikuru24 - 瞬間で繋がるSNS",
   manifest: "/manifest.json",
   themeColor: "#000000",
   viewport:
@@ -25,21 +25,26 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Ikutio AllStars",
+    title: "Tikuru24",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "Ikutio AllStars",
-    title: "Ikutio AllStars",
-    description: "Ikutio AllStars - ソーシャルメディアアプリ",
+    siteName: "Tikuru24",
+    title: "Tikuru24",
+    description: "Tikuru24 - 瞬間で繋がるSNS",
   },
   twitter: {
     card: "summary",
-    title: "Ikutio AllStars",
-    description: "Ikutio AllStars - ソーシャルメディアアプリ",
+    title: "Tikuru24",
+    description: "Tikuru24 - 瞬間で繋がるSNS",
+  },
+  icons: {
+    icon: '/tikuru24-favicon.ico',
+    shortcut: '/tikuru24-icon-192.png',
+    apple: '/tikuru24-icon-192.png',
   },
 };
 
