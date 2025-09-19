@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
       // 他に許可したいドメインがあればここに追加
     ],
   },
+  // フォント最適化の設定
+  optimizeFonts: true,
   // Service Workerの適切な配信設定
   async headers() {
     return [
@@ -21,6 +23,16 @@ const nextConfig: NextConfig = {
           {
             key: 'Service-Worker-Allowed',
             value: '/',
+          },
+        ],
+      },
+      // フォントファイルのキャッシュ設定
+      {
+        source: '/next/static/media/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },

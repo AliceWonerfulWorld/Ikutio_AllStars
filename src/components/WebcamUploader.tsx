@@ -200,7 +200,7 @@ export default function WebcamToTable() {
       {/* メインカメラセクション */}
       <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
         {/* カメラビュー */}
-        <div className="relative aspect-square bg-black">
+        <div className="relative bg-black" style={{ height: '400px' }}>
           <video
             ref={videoRef}
             playsInline
@@ -217,7 +217,7 @@ export default function WebcamToTable() {
             {!streaming ? (
               <button
                 onClick={startCamera}
-                className="flex items-center space-x-3 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-orange-500 via-pink-500 to-red-500 hover:from-orange-400 hover:via-pink-400 hover:to-red-400 text-white rounded-full font-semibold transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-pink-500/30 transform hover:scale-105"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -228,7 +228,7 @@ export default function WebcamToTable() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={capture}
-                  className="flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-full transition-all duration-200 border border-white/20"
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm hover:from-white/30 hover:to-white/20 text-white rounded-full transition-all duration-200 border border-white/20 shadow-lg hover:shadow-xl"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -237,7 +237,7 @@ export default function WebcamToTable() {
                 </button>
                 <button
                   onClick={stopCamera}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-all duration-200"
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 text-white rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-red-500/30"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -266,28 +266,43 @@ export default function WebcamToTable() {
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white mb-2">撮影完了</h3>
                 <p className="text-gray-400 mb-4">この画像でREALctionを作成しますか？</p>
-                <button
-                  onClick={upload}
-                  disabled={uploading}
-                  className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed"
-                >
-                  {uploading ? (
-                    <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>保存中...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span>REALctionを保存</span>
-                    </>
-                  )}
-                </button>
+                
+                {/* ボタン群 */}
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={upload}
+                    disabled={uploading}
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25"
+                  >
+                    {uploading ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>保存中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>REALctionを保存</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => setPreviewUrl(null)}
+                    disabled={uploading}
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 disabled:from-gray-800 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>保存しない</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
