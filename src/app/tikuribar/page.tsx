@@ -15,7 +15,9 @@ import {
   Coffee,
   MessageCircle,
   Sparkles,
-  Radio
+  Radio,
+  X,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -81,6 +83,9 @@ export default function TikuriBarPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newBarTitle, setNewBarTitle] = useState("");
   const [chatMessage, setChatMessage] = useState("");
+  
+  // 退店確認ダイアログの状態
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // WebSocket接続時に音声フックを設定
   useEffect(() => {
@@ -125,8 +130,17 @@ export default function TikuriBarPage() {
   };
 
   const handleLeaveBar = () => {
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeaveBar = () => {
     stopRecording();
     leaveBar();
+    setShowLeaveConfirm(false);
+  };
+
+  const cancelLeaveBar = () => {
+    setShowLeaveConfirm(false);
   };
 
   const handleSendMessage = () => {
@@ -150,6 +164,64 @@ export default function TikuriBarPage() {
       return `${hours}時間${minutes % 60}分`;
     }
     return `${minutes}分`;
+  };
+
+  // 退店確認ダイアログコンポーネント
+  const LeaveConfirmDialog = () => {
+    if (!showLeaveConfirm) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-gradient-to-br from-gray-900 via-black to-amber-900/20 backdrop-blur-xl rounded-3xl p-8 border border-red-500/30 shadow-2xl shadow-red-500/20 max-w-md w-full relative">
+          {/* 閉じるボタン */}
+          <button
+            onClick={cancelLeaveBar}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+
+          {/* アイコン */}
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-full border border-red-500/30">
+              <AlertTriangle size={32} className="text-red-400" />
+            </div>
+          </div>
+
+          {/* タイトル */}
+          <h3 className="text-2xl font-bold text-white text-center mb-4">
+            退店の確認
+          </h3>
+
+          {/* メッセージ */}
+          <div className="text-center mb-8">
+            <p className="text-gray-300 text-lg mb-2">
+              本当にTikuriBARから退店しますか？
+            </p>
+            <p className="text-gray-400 text-sm">
+              現在の会話が終了し、録音も停止されます。
+            </p>
+          </div>
+
+          {/* ボタン */}
+          <div className="flex space-x-4">
+            <button
+              onClick={cancelLeaveBar}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              <span className="font-semibold">キャンセル</span>
+            </button>
+            <button
+              onClick={confirmLeaveBar}
+              className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/30 flex items-center justify-center space-x-2"
+            >
+              <PhoneOff size={20} />
+              <span className="font-semibold">退店する</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (!user) {
@@ -218,52 +290,54 @@ export default function TikuriBarPage() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-80px)] relative z-10">
-          <div className="flex-1 p-6">
-            {/* 音声状態表示 */}
-            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-6 border border-amber-500/30 mb-6 shadow-2xl shadow-amber-500/10">
-              <div className="flex items-center mb-4">
-                <div className="p-3 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-xl mr-4 shadow-lg">
-                  <Radio size={24} className="text-white" />
+        {/* メインコンテンツエリア - コントロールパネル用のスペースを確保 */}
+        <div className="flex flex-col h-[calc(100vh-80px)] relative z-10">
+          {/* スクロール可能なコンテンツエリア */}
+          <div className="flex-1 overflow-y-auto p-6 pb-24">
+            {/* 音声状態表示 - コンパクト版 */}
+            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-2xl p-4 border border-amber-500/30 mb-4 shadow-2xl shadow-amber-500/10">
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg mr-3 shadow-lg">
+                  <Radio size={20} className="text-white" />
                 </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
                   音声状態
                 </h2>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="text-center">
-                  <div className={`text-2xl mb-1 ${isRecording ? 'text-green-400' : 'text-gray-400'}`}>
+                  <div className={`text-lg mb-1 ${isRecording ? 'text-green-400' : 'text-gray-400'}`}>
                     {isRecording ? '🎤' : '🔇'}
                   </div>
-                  <div className="text-sm text-white">
+                  <div className="text-xs text-white">
                     {isRecording ? '録音中' : '停止中'}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-2xl mb-1 ${isMuted ? 'text-red-400' : 'text-green-400'}`}>
+                  <div className={`text-lg mb-1 ${isMuted ? 'text-red-400' : 'text-green-400'}`}>
                     {isMuted ? '🔇' : '🎤'}
                   </div>
-                  <div className="text-sm text-white">
+                  <div className="text-xs text-white">
                     {isMuted ? 'ミュート' : 'マイクON'}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className={`text-2xl mb-1 ${isDeafened ? 'text-red-400' : 'text-green-400'}`}>
+                  <div className={`text-lg mb-1 ${isDeafened ? 'text-red-400' : 'text-green-400'}`}>
                     {isDeafened ? '🔇' : '🔊'}
                   </div>
-                  <div className="text-sm text-white">
+                  <div className="text-xs text-white">
                     {isDeafened ? 'スピーカーOFF' : 'スピーカーON'}
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl mb-1">📊</div>
-                  <div className="text-sm text-white mb-1">
+                  <div className="text-lg mb-1">📊</div>
+                  <div className="text-xs text-white mb-1">
                     音声レベル: {audioLevel}%
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
                     <div 
-                      className="bg-green-400 h-2 rounded-full transition-all duration-100"
+                      className="bg-green-400 h-1.5 rounded-full transition-all duration-100"
                       style={{ width: `${audioLevel}%` }}
                     ></div>
                   </div>
@@ -271,54 +345,54 @@ export default function TikuriBarPage() {
               </div>
             </div>
 
-            {/* バーカウンター風スピーカーエリア */}
-            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/30 mb-6 shadow-2xl shadow-amber-500/10">
-              <div className="flex items-center mb-6">
-                <div className="p-3 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-xl mr-4 shadow-lg">
-                  <Crown size={24} className="text-white" />
+            {/* バーカウンター風スピーカーエリア - コンパクト版 */}
+            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-2xl p-6 border border-amber-500/30 mb-4 shadow-2xl shadow-amber-500/10">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg mr-3 shadow-lg">
+                  <Crown size={20} className="text-white" />
                 </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+                <h2 className="text-lg font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
                   バーカウンター
                 </h2>
-                <div className="ml-4 text-amber-400 text-sm">
+                <div className="ml-3 text-amber-400 text-sm">
                   〜 話し手の席 〜
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {users.filter(u => u.role === 'bartender' || isRecording).map((user) => (
                   <div
                     key={user.id}
-                    className={`relative p-6 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
+                    className={`relative p-4 rounded-xl transition-all duration-300 transform hover:scale-105 ${
                       isRecording && user.id === (window as any).currentUserId
                         ? 'bg-gradient-to-br from-amber-500/30 via-orange-500/20 to-amber-600/30 border-2 border-amber-400/60 shadow-2xl shadow-amber-500/30' 
                         : 'bg-gradient-to-br from-gray-800/40 via-black/60 to-gray-700/40 border border-amber-500/20 backdrop-blur-sm'
                     }`}
                   >
                     <div className="text-center">
-                      <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-3 shadow-lg ${
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-2 shadow-lg ${
                         user.role === 'bartender'
                           ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                           : 'bg-gradient-to-br from-amber-600 to-orange-600'
                       }`}>
                         {user.username.charAt(0)}
                       </div>
-                      <p className="text-white font-semibold text-lg">{user.username}</p>
+                      <p className="text-white font-semibold text-sm">{user.username}</p>
                       {user.role === 'bartender' && (
-                        <div className="flex items-center justify-center mt-2 bg-amber-500/20 rounded-full px-3 py-1">
-                          <Crown size={14} className="text-amber-400 mr-1" />
+                        <div className="flex items-center justify-center mt-1 bg-amber-500/20 rounded-full px-2 py-0.5">
+                          <Crown size={12} className="text-amber-400 mr-1" />
                           <span className="text-xs text-amber-300 font-medium">バーテンダー</span>
                         </div>
                       )}
                     </div>
                     {isRecording && user.id === (window as any).currentUserId && (
-                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-2 shadow-lg animate-pulse">
-                        <MessageCircle size={16} className="text-white" />
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full p-1.5 shadow-lg animate-pulse">
+                        <MessageCircle size={12} className="text-white" />
                       </div>
                     )}
                     {user.isMuted && (
-                      <div className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm rounded-full p-2 border border-red-400/50">
-                        <MicOff size={14} className="text-white" />
+                      <div className="absolute top-1 right-1 bg-red-500/80 backdrop-blur-sm rounded-full p-1 border border-red-400/50">
+                        <MicOff size={10} className="text-white" />
                       </div>
                     )}
                   </div>
@@ -326,24 +400,24 @@ export default function TikuriBarPage() {
               </div>
             </div>
 
-            {/* ラウンジエリア風リスナー表示 */}
-            <div className="bg-gradient-to-br from-gray-800/30 via-black/60 to-amber-900/10 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/20 shadow-2xl shadow-amber-500/5">
-              <div className="flex items-center mb-6">
-                <div className="p-3 bg-gradient-to-r from-gray-600/80 to-gray-700/80 rounded-xl mr-4 shadow-lg">
-                  <Coffee size={24} className="text-amber-300" />
+            {/* ラウンジエリア風リスナー表示 - コンパクト版 */}
+            <div className="bg-gradient-to-br from-gray-800/30 via-black/60 to-amber-900/10 backdrop-blur-xl rounded-2xl p-6 border border-amber-500/20 shadow-2xl shadow-amber-500/5">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-gradient-to-r from-gray-600/80 to-gray-700/80 rounded-lg mr-3 shadow-lg">
+                  <Coffee size={20} className="text-amber-300" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-lg font-bold text-white">
                   ラウンジエリア
                 </h2>
-                <div className="ml-4 text-amber-400 text-sm">
+                <div className="ml-3 text-amber-400 text-sm">
                   〜 {users.filter(u => u.role !== 'bartender' && !isRecording).length}人がくつろぎ中 〜
                 </div>
               </div>
               
-              <div className="grid grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4">
+              <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-16 gap-3">
                 {users.filter(u => u.role !== 'bartender' && !(isRecording && u.id === (window as any).currentUserId)).map((user) => (
                   <div key={user.id} className="text-center group">
-                    <div className="w-14 h-14 bg-gradient-to-br from-gray-600/60 to-gray-700/60 rounded-full flex items-center justify-center text-white font-medium mx-auto mb-2 backdrop-blur-sm border border-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:border-amber-400/40 shadow-lg">
+                    <div className="w-10 h-10 bg-gradient-to-br from-gray-600/60 to-gray-700/60 rounded-full flex items-center justify-center text-white font-medium mx-auto mb-1 backdrop-blur-sm border border-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:border-amber-400/40 shadow-lg">
                       {user.username.charAt(0)}
                     </div>
                     <p className="text-xs text-gray-300 truncate group-hover:text-amber-300 transition-colors duration-300">{user.username}</p>
@@ -352,65 +426,99 @@ export default function TikuriBarPage() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* BAR風コントロールパネル */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-black/90 via-amber-900/20 to-black/90 backdrop-blur-xl border-t border-amber-500/30 p-6 relative z-20">
-          <div className="flex items-center justify-center space-x-6">
-            {/* 録音開始/停止 */}
-            <button
-              onClick={handleToggleRecording}
-              className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
-                isRecording 
-                  ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50 animate-pulse' 
-                  : 'bg-gradient-to-r from-green-600/80 to-green-700/80 hover:from-green-500/80 hover:to-green-600/80 shadow-green-500/20 border-green-400/50'
-              }`}
-              title={isRecording ? '録音停止' : '録音開始'}
-            >
-              <Radio size={28} />
-            </button>
+          {/* BAR風コントロールパネル - 常に表示 */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-black via-amber-900/40 to-black backdrop-blur-xl border-t border-amber-500/30 px-8 py-6 relative z-20 shadow-2xl shadow-black/50">
+            <div className="flex items-center justify-center space-x-6 max-w-4xl mx-auto">
+              {/* 録音開始/停止 */}
+              <button
+                onClick={handleToggleRecording}
+                className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
+                  isRecording 
+                    ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50 animate-pulse' 
+                    : 'bg-gradient-to-r from-green-600/80 to-green-700/80 hover:from-green-500/80 hover:to-green-600/80 shadow-green-500/20 border-green-400/50'
+                }`}
+                title={isRecording ? '録音停止' : '録音開始'}
+              >
+                <Radio size={28} />
+              </button>
 
-            <button
-              onClick={toggleMute}
-              className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
-                isMuted 
-                  ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50' 
-                  : 'bg-gradient-to-r from-gray-700/80 to-gray-800/80 hover:from-amber-600/80 hover:to-orange-600/80 shadow-gray-500/20 border-gray-600/50 hover:border-amber-400/50'
-              }`}
-              title={isMuted ? "ミュート解除" : "ミュート"}
-            >
-              {isMuted ? <MicOff size={28} /> : <Mic size={28} />}
-            </button>
-            
-            <button
-              onClick={toggleDeafen}
-              className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
-                isDeafened 
-                  ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50' 
-                  : 'bg-gradient-to-r from-gray-700/80 to-gray-800/80 hover:from-amber-600/80 hover:to-orange-600/80 shadow-gray-500/20 border-gray-600/50 hover:border-amber-400/50'
-              }`}
-              title={isDeafened ? "スピーカー有効" : "スピーカー無効"}
-            >
-              {isDeafened ? <VolumeX size={28} /> : <Volume2 size={28} />}
-            </button>
+              <button
+                onClick={toggleMute}
+                className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
+                  isMuted 
+                    ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50' 
+                    : 'bg-gradient-to-r from-gray-700/80 to-gray-800/80 hover:from-amber-600/80 hover:to-orange-600/80 shadow-gray-500/20 border-gray-600/50 hover:border-amber-400/50'
+                }`}
+                title={isMuted ? "ミュート解除" : "ミュート"}
+              >
+                {isMuted ? <MicOff size={28} /> : <Mic size={28} />}
+              </button>
+              
+              <button
+                onClick={toggleDeafen}
+                className={`group p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-lg backdrop-blur-sm border ${
+                  isDeafened 
+                    ? 'bg-gradient-to-r from-red-500/80 to-red-600/80 hover:from-red-400/80 hover:to-red-500/80 shadow-red-500/30 border-red-400/50' 
+                    : 'bg-gradient-to-r from-gray-700/80 to-gray-800/80 hover:from-amber-600/80 hover:to-orange-600/80 shadow-gray-500/20 border-gray-600/50 hover:border-amber-400/50'
+                }`}
+                title={isDeafened ? "スピーカー有効" : "スピーカー無効"}
+              >
+                {isDeafened ? <VolumeX size={28} /> : <Volume2 size={28} />}
+              </button>
 
-            <button
-              onClick={handleLeaveBar}
-              className="group bg-gradient-to-r from-red-600/80 to-red-700/80 hover:from-red-500/80 hover:to-red-600/80 text-white px-8 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/30 flex items-center space-x-3 backdrop-blur-sm border border-red-400/50"
-            >
-              <PhoneOff size={24} />
-              <span className="text-lg font-semibold">退店</span>
-            </button>
+              <button
+                onClick={handleLeaveBar}
+                className="group bg-gradient-to-r from-red-600/80 to-red-700/80 hover:from-red-500/80 hover:to-red-600/80 text-white px-8 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/30 flex items-center space-x-3 backdrop-blur-sm border border-red-400/50"
+              >
+                <PhoneOff size={24} />
+                <span className="font-semibold text-lg">退店</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* 退店確認ダイアログ */}
+        <LeaveConfirmDialog />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-amber-900/20 text-white relative overflow-hidden">
-      <div className="absolute inset-0 opacity-40">
-        <div className="w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23D97706%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+      {/* 背景アニメーション */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* バーライフ風の背景パターン */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2280%22%20height%3D%2280%22%20viewBox%3D%220%200%2080%2080%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23D97706%22%20fill-opacity%3D%220.02%22%3E%3Cpath%20d%3D%22M40%200c22.091%200%2040%2017.909%2040%2040S62.091%2080%2040%2080%200%2062.091%200%2040%2017.909%200%2040%200zm0%208c-17.673%200-32%2014.327-32%2032s14.327%2032%2032%2032%2032-14.327%2032-32S57.673%208%2040%208z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+        </div>
+        
+        {/* 浮遊する光のパーティクル */}
+        <div className="absolute inset-0">
+          {[...Array(15)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-amber-400 rounded-full animate-pulse opacity-60"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`
+              }}
+            />
+          ))}
+        </div>
+
+        {/* 動的なグラデーションオーバーレイ */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-900/10 to-transparent animate-pulse opacity-50"></div>
+        
+        {/* ワイングラス風の装飾要素 */}
+        <div className="absolute top-20 right-20 w-32 h-32 opacity-10">
+          <div className="w-full h-full bg-gradient-to-br from-amber-400/20 to-orange-600/20 rounded-full blur-3xl animate-bounce"></div>
+        </div>
+        <div className="absolute bottom-20 left-20 w-24 h-24 opacity-10">
+          <div className="w-full h-full bg-gradient-to-br from-orange-400/20 to-amber-600/20 rounded-full blur-2xl animate-pulse"></div>
+        </div>
       </div>
       
       {/* ヘッダー */}
@@ -425,11 +533,11 @@ export default function TikuriBarPage() {
               <span className="font-semibold">ホーム</span>
             </button>
             <div className="flex items-center space-x-4">
-              <div className="p-4 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-2xl shadow-xl backdrop-blur-sm border border-amber-400/50">
+              <div className="p-4 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-2xl shadow-xl backdrop-blur-sm border border-amber-400/50 animate-pulse">
                 <Wine size={32} className="text-white" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent animate-pulse">
                   TikuriBAR
                 </h1>
                 <p className="text-amber-400 text-lg font-medium">〜 音声で繋がる社交場 〜</p>
@@ -448,11 +556,40 @@ export default function TikuriBarPage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-8 relative z-10">
+        {/* 魅力的なウェルカムセクション */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full mb-8 backdrop-blur-sm border border-amber-500/30 shadow-2xl shadow-amber-500/20 animate-pulse">
+            <Wine size={48} className="text-amber-400 animate-bounce" />
+          </div>
+          <h2 className="text-5xl font-bold bg-gradient-to-r from-amber-300 via-orange-300 to-amber-300 bg-clip-text text-transparent mb-6 animate-pulse">
+            Welcome to TikuriBAR
+          </h2>
+          <p className="text-xl text-amber-200 mb-8 max-w-2xl mx-auto leading-relaxed">
+            高級バーのような雰囲気で、音声を通じて新しい出会いと会話を楽しむ特別な空間へようこそ
+          </p>
+          <div className="flex items-center justify-center space-x-4 text-amber-300">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span className="text-sm">リアルタイム音声</span>
+            </div>
+            <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span className="text-sm">高品質音声</span>
+            </div>
+            <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+              <span className="text-sm">プライベート空間</span>
+            </div>
+          </div>
+        </div>
+
         {/* ライブスペース一覧 */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-xl mr-4 shadow-lg">
+              <div className="p-3 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-xl mr-4 shadow-lg animate-pulse">
                 <Sparkles size={28} className="text-white" />
               </div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
@@ -463,9 +600,13 @@ export default function TikuriBarPage() {
             <button
               onClick={getBars}
               disabled={!isConnected}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+              className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 disabled:from-gray-600/80 disabled:to-gray-700/80 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center space-x-2 backdrop-blur-sm border border-amber-400/50 group relative overflow-hidden"
             >
-              更新
+              {/* ホバー時の光るエフェクト */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              <Sparkles size={20} className="group-hover:rotate-180 transition-transform duration-500 relative z-10" />
+              <span className="relative z-10 font-semibold">更新</span>
             </button>
           </div>
           
@@ -473,28 +614,31 @@ export default function TikuriBarPage() {
             {availableBars.map((bar) => (
               <div
                 key={bar.id}
-                className="group bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-500 transform hover:scale-105 cursor-pointer shadow-2xl hover:shadow-amber-500/20"
+                className="group bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-500 transform hover:scale-105 cursor-pointer shadow-2xl hover:shadow-amber-500/20 relative overflow-hidden"
                 onClick={() => handleJoinBar(bar.id)}
               >
-                <div className="flex items-center justify-between mb-6">
+                {/* ホバー時の光るエフェクト */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                <div className="flex items-center justify-between mb-6 relative z-10">
                   <div className="flex items-center space-x-3 bg-red-500/20 backdrop-blur-sm rounded-full px-4 py-2 border border-red-400/30">
                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
                     <span className="text-red-300 text-sm font-bold">LIVE</span>
                   </div>
                 </div>
                 
-                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-100 transition-colors duration-300">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-100 transition-colors duration-300 relative z-10">
                   {bar.title}
                 </h3>
                 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center space-x-2 bg-gray-800/40 backdrop-blur-sm rounded-full px-3 py-2 border border-gray-600/30">
                     <Users size={16} className="text-amber-400" />
                     <span className="text-amber-300 font-medium">{bar.userCount}</span>
                   </div>
                 </div>
                 
-                <div className="mt-4 text-xs text-amber-500/80 text-center bg-black/30 rounded-full py-2 backdrop-blur-sm">
+                <div className="mt-4 text-xs text-amber-500/80 text-center bg-black/30 rounded-full py-2 backdrop-blur-sm relative z-10">
                   {formatDuration(Date.now() - bar.createdAt)}前から営業中
                 </div>
               </div>
@@ -508,28 +652,31 @@ export default function TikuriBarPage() {
             <button
               onClick={() => setShowCreateForm(true)}
               disabled={!isConnected}
-              className="group bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 disabled:from-gray-600/80 disabled:to-gray-700/80 text-white px-12 py-6 rounded-2xl transition-all duration-500 transform hover:scale-110 shadow-2xl hover:shadow-amber-500/30 flex items-center space-x-4 mx-auto backdrop-blur-sm border border-amber-400/50"
+              className="group bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 disabled:from-gray-600/80 disabled:to-gray-700/80 text-white px-16 py-8 rounded-3xl transition-all duration-500 transform hover:scale-110 shadow-2xl hover:shadow-amber-500/30 flex items-center space-x-6 mx-auto backdrop-blur-sm border border-amber-400/50 relative overflow-hidden"
             >
-              <Wine size={28} className="group-hover:rotate-12 transition-transform duration-300" />
-              <span className="text-xl font-bold">新しいBARを開店</span>
-              <Sparkles size={24} className="group-hover:animate-pulse" />
+              {/* ボタン内のアニメーション */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              <Wine size={32} className="group-hover:rotate-12 transition-transform duration-300 relative z-10" />
+              <span className="text-2xl font-bold relative z-10">新しいBARを開店</span>
+              <Sparkles size={28} className="group-hover:animate-pulse relative z-10" />
             </button>
           ) : (
-            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/30 max-w-md mx-auto">
-              <h3 className="text-xl font-bold text-white mb-4">新しいBAR開店</h3>
+            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-3xl p-8 border border-amber-500/30 max-w-md mx-auto shadow-2xl shadow-amber-500/10">
+              <h3 className="text-xl font-bold text-white mb-6 text-center">新しいBAR開店</h3>
               <input
                 type="text"
                 value={newBarTitle}
                 onChange={(e) => setNewBarTitle(e.target.value)}
                 placeholder="BAR名を入力..."
-                className="w-full bg-gray-800/60 border border-amber-500/30 rounded-lg px-4 py-3 text-white mb-4"
+                className="w-full bg-gray-800/60 border border-amber-500/30 rounded-xl px-4 py-4 text-white mb-6 focus:outline-none focus:border-amber-400/50 focus:ring-2 focus:ring-amber-400/20 transition-all duration-300"
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateBar()}
               />
-              <div className="flex space-x-3">
+              <div className="flex space-x-4">
                 <button
                   onClick={handleCreateBar}
                   disabled={!newBarTitle.trim() || !isConnected}
-                  className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg transition-all duration-300"
+                  className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25"
                 >
                   開店
                 </button>
@@ -538,7 +685,7 @@ export default function TikuriBarPage() {
                     setShowCreateForm(false);
                     setNewBarTitle("");
                   }}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg transition-colors"
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105"
                 >
                   キャンセル
                 </button>
