@@ -1,9 +1,107 @@
-// app/page.tsx
+"use client";
+
 import WebcamUploader from '@/components/WebcamUploader';
 import { inter, notoJP } from './fonts';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Camera, Home } from 'lucide-react';
 
 export default function Page() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // 未ログインの場合の表示
+  if (!user) {
+    return (
+      <div className={`${inter.className} ${notoJP.className}`} style={{ letterSpacing: 0.2 }}>
+        {/* 背景レイヤー */}
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 100%)',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+        
+        {/* ホームに戻るボタン */}
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 50,
+        }}>
+          <Link
+            href="/"
+            className="flex items-center space-x-2 bg-gray-800/90 hover:bg-gray-700/90 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg cursor-pointer"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <Home size={20} />
+            <span className="font-semibold">ホームに戻る</span>
+          </Link>
+        </div>
+        
+        {/* メインコンテンツ */}
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-6">
+            {/* アイコン */}
+            <div className="flex justify-center mb-6">
+              <div className="p-6 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-full border border-green-500/30 backdrop-blur-sm">
+                <Camera size={64} className="text-green-400" />
+              </div>
+            </div>
+            
+            {/* タイトル */}
+            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-green-300 to-blue-300 bg-clip-text text-transparent">
+              会員限定制
+            </h1>
+            
+            {/* 説明文 */}
+            <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-gray-600/30">
+              <p className="text-gray-300 text-lg mb-4">
+                REALctionは会員様限定の<br />
+                特別なサービスです
+              </p>
+              <p className="text-gray-400 text-sm">
+                ログインして、あなたの顔で<br />
+                REALctionを作成しましょう
+              </p>
+            </div>
+            
+            {/* ボタン群 */}
+            <div className="flex flex-row gap-4 justify-center">
+              <Link 
+                href="/auth/login"
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
+              >
+                <Camera size={20} />
+                <span>ログインして利用開始</span>
+              </Link>
+              
+              <Link 
+                href="/auth/signup"
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                <span>新規会員登録</span>
+              </Link>
+            </div>
+            
+            {/* 追加情報 */}
+            <div className="mt-6 text-center">
+              <p className="text-gray-500 text-xs">
+                ※ 会員登録は無料です
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ログイン済みの場合の通常表示
   return (
     <div className={`${inter.className} ${notoJP.className}`} style={{ letterSpacing: 0.2 }}>
       {/* 背景レイヤー */}
