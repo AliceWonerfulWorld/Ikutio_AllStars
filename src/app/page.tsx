@@ -533,14 +533,8 @@ export default function Home() {
           <div className="flex-1 max-w-2xl mx-auto lg:border-r border-gray-800 relative z-10 overflow-y-auto pb-20 lg:pb-0">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
-              {/* モバイル: ハンバーガーメニュー + タイトル */}
-              <div className="lg:hidden flex items-center space-x-4 mb-4">
-                <Sidebar />
-                <h1 className="text-xl font-bold">ホーム</h1>
-              </div>
-              
-              {/* デスクトップ: タイトルのみ */}
-              <h1 className="hidden lg:block text-xl font-bold">ホーム</h1>
+              {/* モバイル: タイトルのみ */}
+              <h1 className="text-xl font-bold">ホーム</h1>
               
               {authError && (
                 <div className="mt-2 bg-red-900/40 border border-red-700 text-red-200 text-sm p-3 rounded">

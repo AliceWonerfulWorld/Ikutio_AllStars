@@ -442,14 +442,8 @@ export default function SearchPage() {
           <div className="max-w-2xl mx-auto lg:border-r border-gray-800 h-full overflow-y-auto pb-20 lg:pb-0">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
-              {/* モバイル: ハンバーガーメニュー + タイトル */}
-              <div className="lg:hidden flex items-center space-x-4 mb-4">
-                <Sidebar />
-                <h1 className="text-xl font-bold">話題を検索</h1>
-              </div>
-              
-              {/* デスクトップ: タイトルのみ */}
-              <h1 className="hidden lg:block text-xl font-bold">話題を検索</h1>
+              {/* モバイル: タイトルのみ */}
+              <h1 className="text-xl font-bold">話題を検索</h1>
             </div>
             
             {/* 検索バー */}
