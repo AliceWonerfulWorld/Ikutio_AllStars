@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import MobileNavigation from "@/components/MobileNavigation";
+import MobileExtendedNavigation from "@/components/MobileExtendedNavigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/utils/supabase/client";
 import Image from "next/image";
@@ -244,14 +246,14 @@ function ProfilePageContent() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="flex max-w-7xl mx-auto">
-        {/* 左サイドバー */}
-        <div className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">
+      <div className="max-w-7xl mx-auto flex h-screen">
+        {/* デスクトップ: 左サイドバー */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
           <Sidebar />
         </div>
 
         {/* メインコンテンツ */}
-        <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800">
+        <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800 overflow-y-auto pb-20 lg:pb-0">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center space-x-4">
@@ -266,7 +268,7 @@ function ProfilePageContent() {
                   {formData.displayName}
                 </h1>
                 <p className="text-sm text-gray-400">
-                  {formData.following}件の投稿
+                  {posts.length}件の投稿
                 </p>
               </div>
             </div>
@@ -283,30 +285,28 @@ function ProfilePageContent() {
 
             {/* プロフィール画像と編集ボタン */}
             <div className="px-4 pb-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 sm:-mt-16 space-y-4 sm:space-y-0">
+              <div className="flex justify-between items-end -mt-12 sm:-mt-16">
                 <div className="relative">
-                  {/* 画像表示 */}
-                  {formData.iconUrl &&
-                  getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
-                    <Image
-                      src={getPublicIconUrl(formData.iconUrl)}
-                      alt="icon"
-                      width={128}
-                      height={128}
-                      className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold">
-                      {formData.displayName.charAt(0)}
-                    </div>
-                  )}
-                  {/* 画像アップロードボタン */}
-                  <label className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
-                    <Camera size={16} />
+                  {/* 画像表示 - タップ可能にする */}
+                  <label className="cursor-pointer">
+                    {formData.iconUrl &&
+                    getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
+                      <Image
+                        src={getPublicIconUrl(formData.iconUrl)}
+                        alt="icon"
+                        width={128}
+                        height={128}
+                        className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover hover:opacity-80 transition-opacity"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold hover:opacity-80 transition-opacity">
+                        {formData.displayName.charAt(0)}
+                      </div>
+                    )}
                     <input
                       type="file"
                       accept="image/*"
@@ -316,35 +316,35 @@ function ProfilePageContent() {
                     />
                   </label>
                 </div>
-
+              </div>
+              
+              {/* 編集ボタンを別の行に配置 */}
+              <div className="flex justify-end mt-4">
                 <div className="flex space-x-2">
                   {isEditing ? (
                     <>
                       <button
                         onClick={handleSave}
-                        className="bg-white text-black px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2 text-sm sm:text-base"
+                        className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2"
                       >
                         <Save size={16} />
-                        <span className="hidden sm:inline">保存</span>
+                        <span>保存</span>
                       </button>
                       <button
                         onClick={handleCancel}
-                        className="border border-gray-600 text-white px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2 text-sm sm:text-base"
+                        className="border border-gray-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2"
                       >
                         <X size={16} />
-                        <span className="hidden sm:inline">キャンセル</span>
+                        <span>キャンセル</span>
                       </button>
                     </>
                   ) : (
                     <button
                       onClick={handleEdit}
-                      className="border border-gray-600 text-white px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2 text-sm sm:text-base"
+                      className="border border-gray-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2"
                     >
                       <Edit3 size={16} />
-                      <span className="hidden sm:inline">
-                        プロフィールを編集
-                      </span>
-                      <span className="sm:hidden">編集</span>
+                      <span>プロフィールを編集</span>
                     </button>
                   )}
                 </div>
@@ -622,8 +622,8 @@ function ProfilePageContent() {
           </div>
         </div>
 
-        {/* 右サイドバー - デスクトップのみ */}
-        <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
+        {/* デスクトップ: 右サイドバー - 大きなデスクトップのみ */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto p-4">
           <div className="sticky top-4">
             <div className="bg-gray-800 rounded-2xl p-4">
               <h2 className="text-xl font-bold mb-4">おすすめユーザー</h2>
@@ -647,6 +647,10 @@ function ProfilePageContent() {
           </div>
         </div>
       </div>
+
+      {/* モバイルナビゲーション */}
+      <MobileNavigation />
+      <MobileExtendedNavigation />
     </div>
   );
 }

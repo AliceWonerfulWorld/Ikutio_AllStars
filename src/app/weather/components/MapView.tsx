@@ -533,7 +533,7 @@ export default function MapView({ posts, onMapClick }: MapViewProps) {
                     hour: '2-digit',
                     minute: '2-digit'
                   })}
-                </div>
+              </div>
               </div>
             </div>`;
           infoRef.current?.setContent(html);

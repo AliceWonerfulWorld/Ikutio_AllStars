@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import MobileNavigation from "@/components/MobileNavigation";
+import MobileExtendedNavigation from "@/components/MobileExtendedNavigation";
 import { supabase } from "@/utils/supabase/client";
 
 type UserType = {
@@ -60,14 +62,14 @@ export default function MessagePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto flex h-dvh overflow-hidden">
-        {/* 左サイドバー */}
-        <div className="w-64 flex-shrink-0">
+      <div className="max-w-7xl mx-auto flex h-screen">
+        {/* デスクトップ: 左サイドバー */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
           <Sidebar />
         </div>
 
         {/* メインコンテンツ */}
-        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800 flex flex-col bg-black">
+        <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800 flex flex-col bg-black overflow-y-auto pb-20 lg:pb-0">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center space-x-4">
@@ -144,8 +146,8 @@ export default function MessagePage() {
           </div>
         </div>
 
-        {/* 右サイドバー - デスクトップのみ */}
-        <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
+        {/* デスクトップ: 右サイドバー - 大きなデスクトップのみ */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto p-4">
           <div className="sticky top-4">
             <div className="bg-gray-800 rounded-2xl p-4">
               <h2 className="text-xl font-bold mb-4">メッセージ機能</h2>
@@ -157,6 +159,10 @@ export default function MessagePage() {
           </div>
         </div>
       </div>
+
+      {/* モバイルナビゲーション */}
+      <MobileNavigation />
+      <MobileExtendedNavigation />
     </div>
   );
 }
