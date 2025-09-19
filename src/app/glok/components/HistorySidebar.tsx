@@ -1,14 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Thread } from '../types';
 import { Trash2 } from 'lucide-react';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface HistorySidebarProps {
   threads: Thread[];
   currentId: string | null;
   onSelectThread: (id: string) => void;
-  onDeleteThread: (id: string) => void; // 削除機能を追加
+  onDeleteThread: (id: string) => void;
   onClose: () => void;
   historyQuery: string;
   setHistoryQuery: (q: string) => void;
@@ -17,6 +18,9 @@ interface HistorySidebarProps {
 export default function HistorySidebar({
   threads, currentId, onSelectThread, onDeleteThread, onClose, historyQuery, setHistoryQuery,
 }: HistorySidebarProps) {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+
   const filteredThreads = useMemo(() => {
     if (!historyQuery.trim()) return threads;
     const q = historyQuery.toLowerCase();
@@ -24,11 +28,25 @@ export default function HistorySidebar({
   }, [threads, historyQuery]);
 
   const handleDeleteClick = (e: React.MouseEvent, threadId: string) => {
-    e.stopPropagation(); // 親要素のクリックイベントを防止
-    if (confirm('この会話を削除しますか？')) {
-      onDeleteThread(threadId);
-    }
+    e.stopPropagation();
+    setThreadToDelete(threadId);
+    setDeleteModalOpen(true);
   };
+
+  const handleConfirmDelete = () => {
+    if (threadToDelete) {
+      onDeleteThread(threadToDelete);
+    }
+    setDeleteModalOpen(false);
+    setThreadToDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModalOpen(false);
+    setThreadToDelete(null);
+  };
+
+  const threadToDeleteTitle = threadToDelete ? threads.find(t => t.id === threadToDelete)?.title : '';
 
   return (
     <>
@@ -78,7 +96,7 @@ export default function HistorySidebar({
           <input
             value={historyQuery}
             onChange={(e) => setHistoryQuery(e.target.value)}
-            placeholder="Grokの履歴を検索"
+            placeholder="Clockの履歴を検索"
             style={{
               width: '100%',
               padding: '12px 16px',
@@ -114,7 +132,7 @@ export default function HistorySidebar({
                   width: '100%',
                   textAlign: 'left',
                   padding: '16px',
-                  paddingRight: '50px', // 削除ボタンのスペースを確保
+                  paddingRight: '50px',
                   background: 'transparent',
                   border: 'none',
                   color: '#fff',
@@ -179,6 +197,15 @@ export default function HistorySidebar({
           ))}
         </div>
       </aside>
+
+      {/* 削除確認モーダル */}
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="会話を削除"
+        message={`「${threadToDeleteTitle}」を削除しますか？この操作は取り消せません。`}
+      />
     </>
   );
 }
