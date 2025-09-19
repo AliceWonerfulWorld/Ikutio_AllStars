@@ -10,6 +10,7 @@ import Header from './components/Header';
 import HistorySidebar from './components/HistorySidebar';
 import StartView from './components/StartView';
 import ChatView from './components/ChatView';
+import DeleteAllConfirmModal from './components/DeleteAllConfirmModal';
 
 export default function GlokPage() {
   const { user, loading: authLoading } = useAuth();
@@ -20,6 +21,7 @@ export default function GlokPage() {
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyQuery, setHistoryQuery] = useState('');
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const starfieldRef = useRef<StarfieldRef>(null);
 
   // ユーザー別の履歴キー
@@ -186,13 +188,20 @@ export default function GlokPage() {
 
   // 全履歴削除機能
   const onClearAllHistory = () => {
-    if (confirm('すべての会話履歴を削除しますか？この操作は取り消せません。')) {
-      setThreads([]);
-      setCurrentId(null);
-      setPrompt('');
-      setError(null);
-      console.log('🗑️ すべての履歴を削除しました');
-    }
+    setShowDeleteAllModal(true);
+  };
+
+  const handleConfirmDeleteAll = () => {
+    setThreads([]);
+    setCurrentId(null);
+    setPrompt('');
+    setError(null);
+    setShowDeleteAllModal(false);
+    console.log('🗑️ すべての履歴を削除しました');
+  };
+
+  const handleCancelDeleteAll = () => {
+    setShowDeleteAllModal(false);
   };
 
   // ユーザー別の履歴を保存
@@ -433,6 +442,13 @@ export default function GlokPage() {
           setHistoryQuery={setHistoryQuery}
         />
       )}
+
+      {/* 全削除確認モーダル */}
+      <DeleteAllConfirmModal
+        isOpen={showDeleteAllModal}
+        onConfirm={handleConfirmDeleteAll}
+        onCancel={handleCancelDeleteAll}
+      />
     </div>
   );
 }
