@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // グローバルなSpeechRecognitionの型を拡張
 declare global {
@@ -61,6 +61,7 @@ export const useSpeechRecognition = () => {
   const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // ブラウザサポートの確認
   useEffect(() => {
@@ -76,6 +77,7 @@ export const useSpeechRecognition = () => {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
 
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -106,20 +108,22 @@ export const useSpeechRecognition = () => {
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       setError(`音声認識エラー: ${event.error}`);
       setIsListening(false);
+      recognitionRef.current = null;
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      recognitionRef.current = null;
     };
 
     recognition.start();
   }, [isSupported]);
 
   const stopListening = useCallback(() => {
-    if (isListening) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.stop();
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      recognitionRef.current = null;
     }
   }, [isListening]);
 

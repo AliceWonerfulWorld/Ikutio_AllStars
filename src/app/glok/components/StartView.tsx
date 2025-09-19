@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import VoiceSettings from './VoiceSettings';
 
 interface StartViewProps {
   prompt: string;
@@ -15,6 +16,7 @@ export default function StartView({
   prompt, setPrompt, loading, onSend, onKeyDown,
 }: StartViewProps) {
   const { isListening, isSupported, error, startListening, stopListening, transcript, interimTranscript } = useSpeechRecognition();
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
 
   // 音声認識結果をプロンプトに設定
   React.useEffect(() => {
@@ -127,42 +129,7 @@ export default function StartView({
           }}
         />
         
-        {/* 音声入力ボタン */}
-        {isSupported && (
-          <button
-            onClick={handleVoiceToggle}
-            disabled={loading}
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 18,
-              border: 'none',
-              background: isListening 
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: 20,
-              fontWeight: 'bold',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-            }}
-          >
-            {isListening ? '⏹️' : '🎤'}
-          </button>
-        )}
-        
+        {/* 送信ボタン（左側に移動） */}
         <button 
           onClick={onSend} 
           disabled={loading} 
@@ -190,6 +157,42 @@ export default function StartView({
         >
           {loading ? '...' : '↑'}
         </button>
+        
+        {/* 音声入力ボタン（右側に移動） */}
+        {isSupported && (
+          <button
+            onClick={handleVoiceToggle}
+            disabled={loading}
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 18,
+              border: 'none',
+              background: isListening 
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                : 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: 20,
+              fontWeight: 'bold',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+            }}
+          >
+            {isListening ? '⏹️' : '🎤'}
+          </button>
+        )}
       </div>
 
       {/* 音声認識エラー表示 */}
@@ -258,6 +261,34 @@ export default function StartView({
       )}
 
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+        <button 
+          onClick={() => setShowVoiceSettings(true)}
+          style={{
+            padding: '12px 24px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: 25,
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 500,
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          🎵 音声設定
+        </button>
         <button style={{
           padding: '12px 24px',
           background: 'rgba(255, 255, 255, 0.1)',
@@ -305,6 +336,12 @@ export default function StartView({
           ✏️ 画像を編集
         </button>
       </div>
+
+      {/* 音声設定モーダル */}
+      <VoiceSettings 
+        isOpen={showVoiceSettings}
+        onClose={() => setShowVoiceSettings(false)}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
+import React from 'react';
 import { Thread } from '../types';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface ChatViewProps {
   thread: Thread;
@@ -17,12 +19,28 @@ export default function ChatView({
   thread, prompt, setPrompt, loading, error, onSend, onKeyDown,
 }: ChatViewProps) {
   const { isSupported: speechSupported, isSpeaking, speak, stopSpeaking } = useSpeechSynthesis();
+  const { isListening, isSupported: recognitionSupported, error: recognitionError, startListening, stopListening, transcript, interimTranscript } = useSpeechRecognition();
 
   const handleSpeak = (text: string) => {
     if (speechSupported) {
       speak(text);
     }
   };
+
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  // 音声認識結果をプロンプトに設定
+  React.useEffect(() => {
+    if (transcript) {
+      setPrompt(transcript);
+    }
+  }, [transcript, setPrompt]);
 
   return (
     <div style={{ width: '100%', maxWidth: 900, padding: '100px 16px 0', position: 'relative', zIndex: 1 }}>
@@ -101,6 +119,65 @@ export default function ChatView({
         </div>
       )}
 
+      {/* 音声認識エラー表示 */}
+      {recognitionError && (
+        <div style={{
+          background: 'rgba(220, 38, 38, 0.2)',
+          border: '1px solid rgba(220, 38, 38, 0.4)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          marginBottom: 20,
+          color: '#fca5a5',
+          fontSize: 14,
+          backdropFilter: 'blur(10px)',
+        }}>
+          {recognitionError}
+        </div>
+      )}
+
+      {/* 音声認識状態表示 */}
+      {isListening && (
+        <div style={{
+          background: 'rgba(34, 197, 94, 0.2)',
+          border: '1px solid rgba(34, 197, 94, 0.4)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          marginBottom: 20,
+          color: '#86efac',
+          fontSize: 14,
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          <div style={{
+            width: 12,
+            height: 12,
+            background: '#22c55e',
+            borderRadius: '50%',
+            animation: 'pulse 1.5s infinite',
+          }} />
+          音声を認識中...
+        </div>
+      )}
+
+      {/* 音声認識の暫定結果表示 */}
+      {interimTranscript && (
+        <div style={{
+          background: 'rgba(59, 130, 246, 0.2)',
+          border: '1px solid rgba(59, 130, 246, 0.4)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          marginBottom: 20,
+          color: '#93c5fd',
+          fontSize: 14,
+          backdropFilter: 'blur(10px)',
+          fontStyle: 'italic',
+        }}>
+          認識中: {interimTranscript}
+        </div>
+      )}
+
       {/* 音声読み上げ停止ボタン */}
       {isSpeaking && (
         <div style={{
@@ -169,6 +246,8 @@ export default function ChatView({
               e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
             }}
           />
+          
+          {/* 送信ボタン（左側に移動） */}
           <button 
             onClick={onSend} 
             disabled={loading} 
@@ -196,6 +275,42 @@ export default function ChatView({
           >
             {loading ? '...' : '↑'}
           </button>
+          
+          {/* 音声入力ボタン（右側に移動） */}
+          {recognitionSupported && (
+            <button
+              onClick={handleVoiceToggle}
+              disabled={loading}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                border: 'none',
+                background: isListening 
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: 20,
+                fontWeight: 'bold',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+              }}
+            >
+              {isListening ? '⏹️' : '🎤'}
+            </button>
+          )}
         </div>
       </div>
     </div>

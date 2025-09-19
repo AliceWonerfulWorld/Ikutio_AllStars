@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useVoiceSettings } from './useVoiceSettings';
 
 export function useSpeechSynthesis() {
   const [isSupported, setIsSupported] = useState(false);
@@ -8,6 +9,7 @@ export function useSpeechSynthesis() {
   const [error, setError] = useState<string | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isStoppingRef = useRef(false);
+  const { voiceSettings, getSelectedVoice } = useVoiceSettings();
 
   useEffect(() => {
     if ('speechSynthesis' in window) {
@@ -29,10 +31,17 @@ export function useSpeechSynthesis() {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utteranceRef.current = utterance;
+      
+      // 設定された音声とパラメータを使用
+      const selectedVoice = getSelectedVoice();
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+      
       utterance.lang = 'ja-JP';
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
+      utterance.rate = voiceSettings.rate;
+      utterance.pitch = voiceSettings.pitch;
+      utterance.volume = voiceSettings.volume;
 
       utterance.onstart = () => {
         if (!isStoppingRef.current) {
@@ -68,7 +77,7 @@ export function useSpeechSynthesis() {
       setError('音声読み上げに失敗しました');
       setIsSpeaking(false);
     }
-  }, [isSupported]);
+  }, [isSupported, voiceSettings, getSelectedVoice]);
 
   const stopSpeaking = useCallback(() => {
     if (isSupported) {
