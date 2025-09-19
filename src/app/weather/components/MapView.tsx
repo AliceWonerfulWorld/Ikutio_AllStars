@@ -7,6 +7,7 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { WeatherPost, weatherIcons, weatherLabels } from "../types";
 import { escapeHtml, truncate } from "../utils/helpers";
+import { ChevronDown, ChevronUp, Minimize2, Maximize2 } from "lucide-react";
 
 interface MapViewProps {
   posts: WeatherPost[];
@@ -26,6 +27,9 @@ export default function MapView({ posts, onMapClick }: MapViewProps) {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  
+  // パネルの状態
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // コメント吹き出し用（OverlayView）
   type CommentOV = google.maps.OverlayView & { setVisible(v: boolean): void };
@@ -435,44 +439,110 @@ export default function MapView({ posts, onMapClick }: MapViewProps) {
     <div className="relative w-full h-[600px] bg-gray-800 rounded-2xl overflow-hidden">
       <div ref={mapRef} className="absolute inset-0" />
       
-      {/* 情報パネル */}
-      <div className="absolute top-4 right-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700">
-        <div className="text-xs text-gray-300 mb-1">投稿数: {posts.length}</div>
-        <div className="text-xs text-gray-400 mb-2">地図をクリックで投稿座標をセット</div>
-        
-        {/* 現在地ボタン */}
-        <button
-          onClick={getCurrentLocation}
-          disabled={isGettingLocation}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-xs py-2 px-3 rounded-md transition-colors flex items-center justify-center space-x-1"
-        >
-          {isGettingLocation ? (
-            <>
-              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>取得中...</span>
-            </>
-          ) : (
-            <>
-              <span>📍</span>
-              <span>現在地を取得</span>
-            </>
-          )}
-        </button>
-        
-        {/* エラーメッセージ */}
-        {locationError && (
-          <div className="mt-2 text-xs text-red-400 bg-red-900/20 p-2 rounded border border-red-800">
-            {locationError}
-          </div>
-        )}
-        
-        {/* 現在地情報 */}
-        {currentLocation && (
-          <div className="mt-2 text-xs text-green-400 bg-green-900/20 p-2 rounded border border-green-800">
-            <div className="font-medium">現在地を取得しました</div>
-            <div className="text-xs text-gray-400">
-              {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
+      {/* コンパクトな情報パネル */}
+      <div className="absolute top-4 right-4 w-64">
+        {isMinimized ? (
+          /* 最小化された状態 */
+          <div className="bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-xl p-3 border border-gray-700/50 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full p-1">
+                  <span className="text-sm">🌤️</span>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">{posts.length}</div>
+                  <div className="text-xs text-gray-400">投稿</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMinimized(false)}
+                className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-gray-700/50 rounded"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
             </div>
+          </div>
+        ) : (
+          /* 通常の状態 */
+          <div className="bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-xl p-4 border border-gray-700/50 shadow-2xl">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">天気マップ</h3>
+                <p className="text-xs text-gray-400">リアルタイム情報</p>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full p-1.5">
+                  <span className="text-sm">🌤️</span>
+                </div>
+                <button
+                  onClick={() => setIsMinimized(true)}
+                  className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-gray-700/50 rounded"
+                >
+                  <Minimize2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* 統計情報 */}
+            <div className="bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg p-3 mb-3 border border-gray-600/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-bold text-white">{posts.length}</div>
+                  <div className="text-xs text-gray-400">投稿数</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-300">地図をクリック</div>
+                  <div className="text-xs text-gray-500">座標セット</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* 現在地ボタン */}
+            <button
+              onClick={getCurrentLocation}
+              disabled={isGettingLocation}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-gray-600 disabled:to-gray-700 text-white py-2.5 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 font-medium shadow-lg hover:shadow-blue-500/25 transform hover:scale-[1.02] disabled:transform-none disabled:shadow-none text-sm"
+            >
+              {isGettingLocation ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>取得中...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">📍</span>
+                  <span>現在地を取得</span>
+                </>
+              )}
+            </button>
+            
+            {/* エラーメッセージ */}
+            {locationError && (
+              <div className="mt-3 bg-gradient-to-r from-red-900/30 to-red-800/30 border border-red-500/30 rounded-lg p-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-red-400 text-xs">⚠️</span>
+                  </div>
+                  <div className="text-red-300 text-xs">{locationError}</div>
+                </div>
+              </div>
+            )}
+            
+            {/* 現在地情報 */}
+            {currentLocation && (
+              <div className="mt-3 bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border border-emerald-500/30 rounded-lg p-2">
+                <div className="flex items-center space-x-2 mb-1">
+                  <div className="w-4 h-4 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-emerald-400 text-xs">✓</span>
+                  </div>
+                  <div className="text-emerald-300 text-xs font-medium">現在地取得済み</div>
+                </div>
+                <div className="text-xs text-gray-400 font-mono bg-gray-800/50 rounded px-2 py-1">
+                  {currentLocation.lat.toFixed(4)}, {currentLocation.lng.toFixed(4)}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
