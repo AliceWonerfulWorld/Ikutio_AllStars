@@ -316,8 +316,10 @@ function ProfilePageContent() {
                     />
                   </label>
                 </div>
-
-                {/* 編集ボタンを右側に配置 */}
+              </div>
+              
+              {/* 編集ボタンを別の行に配置 */}
+              <div className="flex justify-end mt-4">
                 <div className="flex space-x-2">
                   {isEditing ? (
                     <>

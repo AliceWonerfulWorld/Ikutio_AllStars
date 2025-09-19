@@ -582,88 +582,94 @@ export default function SearchPage() {
         
         {/* デスクトップ: 右サイドバー */}
         <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto">
+          {/* 右サイドバーのコンテンツ */}
           <div className="p-4 space-y-6">
-            {/* TikuriBar ライブルーム */}
-            <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-2xl p-4 border border-amber-500/30 shadow-2xl shadow-amber-500/10">
-              <div className="flex items-center mb-4">
-                <div className="p-2 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg mr-3 shadow-lg">
-                  <Wine size={20} className="text-white" />
-                </div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
-                  TikuriBAR ライブルーム
-                </h2>
-                <div className="ml-3 flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  <span className="text-xs text-gray-400">
-                    {wsConnected ? '接続中' : '未接続'}
-                  </span>
-                </div>
-              </div>
+            {/* TikuriBAR Live Bloom */}
+            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-800 rounded-2xl p-4 border border-amber-500/20 shadow-lg shadow-amber-500/10 relative overflow-hidden">
+              {/* 背景のグラデーション効果 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-orange-500/5 opacity-50"></div>
               
-              <div className="space-y-3">
-                {!wsConnected ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <Wine size={32} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">TikuriBARサーバーに接続できません</p>
-                    <p className="text-xs mt-1">サーバーが起動していない可能性があります</p>
-                    <button
-                      onClick={() => router.push('/tikuribar')}
-                      className="mt-3 bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm"
-                    >
-                      TikuriBARページへ
-                    </button>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500/80 to-orange-500/80 rounded-lg flex items-center justify-center shadow-lg">
+                      <Wine size={16} className="text-white" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white">TikuriBAR ライブブルーム</h2>
                   </div>
-                ) : tikuriBars.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <Wine size={32} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">現在営業中のBARはありません</p>
-                    <p className="text-xs mt-1">新しいBARを作成してみましょう！</p>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                    <span className="text-xs text-gray-300">{wsConnected ? '接続中' : '未接続'}</span>
                   </div>
-                ) : (
-                  tikuriBars.map((bar) => (
-                    <div
-                      key={bar.id}
-                      onClick={() => handleJoinTikuriBar(bar.id)}
-                      className="group bg-gradient-to-br from-gray-800/40 via-black/60 to-gray-700/40 backdrop-blur-sm rounded-xl p-4 border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-amber-500/20 relative overflow-hidden"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      
-                      <div className="flex items-center space-x-3 relative z-10">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-gradient-to-br from-amber-500/80 to-orange-500/80 rounded-full flex items-center justify-center shadow-lg">
-                            <Radio size={20} className="text-white" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white text-sm group-hover:text-amber-100 transition-colors duration-300 truncate">
-                            {bar.title}
-                          </div>
-                          <div className="flex items-center space-x-3 mt-1">
-                            <div className="flex items-center space-x-1">
-                              <Users size={12} className="text-amber-400" />
-                              <span className="text-xs text-amber-300">{bar.userCount}人</span>
+                </div>
+                
+                <div className="space-y-3">
+                  {!wsConnected ? (
+                    <div className="text-center py-8 text-white">
+                      <Wine size={32} className="mx-auto mb-2 opacity-60" />
+                      <p className="text-sm">TikuriBARサーバーに接続できません</p>
+                      <p className="text-xs mt-1 text-gray-300">サーバーが起動していない可能性があります</p>
+                      <button
+                        onClick={() => router.push('/tikuribar')}
+                        className="mt-3 bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm shadow-lg"
+                      >
+                        TikuriBARページへ
+                      </button>
+                    </div>
+                  ) : tikuriBars.length === 0 ? (
+                    <div className="text-center py-8 text-white">
+                      <Wine size={32} className="mx-auto mb-2 opacity-60" />
+                      <p className="text-sm">現在営業中のBARはありません</p>
+                      <p className="text-xs mt-1 text-gray-300">新しいBARを作成してみましょう！</p>
+                    </div>
+                  ) : (
+                    tikuriBars.map((bar) => (
+                      <div
+                        key={bar.id}
+                        onClick={() => handleJoinTikuriBar(bar.id)}
+                        className="group bg-gradient-to-br from-gray-800/40 via-black/60 to-gray-700/40 backdrop-blur-sm rounded-xl p-4 border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-amber-500/20 relative overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        
+                        <div className="flex items-center space-x-3 relative z-10">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-amber-500/80 to-orange-500/80 rounded-full flex items-center justify-center shadow-lg">
+                              <Radio size={20} className="text-white" />
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                              <span className="text-xs text-red-400">LIVE</span>
-                            </div>
                           </div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            {formatDuration(Date.now() - bar.createdAt)}前から営業中
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-white text-sm group-hover:text-amber-100 transition-colors duration-300 truncate">
+                              {bar.title}
+                            </div>
+                            <div className="flex items-center space-x-3 mt-1">
+                              <div className="flex items-center space-x-1">
+                                <Users size={12} className="text-amber-400" />
+                                <span className="text-xs text-amber-300">{bar.userCount}人</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                                <span className="text-xs text-red-400">LIVE</span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-300 mt-1">
+                              {formatDuration(Date.now() - bar.createdAt)}前から営業中
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
-                
-                <button
-                  onClick={() => router.push('/tikuribar')}
-                  className="w-full bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center justify-center space-x-2 backdrop-blur-sm border border-amber-400/50 group"
-                >
-                  <Wine size={18} className="group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="font-semibold">TikuriBARへ</span>
-                </button>
+                    ))
+                  )}
+                  
+                  <button
+                    onClick={() => router.push('/tikuribar')}
+                    className="w-full bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center justify-center space-x-2 backdrop-blur-sm border border-amber-400/50 group relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <Wine size={18} className="group-hover:rotate-12 transition-transform duration-300 relative z-10" />
+                    <span className="font-semibold relative z-10">TikuriBARへ</span>
+                    <div className="w-2 h-2 bg-white/60 rounded-full relative z-10"></div>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -768,20 +774,6 @@ export default function SearchPage() {
           </div>
         </div>
         
-        {/* デスクトップ: 右サイドバー */}
-        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto">
-          {/* 右サイドバーのコンテンツ */}
-          <div className="p-4 space-y-6">
-            <div className="bg-gray-800 rounded-2xl p-4">
-              <h2 className="text-xl font-bold mb-4">トレンド</h2>
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-2">📈</div>
-                <p className="text-sm">トレンド情報は準備中です</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* モバイルナビゲーション */}
         <MobileNavigation />
         <MobileExtendedNavigation />
