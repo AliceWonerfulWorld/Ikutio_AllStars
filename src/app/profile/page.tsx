@@ -285,64 +285,28 @@ function ProfilePageContent() {
 
             {/* プロフィール画像と編集ボタン */}
             <div className="px-4 pb-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 sm:-mt-16 space-y-4 sm:space-y-0">
+              <div className="flex justify-between items-end -mt-12 sm:-mt-16">
                 <div className="relative">
-                  {/* 画像表示 */}
-                  {formData.iconUrl &&
-                  getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
-                    <Image
-                      src={getPublicIconUrl(formData.iconUrl)}
-                      alt="icon"
-                      width={128}
-                      height={128}
-                      className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold">
-                      {formData.displayName.charAt(0)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                  {/* 編集ボタンを先に配置 */}
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={handleSave}
-                        className="bg-white text-black px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2 text-sm sm:text-base"
-                      >
-                        <Save size={16} />
-                        <span className="hidden sm:inline">保存</span>
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="border border-gray-600 text-white px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2 text-sm sm:text-base"
-                      >
-                        <X size={16} />
-                        <span className="hidden sm:inline">キャンセル</span>
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={handleEdit}
-                      className="border border-gray-600 text-white px-3 sm:px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2 text-sm sm:text-base"
-                    >
-                      <Edit3 size={16} />
-                      <span className="hidden sm:inline">
-                        プロフィールを編集
-                      </span>
-                      <span className="sm:hidden">編集</span>
-                    </button>
-                  )}
-                  
-                  {/* カメラアイコンを後に配置 */}
-                  <label className="bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer flex items-center justify-center">
-                    <Camera size={16} />
+                  {/* 画像表示 - タップ可能にする */}
+                  <label className="cursor-pointer">
+                    {formData.iconUrl &&
+                    getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
+                      <Image
+                        src={getPublicIconUrl(formData.iconUrl)}
+                        alt="icon"
+                        width={128}
+                        height={128}
+                        className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover hover:opacity-80 transition-opacity"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gradient-to-r from-green-500 to-blue-500 rounded-full border-4 border-black flex items-center justify-center text-white text-2xl sm:text-4xl font-bold hover:opacity-80 transition-opacity">
+                        {formData.displayName.charAt(0)}
+                      </div>
+                    )}
                     <input
                       type="file"
                       accept="image/*"
@@ -351,6 +315,36 @@ function ProfilePageContent() {
                       disabled={uploading}
                     />
                   </label>
+                </div>
+
+                {/* 編集ボタンを右側に配置 */}
+                <div className="flex space-x-2">
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleSave}
+                        className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                      >
+                        <Save size={16} />
+                        <span>保存</span>
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="border border-gray-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2"
+                      >
+                        <X size={16} />
+                        <span>キャンセル</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="border border-gray-600 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-800 transition-colors flex items-center space-x-2"
+                    >
+                      <Edit3 size={16} />
+                      <span>プロフィールを編集</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
