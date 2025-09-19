@@ -15,7 +15,9 @@ import {
   Coffee,
   MessageCircle,
   Sparkles,
-  Radio
+  Radio,
+  X,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -81,6 +83,9 @@ export default function TikuriBarPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newBarTitle, setNewBarTitle] = useState("");
   const [chatMessage, setChatMessage] = useState("");
+  
+  // 退店確認ダイアログの状態
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // WebSocket接続時に音声フックを設定
   useEffect(() => {
@@ -125,8 +130,17 @@ export default function TikuriBarPage() {
   };
 
   const handleLeaveBar = () => {
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeaveBar = () => {
     stopRecording();
     leaveBar();
+    setShowLeaveConfirm(false);
+  };
+
+  const cancelLeaveBar = () => {
+    setShowLeaveConfirm(false);
   };
 
   const handleSendMessage = () => {
@@ -150,6 +164,64 @@ export default function TikuriBarPage() {
       return `${hours}時間${minutes % 60}分`;
     }
     return `${minutes}分`;
+  };
+
+  // 退店確認ダイアログコンポーネント
+  const LeaveConfirmDialog = () => {
+    if (!showLeaveConfirm) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-gradient-to-br from-gray-900 via-black to-amber-900/20 backdrop-blur-xl rounded-3xl p-8 border border-red-500/30 shadow-2xl shadow-red-500/20 max-w-md w-full relative">
+          {/* 閉じるボタン */}
+          <button
+            onClick={cancelLeaveBar}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+
+          {/* アイコン */}
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-full border border-red-500/30">
+              <AlertTriangle size={32} className="text-red-400" />
+            </div>
+          </div>
+
+          {/* タイトル */}
+          <h3 className="text-2xl font-bold text-white text-center mb-4">
+            退店の確認
+          </h3>
+
+          {/* メッセージ */}
+          <div className="text-center mb-8">
+            <p className="text-gray-300 text-lg mb-2">
+              本当にTikuriBARから退店しますか？
+            </p>
+            <p className="text-gray-400 text-sm">
+              現在の会話が終了し、録音も停止されます。
+            </p>
+          </div>
+
+          {/* ボタン */}
+          <div className="flex space-x-4">
+            <button
+              onClick={cancelLeaveBar}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              <span className="font-semibold">キャンセル</span>
+            </button>
+            <button
+              onClick={confirmLeaveBar}
+              className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-red-500/30 flex items-center justify-center space-x-2"
+            >
+              <PhoneOff size={20} />
+              <span className="font-semibold">退店する</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (!user) {
@@ -405,6 +477,9 @@ export default function TikuriBarPage() {
             </div>
           </div>
         </div>
+
+        {/* 退店確認ダイアログ */}
+        <LeaveConfirmDialog />
       </div>
     );
   }
