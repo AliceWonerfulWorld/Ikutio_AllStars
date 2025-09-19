@@ -404,25 +404,137 @@ export default function MapView({ posts, onMapClick }: MapViewProps) {
 
         marker.addListener("click", () => {
           const html = `
-            <div style="max-width:240px;color:#111">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <div style="width:24px;height:24px;background:linear-gradient(90deg,#60a5fa,#a78bfa);border-radius:9999px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">${escapeHtml(
-                  p.userAvatar
-                )}</div>
-                <div style="font-weight:600">${escapeHtml(p.username)}</div>
+            <div style="
+              max-width: 320px; 
+              color: #111; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            ">
+              <!-- ヘッダー部分 -->
+              <div style="
+                display: flex; 
+                align-items: center; 
+                gap: 12px; 
+                margin-bottom: 12px; 
+                padding-bottom: 12px; 
+                border-bottom: 1px solid #e5e7eb;
+              ">
+                <div style="
+                  width: 40px; 
+                  height: 40px; 
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                  border-radius: 50%; 
+                  color: #fff; 
+                  display: flex; 
+                  align-items: center; 
+                  justify-content: center; 
+                  font-weight: 700; 
+                  font-size: 16px;
+                  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                ">${escapeHtml(p.userAvatar)}</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 16px; color: #111; margin-bottom: 2px;">${escapeHtml(p.username)}</div>
+                  <div style="color: #6b7280; font-size: 12px;">天気投稿</div>
+                </div>
               </div>
-              <div style="color:#666;font-size:12px;margin-bottom:6px">${escapeHtml(p.location)}</div>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <div style="font-size:18px">${label}</div>
-                <div style="font-weight:600">${p.temperature}°C</div>
-                <div style="color:#888;font-size:12px">${escapeHtml(
-                  weatherLabels[p.weather as keyof typeof weatherLabels]
-                )}</div>
+
+              <!-- 位置情報 -->
+              <div style="
+                color: #6b7280; 
+                font-size: 13px; 
+                margin-bottom: 12px; 
+                padding: 8px 12px; 
+                background: #f8fafc; 
+                border-radius: 8px; 
+                border-left: 3px solid #3b82f6;
+              ">
+                📍 ${escapeHtml(p.location)}
               </div>
-              <div style="white-space:pre-wrap;line-height:1.5;color:#111">${escapeHtml(p.comment)}</div>
-              <div style="margin-top:8px;color:#777;font-size:12px">いいね ${p.likes} ・ ${new Date(
-                p.createdAt
-              ).toLocaleString()}</div>
+
+              <!-- 天気情報 -->
+              <div style="
+                display: flex; 
+                align-items: center; 
+                gap: 12px; 
+                margin-bottom: 12px; 
+                padding: 12px; 
+                background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
+                border-radius: 12px; 
+                border: 1px solid #bae6fd;
+              ">
+                <div style="font-size: 24px;">${label}</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 18px; color: #111; margin-bottom: 2px;">
+                    ${p.temperature}°C
+                  </div>
+                  <div style="color: #0891b2; font-size: 13px; font-weight: 500;">
+                    ${escapeHtml(weatherLabels[p.weather as keyof typeof weatherLabels])}
+                  </div>
+                </div>
+                <div style="margin-left: auto; text-align: right;">
+                  <div style="color: #6b7280; font-size: 11px; margin-bottom: 2px;">湿度</div>
+                  <div style="color: #111; font-weight: 600; font-size: 14px;">${p.humidity}%</div>
+                </div>
+              </div>
+
+              <!-- コメント -->
+              <div style="
+                background: #f9fafb; 
+                border-radius: 12px; 
+                padding: 12px; 
+                margin-bottom: 12px; 
+                border: 1px solid #e5e7eb;
+              ">
+                <div style="
+                  display: flex; 
+                  align-items: center; 
+                  gap: 8px; 
+                  margin-bottom: 8px;
+                ">
+                  <div style="
+                    width: 20px; 
+                    height: 20px; 
+                    background: #3b82f6; 
+                    border-radius: 50%; 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                  ">
+                    <span style="color: white; font-size: 10px;">📅</span>
+                  </div>
+                  <div style="color: #6b7280; font-size: 12px; font-weight: 500;">コメント</div>
+                </div>
+                <div style="
+                  white-space: pre-wrap; 
+                  line-height: 1.6; 
+                  color: #111; 
+                  font-size: 14px;
+                ">${escapeHtml(p.comment)}</div>
+              </div>
+
+              <!-- 投稿日付のみ -->
+              <div style="
+                display: flex; 
+                justify-content: center; 
+                padding-top: 12px; 
+                border-top: 1px solid #e5e7eb;
+              ">
+                <div style="
+                  color: #9ca3af; 
+                  font-size: 12px; 
+                  background: #f3f4f6; 
+                  padding: 6px 12px; 
+                  border-radius: 8px;
+                  font-weight: 500;
+                ">
+                  📅 ${new Date(p.createdAt).toLocaleString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
             </div>`;
           infoRef.current?.setContent(html);
           infoRef.current?.open({ map: mapObj.current!, anchor: marker });
