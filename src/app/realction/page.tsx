@@ -31,7 +31,7 @@ export default function Page() {
         <div style={{
           position: 'fixed',
           top: '24px',
-          right: '24px',
+          left: '24px',
           zIndex: 50,
         }}>
           <Link
