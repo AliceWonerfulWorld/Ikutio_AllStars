@@ -13,7 +13,7 @@ import ListView from "./components/ListView";
 
 export default function WeatherPage() {
   const { user } = useAuth();
-  const { posts, submitPost, handleLike } = useWeatherPosts();
+  const { posts, submitPost, handleLike, addComment, likeComment } = useWeatherPosts();
   
   const [showPostForm, setShowPostForm] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
@@ -111,33 +111,47 @@ export default function WeatherPage() {
     );
   }
 
-  const handleSubmitPost = async () => {
+  // 投稿処理（座標を受け取る）
+  const handleSubmitPost = async (coords: { lat: number; lng: number }) => {
     try {
-      await submitPost(newPost, postCoords, user);
-    setNewPost({
-      location: "",
-      weather: "sunny",
-      temperature: 20,
-      humidity: 60,
-      windSpeed: 5,
-      visibility: 10,
-      comment: "",
-    });
-    setPostCoords(null);
-    setShowPostForm(false);
+      console.log("投稿処理開始:", { newPost, coords });
+      await submitPost(newPost, coords, user);
+      
+      // フォームをリセット
+      setNewPost({
+        location: "",
+        weather: "sunny",
+        temperature: 20,
+        humidity: 60,
+        windSpeed: 5,
+        visibility: 10,
+        comment: "",
+      });
+      setPostCoords(null);
+      setShowPostForm(false);
+      
+      console.log("投稿完了");
     } catch (error) {
+      console.error("投稿エラー:", error);
       // エラーは useWeatherPosts 内で処理済み
     }
   };
 
+  // 地図クリックは無効化（右上のボタンからのみ投稿可能）
   const handleMapClick = (coords: { lat: number; lng: number }) => {
-    setPostCoords(coords);
-    setShowPostForm(true);
+    // 地図クリックでは投稿フォームを開かない
+    console.log("地図クリック:", coords);
   };
 
   const handleCloseForm = () => {
     setShowPostForm(false);
     setPostCoords(null);
+  };
+
+  // 投稿フォームを開く関数
+  const handleCreatePost = () => {
+    setPostCoords(null); // 地図クリック位置はリセット
+    setShowPostForm(true);
   };
 
   // ログイン済みの場合の通常表示
@@ -146,7 +160,7 @@ export default function WeatherPage() {
       <WeatherHeader
         viewMode={viewMode}
         setViewMode={setViewMode}
-        onCreatePost={() => setShowPostForm(true)}
+        onCreatePost={handleCreatePost}
       />
 
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -163,7 +177,12 @@ export default function WeatherPage() {
         {viewMode === "map" ? (
           <MapView posts={posts} onMapClick={handleMapClick} />
         ) : (
-          <ListView posts={posts} onLike={handleLike} />
+          <ListView 
+            posts={posts} 
+            onLike={handleLike}
+            onAddComment={addComment}
+            onLikeComment={likeComment}
+          />
         )}
       </div>
     </div>
