@@ -14,7 +14,7 @@ import {
   Heart,
   CloudSun,
   Wine, // BARのコンセプトに合うアイコンに変更
-  Camera, // Realction用のカメラアイコンを追加
+  Camera, // REALction用のカメラアイコンを追加
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -79,8 +79,8 @@ export default function Sidebar() {
     { icon: Bookmark, label: "ブックマーク", href: "/bookmarks" },
     { icon: Clock, label: "Clock", href: "/glok" },
     { icon: Heart, label: "リアクション", href: "/reactions" },
-    { icon: Camera, label: "Realction", href: "/realction" }, // Realction項目を追加
-    { icon: CloudSun, label: "天気", href: "/weather" },
+    { icon: Camera, label: "REALction", href: "/realction" }, // REALction項目を追加
+    { icon: CloudSun, label: "天気Yohoo!", href: "/weather" },
     { icon: Wine, label: "TikuriBAR", href: "/tikuribar" },
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },

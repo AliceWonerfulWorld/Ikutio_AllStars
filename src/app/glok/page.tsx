@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Home } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Thread, LS_KEY } from './types';
 import Starfield, { StarfieldRef } from './components/Starfield';
@@ -11,6 +13,7 @@ import ChatView from './components/ChatView';
 
 export default function GlokPage() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
@@ -256,6 +259,43 @@ export default function GlokPage() {
       }}>
         <Starfield ref={starfieldRef} active={true} />
         
+        {/* ホームに戻るボタン */}
+        <div style={{
+          position: 'absolute',
+          top: '24px',
+          left: '24px',
+          zIndex: 10,
+        }}>
+          <button
+            onClick={() => router.push("/")}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(0, 0, 0, 0.8)',
+              color: 'white',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontSize: '14px',
+              fontWeight: '600',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
+            }}
+          >
+            <Home size={20} />
+            <span>ホームに戻る</span>
+          </button>
+        </div>
+        
         <div style={{
           textAlign: 'center',
           zIndex: 1,
@@ -270,31 +310,67 @@ export default function GlokPage() {
           <p style={{ fontSize: '1.2em', marginBottom: '30px', color: '#aaa' }}>
             Clockを使用するには、先にサインインしてください
           </p>
-          <a 
-            href="/auth/login" 
-            style={{
-              display: 'inline-block',
-              background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
-              color: 'white',
-              padding: '15px 30px',
-              borderRadius: '25px',
-              textDecoration: 'none',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              border: '1px solid #444',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            ログインページへ
-          </a>
+          
+          {/* ボタン群 */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '16px',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <a 
+              href="/auth/login" 
+              style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
+                color: 'white',
+                padding: '15px 30px',
+                borderRadius: '25px',
+                textDecoration: 'none',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                border: '1px solid #444',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              ログインページへ
+            </a>
+            
+            <a 
+              href="/auth/signup" 
+              style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #444 0%, #2a2a2a 100%)',
+                color: 'white',
+                padding: '15px 30px',
+                borderRadius: '25px',
+                textDecoration: 'none',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                border: '1px solid #555',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              新規会員登録
+            </a>
+          </div>
         </div>
       </div>
     );
