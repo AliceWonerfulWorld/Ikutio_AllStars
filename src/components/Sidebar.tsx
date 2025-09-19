@@ -13,8 +13,8 @@ import {
   Clock,
   Heart,
   CloudSun,
-  Wine, // BARのコンセプトに合うアイコンに変更
-  Camera, // REALction用のカメラアイコンを追加
+  Wine,
+  Camera,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -100,7 +100,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* モバイルメニューボタン */}
+      {/* モバイルメニューボタン（デスクトップでは非表示） */}
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className="lg:hidden fixed top-4 left-4 z-50 bg-black/80 backdrop-blur-md text-white p-2 rounded-lg"
@@ -110,7 +110,7 @@ export default function Sidebar() {
 
       {/* モバイルメニューオーバーレイ */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-40">
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-[9999]">
           <div className="w-80 h-full bg-black border-r border-gray-800 flex flex-col">
             {/* ヘッダー */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
@@ -213,13 +213,24 @@ export default function Sidebar() {
                   </Link>
                 </div>
               )}
+
+              {/* ログアウトボタン */}
+              {user && (
+                <button
+                  onClick={handleSignOut}
+                  className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors"
+                >
+                  <LogOut size={20} />
+                  <span>ログアウト</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* デスクトップサイドバー */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden lg:z-30 lg:bg-black">
+      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen lg:border-r lg:border-gray-800 lg:sticky lg:top-0 lg:overflow-hidden lg:z-10 lg:bg-black">
         {/* ロゴ */}
         <div className="flex-shrink-0 p-4 relative z-10">
           <h1 className="text-2xl font-bold text-white">Tikuru24</h1>

@@ -6,6 +6,8 @@ import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import MobileNavigation from "@/components/MobileNavigation";
+import MobileExtendedNavigation from "@/components/MobileExtendedNavigation";
 
 type Trend = {
   tag: string;
@@ -430,17 +432,24 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-7xl mx-auto flex h-screen">
-        {/* 左サイドバー */}
-        <div className="w-64 flex-shrink-0">
+        {/* デスクトップ: 左サイドバー */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
           <Sidebar />
         </div>
         
         {/* メインコンテンツ */}
         <div className="flex-1 min-w-0">
-          <div className="max-w-2xl mx-auto border-r border-gray-800 h-full overflow-y-auto">
+          <div className="max-w-2xl mx-auto lg:border-r border-gray-800 h-full overflow-y-auto pb-20 lg:pb-0">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
-              <h1 className="text-xl font-bold">話題を検索</h1>
+              {/* モバイル: ハンバーガーメニュー + タイトル */}
+              <div className="lg:hidden flex items-center space-x-4 mb-4">
+                <Sidebar />
+                <h1 className="text-xl font-bold">話題を検索</h1>
+              </div>
+              
+              {/* デスクトップ: タイトルのみ */}
+              <h1 className="hidden lg:block text-xl font-bold">話題を検索</h1>
             </div>
             
             {/* 検索バー */}
@@ -469,7 +478,7 @@ export default function SearchPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-4 text-sm font-medium transition-colors ${
+                  className={`px-3 lg:px-6 py-4 text-sm font-medium transition-colors ${
                     activeTab === tab.id
                       ? "text-white border-b-2 border-blue-500"
                       : "text-gray-500 hover:text-white"
@@ -577,8 +586,8 @@ export default function SearchPage() {
           </div>
         </div>
         
-        {/* 右サイドバー */}
-        <div className="w-80 flex-shrink-0 h-screen overflow-y-auto">
+        {/* デスクトップ: 右サイドバー */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto">
           <div className="p-4 space-y-6">
             {/* TikuriBar ライブルーム */}
             <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-2xl p-4 border border-amber-500/30 shadow-2xl shadow-amber-500/10">
@@ -764,6 +773,24 @@ export default function SearchPage() {
             </div>
           </div>
         </div>
+        
+        {/* デスクトップ: 右サイドバー */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto">
+          {/* 右サイドバーのコンテンツ */}
+          <div className="p-4 space-y-6">
+            <div className="bg-gray-800 rounded-2xl p-4">
+              <h2 className="text-xl font-bold mb-4">トレンド</h2>
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">📈</div>
+                <p className="text-sm">トレンド情報は準備中です</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* モバイルナビゲーション */}
+        <MobileNavigation />
+        <MobileExtendedNavigation />
       </div>
     </div>
   );

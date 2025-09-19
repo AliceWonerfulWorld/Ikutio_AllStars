@@ -209,3 +209,58 @@ body {
   z-index: 30;
   background: #000000;
 }
+
+/* レスポンシブ対応のための追加スタイル */
+@media (max-width: 1024px) {
+  .sidebar-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* モバイルでのスクロール改善 */
+@media (max-width: 768px) {
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* モーダル用のz-index */
+.modal-overlay {
+  z-index: 9999;
+}
+
+.modal-content {
+  z-index: 10000;
+}
+
+/* モバイルナビゲーション用のスタイル */
+.mobile-nav {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* モバイルでのスクロール改善 */
+@media (max-width: 1024px) {
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    padding-bottom: 80px; /* モバイルナビゲーションの高さ分 */
+  }
+}
+
+/* 拡張メニューのアニメーション */
+.extended-menu {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
