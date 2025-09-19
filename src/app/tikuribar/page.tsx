@@ -227,25 +227,70 @@ export default function TikuriBarPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-amber-900/20 text-white flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
+        {/* 背景パターン */}
+        <div className="absolute inset-0 opacity-30">
           <div className="w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23D97706%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
         </div>
         
-        <div className="text-center relative z-10">
-          <div className="p-6 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full mb-6 backdrop-blur-sm border border-amber-500/30">
-            <Wine size={64} className="mx-auto text-amber-400" />
-          </div>
-          <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
-            TikuriBARへようこそ
-          </h1>
-          <p className="text-gray-300 mb-8 text-lg">音声で繋がる、大人の社交場</p>
+        {/* ホームに戻るボタン */}
+        <div className="absolute top-6 left-6 z-20">
           <button
-            onClick={() => router.push("/auth/login")}
-            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center space-x-3 mx-auto"
+            onClick={() => router.push("/")}
+            className="group flex items-center space-x-2 bg-gradient-to-r from-gray-800/80 to-gray-700/80 hover:from-gray-700/80 hover:to-gray-600/80 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg"
           >
-            <Wine size={24} />
-            <span className="text-lg font-semibold">BARに入店する</span>
+            <Home size={20} className="group-hover:rotate-12 transition-transform duration-300" />
+            <span className="font-semibold">ホームに戻る</span>
           </button>
+        </div>
+        
+        {/* メインコンテンツ */}
+        <div className="text-center relative z-10 max-w-md mx-auto px-6">
+          {/* ロックアイコン */}
+          <div className="p-6 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-full mb-6 backdrop-blur-sm border border-red-500/30 mx-auto w-fit">
+            <Crown size={64} className="mx-auto text-red-400" />
+          </div>
+          
+          {/* タイトル */}
+          <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-red-300 to-red-400 bg-clip-text text-transparent">
+            会員限定制
+          </h1>
+          
+          {/* 説明文 */}
+          <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-gray-600/30">
+            <p className="text-gray-300 text-lg mb-4">
+              TikuriBARは会員様限定の<br />
+              特別なサービスです
+            </p>
+            <p className="text-gray-400 text-sm">
+              ログインして、音声で繋がる大人の社交場を<br />
+              お楽しみください
+            </p>
+          </div>
+          
+          {/* ログインボタン */}
+          <div className="space-y-4">
+            <button
+              onClick={() => router.push("/auth/login")}
+              className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center justify-center space-x-3"
+            >
+              <Wine size={24} />
+              <span className="text-lg font-semibold">ログインして入店</span>
+            </button>
+            
+            <button
+              onClick={() => router.push("/auth/signup")}
+              className="w-full bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-8 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+            >
+              <span className="font-semibold">新規会員登録</span>
+            </button>
+          </div>
+          
+          {/* 追加情報 */}
+          <div className="mt-8 text-center">
+            <p className="text-gray-500 text-xs">
+              ※ 会員登録は無料です
+            </p>
+          </div>
         </div>
       </div>
     );
