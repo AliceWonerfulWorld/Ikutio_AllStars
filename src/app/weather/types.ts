@@ -45,3 +45,14 @@ export const weatherLabels = {
   snowy: "雪",
   stormy: "嵐",
 } as const;
+
+// 天気APIレスポンス用の型
+export interface WeatherApiResponse {
+  location: string;
+  weather: string;
+  temperature: number;
+  humidity: number;
+  windSpeed: number;
+  visibility: number;
+  description: string;
+}

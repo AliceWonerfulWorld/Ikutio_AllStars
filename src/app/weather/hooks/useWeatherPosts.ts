@@ -58,7 +58,15 @@ export function useWeatherPosts() {
     postCoords: { lat: number; lng: number } | null,
     user: any
   ) => {
-    if (!user || !newPost.location || !newPost.comment) return;
+    // バリデーションを修正：locationとcommentの両方が必要
+    if (!user || !newPost.location || !newPost.comment.trim()) {
+      console.error("投稿に必要な情報が不足しています:", {
+        user: !!user,
+        location: newPost.location,
+        comment: newPost.comment
+      });
+      return;
+    }
 
     const fallback = {
       lat: 35.6762 + (Math.random() - 0.5) * 0.1,
@@ -94,10 +102,23 @@ export function useWeatherPosts() {
       lat: coords.lat,
       lng: coords.lng,
     };
+    
+    console.log("楽観的UI更新:", optimistic);
     setPosts((p) => [optimistic, ...p]);
 
     try {
-      if (!supabase) throw new Error("Supabase client not configured.");
+      if (!supabase) {
+        console.log("Supabase not configured, using mock data only");
+        return;
+      }
+      
+      console.log("Supabaseに投稿中:", {
+        user_id: (user as any).id,
+        location: newPost.location,
+        weather: newPost.weather,
+        coords
+      });
+
       const { data, error } = await supabase
         .from("weather")
         .insert([
@@ -120,7 +141,12 @@ export function useWeatherPosts() {
         .select("*")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+
+      console.log("投稿成功:", data);
 
       // 返ってきた行で optimistic を置き換え
       const saved: WeatherPost = {
