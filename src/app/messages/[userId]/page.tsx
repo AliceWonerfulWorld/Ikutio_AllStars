@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, use } from "react";
 import { ArrowLeft, Send, MoreVertical, Hourglass } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
+import MobileNavigation from "@/components/MobileNavigation";
+import MobileExtendedNavigation from "@/components/MobileExtendedNavigation";
 import { supabase } from "@/utils/supabase/client";
 
 interface Message {
@@ -204,9 +206,9 @@ export default function ChatPage({
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="flex max-w-7xl mx-auto">
-        {/* 左サイドバー */}
-        <div className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">
+      <div className="max-w-7xl mx-auto flex h-screen">
+        {/* デスクトップ: 左サイドバー */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
           <Sidebar />
         </div>
 
@@ -304,7 +306,7 @@ export default function ChatPage({
           </div>
 
           {/* メッセージ入力 */}
-          <div className="sticky bottom-0 bg-black/80 backdrop-blur-md border-t border-gray-800 p-4">
+          <div className="sticky bottom-20 lg:bottom-0 bg-black/80 backdrop-blur-md border-t border-gray-800 p-4">
             <div className="flex space-x-3">
               <div className="flex-1 relative">
                 <textarea
@@ -328,8 +330,8 @@ export default function ChatPage({
           </div>
         </div>
 
-        {/* 右サイドバー - デスクトップのみ */}
-        <div className="hidden xl:block w-80 flex-shrink-0 h-screen sticky top-0 p-4">
+        {/* デスクトップ: 右サイドバー - 大きなデスクトップのみ */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto p-4">
           <div className="sticky top-4">
             <div className="bg-gray-800 rounded-2xl p-4">
               <h2 className="text-xl font-bold mb-4">メッセージについて</h2>
@@ -340,6 +342,10 @@ export default function ChatPage({
           </div>
         </div>
       </div>
+
+      {/* モバイルナビゲーション */}
+      <MobileNavigation />
+      <MobileExtendedNavigation />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { ArrowLeft, Settings, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Notification from '@/components/Notification';
+import MobileNavigation from '@/components/MobileNavigation';
+import MobileExtendedNavigation from '@/components/MobileExtendedNavigation';
 import { Notification as NotificationType } from '@/types';
 import { supabase } from '@/utils/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -129,14 +131,14 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="flex max-w-7xl mx-auto">
-        {/* 左サイドバー */}
-        <div className="w-64 flex-shrink-0 h-screen sticky top-0">
+      <div className="max-w-7xl mx-auto flex h-screen">
+        {/* デスクトップ: 左サイドバー */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
           <Sidebar />
         </div>
         
         {/* メインコンテンツ */}
-        <div className="flex-1 min-w-0 max-w-2xl border-r border-gray-800">
+        <div className="flex-1 min-w-0 max-w-2xl lg:border-r border-gray-800 overflow-y-auto pb-20 lg:pb-0">
           {/* ヘッダー */}
           <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-10">
             <div className="flex items-center justify-between">
@@ -181,7 +183,7 @@ export default function NotificationsPage() {
             <div className="flex space-x-4 mt-4">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 lg:px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   filter === 'all'
                     ? 'bg-blue-500 text-white'
                     : 'text-gray-500 hover:text-white hover:bg-gray-800'
@@ -191,7 +193,7 @@ export default function NotificationsPage() {
               </button>
               <button
                 onClick={() => setFilter('unread')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`px-3 lg:px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   filter === 'unread'
                     ? 'bg-blue-500 text-white'
                     : 'text-gray-500 hover:text-white hover:bg-gray-800'
@@ -234,8 +236,8 @@ export default function NotificationsPage() {
           </div>
         </div>
         
-        {/* 右サイドバー */}
-        <div className="w-80 flex-shrink-0 h-screen sticky top-0 p-4">
+        {/* デスクトップ: 右サイドバー */}
+        <div className="hidden xl:block w-80 flex-shrink-0 h-screen overflow-y-auto p-4">
           <div className="sticky top-4">
             {/* 通知統計 */}
             <div className="bg-gray-800 rounded-2xl p-4 mb-6">
@@ -305,6 +307,10 @@ export default function NotificationsPage() {
           </div>
         </div>
       </div>
+
+      {/* モバイルナビゲーション */}
+      <MobileNavigation />
+      <MobileExtendedNavigation />
     </div>
   );
 }

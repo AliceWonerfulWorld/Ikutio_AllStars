@@ -38,40 +38,35 @@ export default function WeatherPage() {
         </div>
         
         {/* ホームに戻るボタン */}
-        <div style={{
-          position: 'fixed',
-          top: '24px',
-          left: '24px',
-          zIndex: 50,
-        }}>
+        <div className="fixed top-4 left-4 z-50">
           <Link
             href="/"
-            className="flex items-center space-x-2 bg-gray-800/90 hover:bg-gray-700/90 text-white px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg cursor-pointer"
+            className="flex items-center space-x-2 bg-gray-800/90 hover:bg-gray-700/90 text-white px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg cursor-pointer"
             style={{ pointerEvents: 'auto' }}
           >
-            <Home size={20} />
-            <span className="font-semibold">ホームに戻る</span>
+            <Home size={18} className="sm:w-5 sm:h-5" />
+            <span className="font-semibold text-sm sm:text-base">ホームに戻る</span>
           </Link>
         </div>
         
         {/* メインコンテンツ */}
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto px-6">
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+          <div className="text-center max-w-md mx-auto">
             {/* アイコン */}
             <div className="flex justify-center mb-6">
-              <div className="p-6 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full border border-blue-500/30 backdrop-blur-sm">
-                <CloudSun size={64} className="text-blue-400" />
+              <div className="p-4 sm:p-6 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full border border-blue-500/30 backdrop-blur-sm">
+                <CloudSun size={48} className="sm:w-16 sm:h-16 text-blue-400" />
               </div>
             </div>
             
             {/* タイトル */}
-            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent">
               会員限定制
             </h1>
             
             {/* 説明文 */}
-            <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-gray-600/30">
-              <p className="text-gray-300 text-lg mb-4">
+            <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-8 border border-gray-600/30">
+              <p className="text-gray-300 text-base sm:text-lg mb-4">
                 天気Yohoo!は会員様限定の<br />
                 特別なサービスです
               </p>
@@ -82,20 +77,20 @@ export default function WeatherPage() {
             </div>
             
             {/* ボタン群 */}
-            <div className="flex flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Link 
                 href="/auth/login"
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
               >
-                <CloudSun size={20} />
-                <span>ログインして利用開始</span>
+                <CloudSun size={18} className="sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">ログインして利用開始</span>
               </Link>
               
               <Link 
                 href="/auth/signup"
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                <span>新規会員登録</span>
+                <span className="text-sm sm:text-base">新規会員登録</span>
               </Link>
             </div>
             
@@ -163,7 +158,7 @@ export default function WeatherPage() {
         onCreatePost={handleCreatePost}
       />
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
         {showPostForm && (
           <WeatherPostForm
             newPost={newPost}

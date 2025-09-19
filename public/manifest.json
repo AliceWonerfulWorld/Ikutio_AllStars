@@ -1,7 +1,7 @@
 {
-    "name": "Ikutio AllStars",
-    "short_name": "Ikutio",
-    "description": "Ikutio AllStars - ソーシャルメディアアプリ",
+    "name": "Tikuru24",
+    "short_name": "Tikuru24",
+    "description": "瞬間で繋がるSNS",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",

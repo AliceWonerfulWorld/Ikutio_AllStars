@@ -210,7 +210,7 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
     if (!showBanModal) return null;
 
     return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <div className="bg-gradient-to-br from-gray-900 via-black to-red-900/20 backdrop-blur-xl rounded-3xl p-8 border border-red-500/30 shadow-2xl shadow-red-500/20 max-w-md w-full relative">
           {/* 閉じるボタン */}
           <button
@@ -330,7 +330,8 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
               )}
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 text-blue-400">
+                {/* モバイル: アイコンを小さく、レスポンシブ対応 */}
+                <div className="flex items-center space-x-2 lg:space-x-4 text-blue-400">
                   <button
                     type="button"
                     className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
@@ -339,7 +340,7 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
                       document.getElementById("image-upload")?.click()
                     }
                   >
-                    <Image size={20} />
+                    <Image size={18} className="lg:w-5 lg:h-5" />
                   </button>
                   <input
                     id="image-upload"
@@ -351,42 +352,43 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
                       if (file) setImageFile(file);
                     }}
                   />
+                  {/* モバイルでは一部のアイコンを非表示 */}
                   <button
                     type="button"
-                    className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
+                    className="hidden sm:block hover:bg-blue-500/10 p-2 rounded-full transition-colors"
                     aria-label="投票を追加"
                   >
-                    <BarChart3 size={20} />
+                    <BarChart3 size={18} className="lg:w-5 lg:h-5" />
                   </button>
                   <button
                     type="button"
-                    className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
+                    className="hidden sm:block hover:bg-blue-500/10 p-2 rounded-full transition-colors"
                     aria-label="絵文字を追加"
                   >
-                    <Smile size={20} />
+                    <Smile size={18} className="lg:w-5 lg:h-5" />
                   </button>
                   <button
                     type="button"
-                    className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
+                    className="hidden lg:block hover:bg-blue-500/10 p-2 rounded-full transition-colors"
                     aria-label="スケジュールを追加"
                   >
                     <Calendar size={20} />
                   </button>
                   <button
                     type="button"
-                    className="hover:bg-blue-500/10 p-2 rounded-full transition-colors"
+                    className="hidden lg:block hover:bg-blue-500/10 p-2 rounded-full transition-colors"
                     aria-label="場所を追加"
                   >
                     <MapPin size={20} />
                   </button>
                 </div>
 
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-gray-500">{text.length}/280</div>
+                <div className="flex items-center space-x-2 lg:space-x-4">
+                  <div className="text-xs lg:text-sm text-gray-500">{text.length}/280</div>
                   <button
                     type="submit"
                     disabled={!text.trim()}
-                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-full font-semibold transition-colors"
+                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 lg:px-6 py-2 rounded-full font-semibold transition-colors text-sm lg:text-base"
                   >
                     投稿
                   </button>
