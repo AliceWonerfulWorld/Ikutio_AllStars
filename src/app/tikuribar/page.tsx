@@ -23,28 +23,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useBarAudio } from "./hooks/useBarAudio";
 
-interface SpaceUser {
-  id: string;
-  name: string;
-  avatar?: string;
-  isSpeaking: boolean;
-  isMuted: boolean;
-  isHost: boolean;
-  joinedAt: number;
-}
-
-interface Space {
-  id: string;
-  title: string;
-  description: string;
-  hostId: string;
-  hostName: string;
-  participants: number;
-  isLive: boolean;
-  startedAt: number;
-  category: string;
-}
-
 export default function TikuriBarPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -54,10 +32,8 @@ export default function TikuriBarPage() {
     isConnected,
     currentBar,
     users,
-    messages,
     availableBars,
     connect,
-    disconnect,
     createBar,
     joinBar,
     sendMessage,

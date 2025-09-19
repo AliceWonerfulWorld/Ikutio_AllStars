@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, TrendingUp, Wine, Users, Radio } from "lucide-react";
+import { Search, TrendingUp, Wine, Users, Radio, ExternalLink, Clock } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,16 @@ type BarRoom = {
   hostName: string;
 };
 
+// ニュース記事の型
+type NewsArticle = {
+  title: string;
+  description: string;
+  url: string;
+  publishedAt: string;
+  source: string;
+  imageUrl?: string;
+};
+
 export default function SearchPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -49,30 +59,154 @@ export default function SearchPage() {
   const [isLoadingBars, setIsLoadingBars] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
 
-  // WebSocket接続とTikuriBarルーム情報の取得
+  // ニュース関連の状態（初期値にモックデータを設定）
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([
+    {
+      title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
+      description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
+      url: "#",
+      publishedAt: new Date('2024-01-01T00:00:00Z').toISOString(),
+      source: "ゲームニュース",
+    },
+    {
+      title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
+      description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
+      url: "#",
+      publishedAt: new Date('2024-01-01T00:00:00Z').toISOString(),
+      source: "映画ニュース",
+    },
+    {
+      title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
+      description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
+      url: "#",
+      publishedAt: new Date('2024-01-01T00:00:00Z').toISOString(),
+      source: "エンタメニュース",
+    },
+  ]);
+  const [isLoadingNews, setIsLoadingNews] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+
+  // ニュース取得関数（キャッシュを無効化）
+  const fetchNews = async (forceRefresh = false) => {
+    setIsLoadingNews(true);
+    setNewsError(null);
+    
+    try {
+      // キャッシュを無効化するためのクエリパラメータを追加
+      const url = forceRefresh ? '/api/news?refresh=true' : '/api/news';
+      
+      console.log('ニュース取得開始:', url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('ニュース取得成功:', data.articles?.length || 0, '件');
+      
+      if (data.articles && data.articles.length > 0) {
+        setNewsArticles(data.articles);
+        setNewsError(null); // エラーをクリア
+      } else {
+        // APIから記事が返されない場合はフォールバックデータを使用
+        const fixedDate = new Date('2024-01-01T00:00:00Z');
+        setNewsArticles([
+          {
+            title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
+            description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
+            url: "#",
+            publishedAt: fixedDate.toISOString(),
+            source: "ゲームニュース",
+          },
+          {
+            title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
+            description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
+            url: "#",
+            publishedAt: fixedDate.toISOString(),
+            source: "映画ニュース",
+          },
+          {
+            title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
+            description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
+            url: "#",
+            publishedAt: fixedDate.toISOString(),
+            source: "エンタメニュース",
+          },
+        ]);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('ニュース取得エラー:', errorMessage);
+      setNewsError(`ニュースを読み込めませんでした: ${errorMessage}`);
+      
+      // フォールバック: モックデータを使用
+      const fixedDate = new Date('2024-01-01T00:00:00Z');
+      setNewsArticles([
+        {
+          title: "ポケモンSV、色違いコライドンとミライドンの限定配布がスタート",
+          description: "人気ゲームソフト『ポケットモンスター スカーレット・バイオレット』で、色違いの伝説のポケモンが限定配布されるイベントが開始されました。",
+          url: "#",
+          publishedAt: fixedDate.toISOString(),
+          source: "ゲームニュース",
+        },
+        {
+          title: "夜勤事件、実写映画化!永江二朗監督が恐怖を拡大",
+          description: "人気ホラーゲーム『夜勤事件』の実写映画化が決定。永江二朗監督が手がける本作は、ゲームの恐怖を忠実に再現すると話題になっています。",
+          url: "#",
+          publishedAt: fixedDate.toISOString(),
+          source: "映画ニュース",
+        },
+        {
+          title: "でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い",
+          description: "長年愛され続けてきた『でんぢゃらすじーさん』シリーズの終了が発表され、ファンからは複雑な声が寄せられています。",
+          url: "#",
+          publishedAt: fixedDate.toISOString(),
+          source: "エンタメニュース",
+        },
+      ]);
+    } finally {
+      setIsLoadingNews(false);
+    }
+  };
+
+  // コンポーネントマウント時にニュースを取得
+  useEffect(() => {
+    fetchNews();
+    
+    // 30分ごとにニュースを更新
+    const newsInterval = setInterval(fetchNews, 30 * 60 * 1000);
+    
+    return () => clearInterval(newsInterval);
+  }, []);
+
+  // 既存のuseEffectはそのまま維持
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
 
     const connectToTikuriBar = () => {
       try {
-        // WebSocket接続を試行（タイムアウト付き）
         ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080');
         
-        // 接続タイムアウトを設定
         const connectionTimeout = setTimeout(() => {
           if (ws && ws.readyState === WebSocket.CONNECTING) {
             console.log('TikuriBar WebSocket接続タイムアウト');
             ws.close();
             setWsConnected(false);
           }
-        }, 5000); // 5秒でタイムアウト
+        }, 5000);
         
         ws.onopen = () => {
           console.log('TikuriBar WebSocket接続成功');
           clearTimeout(connectionTimeout);
           setWsConnected(true);
-          // ルーム一覧を取得
           if (ws && ws.readyState === WebSocket.OPEN) {
             try {
               ws.send(JSON.stringify({ type: 'get_bars' }));
@@ -98,12 +232,11 @@ export default function SearchPage() {
           console.log('TikuriBar WebSocket接続が切断されました:', event.code, event.reason);
           setWsConnected(false);
           
-          // 自動再接続を試行（サーバーエラーでない場合）
           if (event.code !== 1000 && event.code !== 1001) {
             reconnectTimeout = setTimeout(() => {
               console.log('TikuriBar WebSocket再接続を試行...');
               connectToTikuriBar();
-            }, 5000); // 5秒後に再接続
+            }, 5000);
           }
         };
 
@@ -112,12 +245,11 @@ export default function SearchPage() {
           console.warn('TikuriBar WebSocket接続エラー - サーバーが利用できない可能性があります');
           setWsConnected(false);
           
-          // エラー時は再接続を試行
           if (!reconnectTimeout) {
             reconnectTimeout = setTimeout(() => {
               console.log('TikuriBar WebSocket再接続を試行...');
               connectToTikuriBar();
-            }, 10000); // 10秒後に再接続
+            }, 10000);
           }
         };
 
@@ -125,20 +257,17 @@ export default function SearchPage() {
         console.warn('TikuriBar WebSocket作成エラー:', error);
         setWsConnected(false);
         
-        // 作成エラー時も再接続を試行
         if (!reconnectTimeout) {
           reconnectTimeout = setTimeout(() => {
             console.log('TikuriBar WebSocket再接続を試行...');
             connectToTikuriBar();
-          }, 15000); // 15秒後に再接続
+          }, 15000);
         }
       }
     };
 
-    // 接続を開始
     connectToTikuriBar();
 
-    // 定期的にルーム一覧を更新（接続されている場合のみ）
     const interval = setInterval(() => {
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
@@ -147,7 +276,7 @@ export default function SearchPage() {
           console.warn('TikuriBar 定期更新エラー:', error);
         }
       }
-    }, 30000); // 30秒ごとに更新
+    }, 30000);
 
     return () => {
       if (reconnectTimeout) {
@@ -248,7 +377,6 @@ export default function SearchPage() {
       alert("TikuriBarに参加するにはログインが必要です");
       return;
     }
-    // TikuriBarページに遷移
     router.push(`/tikuribar?join=${barId}`);
   };
 
@@ -260,6 +388,37 @@ export default function SearchPage() {
       return `${hours}時間${minutes % 60}分`;
     }
     return `${minutes}分`;
+  };
+
+  // ニュース記事の時間フォーマット関数
+  const formatNewsTime = (publishedAt: string) => {
+    const now = new Date();
+    const published = new Date(publishedAt);
+    const diffMs = now.getTime() - published.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 60) {
+      return `${diffMinutes}分前`;
+    } else if (diffHours < 24) {
+      return `${diffHours}時間前`;
+    } else {
+      return `${diffDays}日前`;
+    }
+  };
+
+  // ニュース記事をクリックした時の処理
+  const handleNewsClick = (url: string) => {
+    if (url !== "#") {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // 更新ボタンのクリックハンドラー
+  const handleRefreshNews = () => {
+    console.log('更新ボタンがクリックされました');
+    fetchNews(true); // 強制更新
   };
 
   const tabs = [
@@ -464,7 +623,6 @@ export default function SearchPage() {
                       onClick={() => handleJoinTikuriBar(bar.id)}
                       className="group bg-gradient-to-br from-gray-800/40 via-black/60 to-gray-700/40 backdrop-blur-sm rounded-xl p-4 border border-amber-500/20 hover:border-amber-400/40 transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-amber-500/20 relative overflow-hidden"
                     >
-                      {/* ホバー時の光るエフェクト */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                       
                       <div className="flex items-center space-x-3 relative z-10">
@@ -496,7 +654,6 @@ export default function SearchPage() {
                   ))
                 )}
                 
-                {/* TikuriBARに移動するボタン */}
                 <button
                   onClick={() => router.push('/tikuribar')}
                   className="w-full bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center justify-center space-x-2 backdrop-blur-sm border border-amber-400/50 group"
@@ -509,24 +666,92 @@ export default function SearchPage() {
 
             {/* 本日のニュース */}
             <div className="bg-gray-800 rounded-2xl p-4">
-              <h2 className="text-xl font-bold mb-4">本日のニュース</h2>
-              <div className="space-y-3">
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm font-semibold">
-                    ポケモンSV、色違いコライドンとミライドンの限定配布がスタート
-                  </div>
-                </div>
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm font-semibold">
-                    夜勤事件、実写映画化!永江二朗監督が恐怖を拡大
-                  </div>
-                </div>
-                <div className="hover:bg-gray-700 p-2 rounded-lg cursor-pointer transition-colors">
-                  <div className="text-sm font-semibold">
-                    でんぢゃらすじーさん、24年の伝説に終止符か?ファンの複雑な想い
-                  </div>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">本日のニュース</h2>
+                <button
+                  onClick={handleRefreshNews}
+                  disabled={isLoadingNews}
+                  className="text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg"
+                >
+                  {isLoadingNews ? '更新中...' : '更新'}
+                </button>
               </div>
+              
+              {isLoadingNews ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="animate-spin w-6 h-6 border-2 border-gray-600 border-t-white rounded-full mx-auto mb-2"></div>
+                  <p className="text-sm">ニュースを読み込み中...</p>
+                </div>
+              ) : newsError && newsArticles.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-2">⚠️</div>
+                  <p className="text-sm">{newsError}</p>
+                  <button
+                    onClick={handleRefreshNews}
+                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    再試行
+                  </button>
+                </div>
+              ) : newsArticles.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-2"></div>
+                  <p className="text-sm">ニュースがありません</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {newsArticles.slice(0, 5).map((article, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleNewsClick(article.url)}
+                      className="group hover:bg-gray-700 p-3 rounded-lg cursor-pointer transition-all duration-200 border border-gray-700 hover:border-gray-600"
+                    >
+                      <div className="flex items-start space-x-3">
+                        {article.imageUrl && (
+                          <div className="flex-shrink-0 w-16 h-16 bg-gray-700 rounded-lg overflow-hidden">
+                            <img
+                              src={article.imageUrl}
+                              alt={article.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-white group-hover:text-blue-300 transition-colors line-clamp-2">
+                            {article.title}
+                          </div>
+                          {article.description && (
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                              {article.description}
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-2 mt-2">
+                            <div className="flex items-center space-x-1">
+                              <Clock size={10} className="text-gray-500" />
+                              <span className="text-xs text-gray-500">
+                                {formatNewsTime(article.publishedAt)}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500">•</span>
+                            <span className="text-xs text-gray-500">
+                              {article.source}
+                            </span>
+                            {article.url !== "#" && (
+                              <>
+                                <span className="text-xs text-gray-500">•</span>
+                                <ExternalLink size={10} className="text-gray-500 group-hover:text-blue-400 transition-colors" />
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* おすすめメッセージ */}
