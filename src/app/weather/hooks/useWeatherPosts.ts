@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { WeatherPost, NewPostData } from "../types";
+import { WeatherPost, NewPostData, PostComment } from "../types";
 import { supabase } from "../utils/supabase";
 import { mockWeatherPosts } from "../data/mockData";
 
@@ -45,6 +45,7 @@ export function useWeatherPosts() {
         isLiked: false,
         lat: typeof r.lat === "number" ? r.lat : undefined,
         lng: typeof r.lng === "number" ? r.lng : undefined,
+        comments: [], // 初期化
       }));
       
       setPosts(mapped.length ? mapped : mockWeatherPosts);
@@ -101,6 +102,7 @@ export function useWeatherPosts() {
       isLiked: false,
       lat: coords.lat,
       lng: coords.lng,
+      comments: [],
     };
     
     console.log("楽観的UI更新:", optimistic);
@@ -167,6 +169,7 @@ export function useWeatherPosts() {
         isLiked: false,
         lat: typeof data.lat === "number" ? data.lat : coords.lat,
         lng: typeof data.lng === "number" ? data.lng : coords.lng,
+        comments: [],
       };
 
       setPosts((prev) => {
@@ -192,9 +195,52 @@ export function useWeatherPosts() {
     );
   };
 
+  // コメント追加
+  const addComment = async (postId: string, content: string) => {
+    // 楽観的UI更新
+    const newComment: PostComment = {
+      id: `comment-${Date.now()}`,
+      postId,
+      userId: "current-user", // 実際のユーザーIDを設定
+      username: "現在のユーザー",
+      userAvatar: "U",
+      content,
+      createdAt: new Date(),
+      likes: 0,
+      isLiked: false,
+    };
+
+    setPosts((posts) =>
+      posts.map((post) =>
+        post.id === postId
+          ? { ...post, comments: [...(post.comments || []), newComment] }
+          : post
+      )
+    );
+
+    // 実際のデータベース保存はここで実装
+    console.log("コメント追加:", { postId, content });
+  };
+
+  // コメントいいね
+  const likeComment = (commentId: string) => {
+    setPosts((posts) =>
+      posts.map((post) => ({
+        ...post,
+        comments: post.comments?.map((comment) =>
+          comment.id === commentId
+            ? { ...comment, isLiked: !comment.isLiked, likes: comment.isLiked ? comment.likes - 1 : comment.likes + 1 }
+            : comment
+        ) || []
+      }))
+    );
+  };
+
   return {
     posts,
     submitPost,
     handleLike,
+    addComment,
+    likeComment,
   };
 }

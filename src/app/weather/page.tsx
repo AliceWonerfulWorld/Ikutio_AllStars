@@ -13,7 +13,7 @@ import ListView from "./components/ListView";
 
 export default function WeatherPage() {
   const { user } = useAuth();
-  const { posts, submitPost, handleLike } = useWeatherPosts();
+  const { posts, submitPost, handleLike, addComment, likeComment } = useWeatherPosts();
   
   const [showPostForm, setShowPostForm] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
@@ -177,7 +177,12 @@ export default function WeatherPage() {
         {viewMode === "map" ? (
           <MapView posts={posts} onMapClick={handleMapClick} />
         ) : (
-          <ListView posts={posts} onLike={handleLike} />
+          <ListView 
+            posts={posts} 
+            onLike={handleLike}
+            onAddComment={addComment}
+            onLikeComment={likeComment}
+          />
         )}
       </div>
     </div>

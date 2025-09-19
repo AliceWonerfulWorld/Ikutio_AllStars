@@ -3,13 +3,16 @@
 import { Heart, MapPin, Thermometer, Droplets, Wind, Eye, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { WeatherPost, weatherIcons, weatherLabels } from "../types";
 import { formatTimeAgo } from "../utils/helpers";
+import CommentSection from "./CommentSection";
 
 interface ListViewProps {
   posts: WeatherPost[];
   onLike: (postId: string) => void;
+  onAddComment: (postId: string, content: string) => void;
+  onLikeComment: (commentId: string) => void;
 }
 
-export default function ListView({ posts, onLike }: ListViewProps) {
+export default function ListView({ posts, onLike, onAddComment, onLikeComment }: ListViewProps) {
   // 天気に応じた背景グラデーションを取得
   const getWeatherGradient = (weather: string) => {
     switch (weather) {
@@ -25,24 +28,6 @@ export default function ListView({ posts, onLike }: ListViewProps) {
         return 'from-purple-500/20 via-red-500/10 to-orange-500/20';
       default:
         return 'from-gray-500/20 via-slate-500/10 to-gray-600/20';
-    }
-  };
-
-  // 天気に応じたアクセントカラーを取得
-  const getWeatherAccent = (weather: string) => {
-    switch (weather) {
-      case 'sunny':
-        return 'text-yellow-400';
-      case 'cloudy':
-        return 'text-gray-400';
-      case 'rainy':
-        return 'text-blue-400';
-      case 'snowy':
-        return 'text-cyan-400';
-      case 'stormy':
-        return 'text-purple-400';
-      default:
-        return 'text-gray-400';
     }
   };
 
@@ -144,7 +129,7 @@ export default function ListView({ posts, onLike }: ListViewProps) {
               </div>
             </div>
 
-            {/* コメント部分 */}
+            {/* 投稿コメント部分 */}
             {post.comment && (
               <div className="mb-6">
                 <div className="bg-gray-800/40 rounded-2xl p-4 border border-gray-700/30">
@@ -159,6 +144,7 @@ export default function ListView({ posts, onLike }: ListViewProps) {
             {/* アクションボタン */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
+                {/* いいねボタン */}
                 <button
                   onClick={() => onLike(post.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 ${
@@ -171,21 +157,26 @@ export default function ListView({ posts, onLike }: ListViewProps) {
                   <span className="font-medium">{post.likes}</span>
                 </button>
 
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-700/60 text-gray-300 hover:bg-blue-500/20 hover:text-blue-400 border border-gray-600/50 transition-all duration-200 transform hover:scale-105">
-                  <MessageCircle className="w-5 h-5" />
-                  <span className="font-medium">コメント</span>
-                </button>
-
+                {/* シェアボタン */}
                 <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-700/60 text-gray-300 hover:bg-green-500/20 hover:text-green-400 border border-gray-600/50 transition-all duration-200 transform hover:scale-105">
                   <Share2 className="w-5 h-5" />
                   <span className="font-medium">シェア</span>
                 </button>
               </div>
 
+              {/* ブックマークボタン */}
               <button className="p-2 rounded-xl bg-gray-700/60 text-gray-400 hover:bg-yellow-500/20 hover:text-yellow-400 border border-gray-600/50 transition-all duration-200">
                 <Bookmark className="w-5 h-5" />
               </button>
             </div>
+
+            {/* コメントセクション（投稿の下に配置） */}
+            <CommentSection
+              postId={post.id}
+              comments={post.comments || []}
+              onAddComment={onAddComment}
+              onLikeComment={onLikeComment}
+            />
           </div>
         </div>
       ))}

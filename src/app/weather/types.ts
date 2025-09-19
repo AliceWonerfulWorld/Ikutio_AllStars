@@ -16,6 +16,7 @@ export interface WeatherPost {
   isLiked: boolean;
   lat?: number;
   lng?: number;
+  comments?: PostComment[]; // コメント配列を追加
 }
 
 export interface NewPostData {
@@ -26,6 +27,19 @@ export interface NewPostData {
   windSpeed: number;
   visibility: number;
   comment: string;
+}
+
+// 投稿コメントの型定義
+export interface PostComment {
+  id: string;
+  postId: string;
+  userId: string;
+  username: string;
+  userAvatar: string;
+  content: string;
+  createdAt: Date;
+  likes: number;
+  isLiked: boolean;
 }
 
 export type ViewMode = "map" | "list";
