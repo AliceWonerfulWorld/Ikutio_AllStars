@@ -1,6 +1,6 @@
 "use client";
 
-import { Send, X, MapPin, Cloud, Thermometer, Droplets, Wind, Eye, Loader2 } from "lucide-react";
+import { Send, X, MapPin, Loader2, CheckCircle } from "lucide-react";
 import { NewPostData } from "../types";
 import { useState, useEffect } from "react";
 
@@ -8,7 +8,7 @@ interface WeatherPostFormProps {
   newPost: NewPostData;
   setNewPost: (post: NewPostData) => void;
   postCoords: { lat: number; lng: number } | null;
-  onSubmit: (coords: { lat: number; lng: number }) => void; // 座標を受け取るように変更
+  onSubmit: (coords: { lat: number; lng: number }) => void;
   onClose: () => void;
 }
 
@@ -69,13 +69,13 @@ export default function WeatherPostForm({
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "位置情報の許可が必要です。ブラウザの設定で位置情報を許可してください。";
+            errorMessage = "位置情報の許可が必要です";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "位置情報が利用できません。GPS機能を確認してください。";
+            errorMessage = "位置情報が利用できません";
             break;
           case error.TIMEOUT:
-            errorMessage = "位置情報の取得がタイムアウトしました。もう一度お試しください。";
+            errorMessage = "位置情報の取得がタイムアウトしました";
             break;
         }
         
@@ -83,9 +83,9 @@ export default function WeatherPostForm({
         setIsGettingLocation(false);
       },
       {
-        enableHighAccuracy: true, // 高精度モード
-        timeout: 15000, // 15秒に延長
-        maximumAge: 60000 // 1分間キャッシュ
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000
       }
     );
   };
@@ -123,7 +123,7 @@ export default function WeatherPostForm({
 
     } catch (error) {
       console.error('Weather fetch error:', error);
-      setWeatherError('天気情報の取得に失敗しました。手動で入力してください。');
+      setWeatherError('天気情報の取得に失敗しました。');
     } finally {
       setIsLoadingWeather(false);
     }
@@ -131,17 +131,14 @@ export default function WeatherPostForm({
 
   // コンポーネントマウント時に自動で現在地を取得
   useEffect(() => {
-    // 地図クリックで位置が設定されている場合はそのまま天気取得
     if (postCoords) {
       fetchWeatherData(postCoords);
     } else {
-      // 位置が設定されていない場合は現在地を取得
       getCurrentLocation();
     }
   }, []);
 
   const handleSubmit = () => {
-    // 使用する座標を決定
     const coords = currentLocation || postCoords;
     
     if (!coords) {
@@ -149,34 +146,14 @@ export default function WeatherPostForm({
       return;
     }
 
-    console.log("投稿ボタンクリック:", {
-      weatherData: !!weatherData,
-      location: newPost.location,
-      comment: newPost.comment,
-      coords
-    });
-
     if (weatherData && newPost.location && newPost.comment.trim()) {
-      onSubmit(coords); // 座標を渡す
+      onSubmit(coords);
     } else {
-      console.error("投稿に必要な情報が不足:", {
-        weatherData: !!weatherData,
-        location: newPost.location,
-        comment: newPost.comment
-      });
       alert("天気情報の取得が完了していないか、コメントが入力されていません。");
     }
   };
 
-  // ボタンの状態をデバッグ
   const isButtonDisabled = isLoadingWeather || isGettingLocation || !weatherData || !newPost.comment.trim();
-  console.log("ボタン状態:", {
-    isLoadingWeather,
-    isGettingLocation,
-    hasWeatherData: !!weatherData,
-    hasComment: !!newPost.comment.trim(),
-    isButtonDisabled
-  });
 
   const weatherIcons = {
     sunny: "☀️",
@@ -195,162 +172,144 @@ export default function WeatherPostForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md border border-gray-800 shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-3xl p-8 w-full max-w-lg border border-gray-700/50 shadow-2xl">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">天気を投稿</h2>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-200 to-gray-300 bg-clip-text text-transparent">
+              天気を投稿
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">現在の天気を共有しましょう</p>
+          </div>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-white transition-colors p-1"
+            className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700/50 rounded-xl"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* デバッグ情報（開発時のみ表示） */}
-        <div className="bg-gray-800 rounded-lg p-3 mb-4 text-xs">
-          <div className="text-gray-400 mb-2">デバッグ情報:</div>
-          <div className="space-y-1">
-            <div>位置取得中: {isGettingLocation ? "はい" : "いいえ"}</div>
-            <div>天気取得中: {isLoadingWeather ? "はい" : "いいえ"}</div>
-            <div>天気データ: {weatherData ? "あり" : "なし"}</div>
-            <div>コメント: &quot;{newPost.comment}&quot;</div>
-            <div>現在地: {currentLocation ? `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}` : "なし"}</div>
-            <div>地図位置: {postCoords ? `${postCoords.lat.toFixed(6)}, ${postCoords.lng.toFixed(6)}` : "なし"}</div>
-            <div>ボタン状態: {isButtonDisabled ? "無効" : "有効"}</div>
-          </div>
-        </div>
-
-        {/* 位置情報取得中 */}
-        {isGettingLocation && (
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-3">
-              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+        {/* ローディング状態 */}
+        {(isGettingLocation || isLoadingWeather) && (
+          <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 border border-gray-600/30 rounded-2xl p-6 mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-600 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+                </div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-gray-600/30 to-gray-500/30 rounded-full opacity-50 animate-pulse"></div>
+              </div>
               <div>
-                <div className="text-blue-300 font-medium text-sm">現在地を高精度で取得中...</div>
-                <div className="text-blue-400 text-xs">GPSを使用して正確な位置情報を取得しています</div>
+                <div className="text-gray-200 font-medium">
+                  {isGettingLocation ? "現在地を取得中..." : "天気情報を取得中..."}
+                </div>
+                <div className="text-gray-400 text-sm">
+                  {isGettingLocation ? "GPSを使用して正確な位置を取得しています" : "リアルタイムの天気データを取得しています"}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 位置情報エラー */}
-        {locationError && (
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-4">
-            <div className="text-red-300 text-sm">{locationError}</div>
-            <button
-              onClick={getCurrentLocation}
-              className="text-red-400 text-xs hover:text-red-300 mt-2 underline"
-            >
-              再試行
-            </button>
-          </div>
-        )}
-
-        {/* 位置情報 */}
-        {(currentLocation || postCoords) && (
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-            <div className="flex items-center space-x-2 text-blue-300">
-              <MapPin size={16} />
-              <span className="text-sm font-medium">投稿位置</span>
-            </div>
-            <div className="text-xs text-gray-300 mt-1">
-              {(currentLocation || postCoords)!.lat.toFixed(6)}, {(currentLocation || postCoords)!.lng.toFixed(6)}
-            </div>
-          </div>
-        )}
-
-        {/* 天気情報取得状況 */}
-        {isLoadingWeather && (
-          <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-3">
-              <Loader2 className="w-5 h-5 text-yellow-400 animate-spin" />
+        {/* エラー状態 */}
+        {(locationError || weatherError) && (
+          <div className="bg-gradient-to-r from-red-900/20 to-red-800/20 border border-red-500/30 rounded-2xl p-6 mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-900/40 to-red-800/40 rounded-full flex items-center justify-center">
+                <X className="w-6 h-6 text-red-400" />
+              </div>
               <div>
-                <div className="text-yellow-300 font-medium text-sm">天気情報を取得中...</div>
-                <div className="text-yellow-400 text-xs">現在地の天気データを自動取得しています</div>
+                <div className="text-red-300 font-medium">エラーが発生しました</div>
+                <div className="text-red-400 text-sm">
+                  {locationError || weatherError}
+                </div>
+                <button
+                  onClick={() => {
+                    if (locationError) {
+                      getCurrentLocation();
+                    } else {
+                      const coords = currentLocation || postCoords;
+                      if (coords) fetchWeatherData(coords);
+                    }
+                  }}
+                  className="text-red-300 text-sm hover:text-red-200 mt-2 underline"
+                >
+                  再試行
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* エラー表示 */}
-        {weatherError && (
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-4">
-            <div className="text-red-300 text-sm">{weatherError}</div>
-            <button
-              onClick={() => {
-                const coords = currentLocation || postCoords;
-                if (coords) fetchWeatherData(coords);
-              }}
-              className="text-red-400 text-xs hover:text-red-300 mt-2 underline"
-            >
-              再試行
-            </button>
-          </div>
-        )}
-
-        {/* 取得された天気情報 */}
+        {/* 天気情報表示 */}
         {weatherData && (
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
-            <div className="flex items-center space-x-2 text-green-300 mb-3">
-              <Cloud size={16} />
-              <span className="text-sm font-medium">現在の天気情報</span>
+          <div className="bg-gradient-to-r from-gray-800/40 to-gray-700/40 border border-gray-600/30 rounded-2xl p-6 mb-6">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center relative">
+                <CheckCircle className="w-6 h-6 text-emerald-400" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <div className="text-gray-200 font-medium">天気情報を取得しました</div>
+                <div className="text-gray-400 text-sm">{weatherData.location}</div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center space-x-2">
-                <MapPin size={14} className="text-gray-400" />
-                <span className="text-gray-300">{weatherData.location}</span>
+            {/* 天気サマリー */}
+            <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/60 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <span className="text-3xl">{weatherIcons[weatherData.weather as keyof typeof weatherIcons]}</span>
+                  <div>
+                    <div className="text-gray-100 font-semibold text-lg">{weatherLabels[weatherData.weather as keyof typeof weatherLabels]}</div>
+                    <div className="text-gray-400 text-sm">{weatherData.temperature}°C</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-gray-400 text-xs">湿度</div>
+                  <div className="text-gray-200 font-medium">{weatherData.humidity}%</div>
+                </div>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <span className="text-lg">{weatherIcons[weatherData.weather as keyof typeof weatherIcons]}</span>
-                <span className="text-gray-300">{weatherLabels[weatherData.weather as keyof typeof weatherLabels]}</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Thermometer size={14} className="text-gray-400" />
-                <span className="text-gray-300">{weatherData.temperature}°C</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Droplets size={14} className="text-gray-400" />
-                <span className="text-gray-300">{weatherData.humidity}%</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Wind size={14} className="text-gray-400" />
-                <span className="text-gray-300">{weatherData.windSpeed}m/s</span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Eye size={14} className="text-gray-400" />
-                <span className="text-gray-300">{weatherData.visibility}km</span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">風速</span>
+                  <span className="text-gray-200">{weatherData.windSpeed}m/s</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">視程</span>
+                  <span className="text-gray-200">{weatherData.visibility}km</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* コメント入力 */}
-        <div className="mb-6">
+        <div className="mb-8">
           <label className="block text-sm font-medium mb-3 text-gray-300">
-            コメント（必須）
+            コメント <span className="text-red-400">*</span>
           </label>
-          <textarea
-            value={newPost.comment}
-            onChange={(e) => setNewPost({ ...newPost, comment: e.target.value })}
-            placeholder="今日の天気についてコメントを書いてください..."
-            rows={3}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white resize-none focus:border-blue-500 focus:outline-none transition-colors"
-          />
+          <div className="relative">
+            <textarea
+              value={newPost.comment}
+              onChange={(e) => setNewPost({ ...newPost, comment: e.target.value })}
+              placeholder="今日の天気についてコメントを書いてください..."
+              rows={4}
+              className="w-full bg-gradient-to-br from-gray-800/60 to-gray-700/60 border border-gray-600/50 rounded-2xl px-4 py-3 text-white resize-none focus:border-gray-500 focus:outline-none transition-all duration-200 focus:from-gray-800/80 focus:to-gray-700/80"
+            />
+            <div className="absolute bottom-3 right-3 text-xs text-gray-500">
+              {newPost.comment.length}/500
+            </div>
+          </div>
         </div>
 
         {/* ボタン群 */}
-        <div className="flex space-x-3">
+        <div className="flex space-x-4">
           <button
             onClick={onClose}
-            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg transition-colors font-medium"
+            className="flex-1 bg-gradient-to-r from-gray-700/60 to-gray-600/60 hover:from-gray-600/60 hover:to-gray-500/60 text-white py-4 rounded-2xl transition-all duration-200 font-medium border border-gray-600/50"
           >
             キャンセル
           </button>
@@ -358,20 +317,20 @@ export default function WeatherPostForm({
           <button
             onClick={handleSubmit}
             disabled={isButtonDisabled}
-            className={`flex-1 py-3 rounded-lg transition-colors font-medium flex items-center justify-center space-x-2 ${
+            className={`flex-1 py-4 rounded-2xl transition-all duration-200 font-medium flex items-center justify-center space-x-2 ${
               isButtonDisabled 
-                ? "bg-gray-600 cursor-not-allowed text-gray-400" 
-                : "bg-blue-600 hover:bg-blue-700 text-white"
+                ? "bg-gradient-to-r from-gray-600/50 to-gray-500/50 cursor-not-allowed text-gray-400 border border-gray-600/30" 
+                : "bg-gradient-to-r from-slate-600 to-blue-700 hover:from-slate-500 hover:to-blue-600 text-white shadow-lg hover:shadow-slate-500/25 transform hover:scale-[1.02] border border-slate-500/30"
             }`}
           >
             {isLoadingWeather || isGettingLocation ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{isGettingLocation ? "位置取得中..." : "天気取得中..."}</span>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>準備中...</span>
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
                 <span>投稿する</span>
               </>
             )}
