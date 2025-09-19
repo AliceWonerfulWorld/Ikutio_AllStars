@@ -80,7 +80,7 @@ export default function Sidebar() {
     { icon: Clock, label: "Clock", href: "/glok" },
     { icon: Heart, label: "リアクション", href: "/reactions" },
     { icon: Camera, label: "Realction", href: "/realction" }, // Realction項目を追加
-    { icon: CloudSun, label: "天気", href: "/weather" },
+    { icon: CloudSun, label: "天気Yohoo!", href: "/weather" },
     { icon: Wine, label: "TikuriBAR", href: "/tikuribar" },
     { icon: User, label: "プロフィール", href: "/profile" },
     { icon: Settings, label: "設定", href: "/settings" },
