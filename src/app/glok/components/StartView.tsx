@@ -12,11 +12,190 @@ interface StartViewProps {
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
+// 共通スタイルパターン - ベーススタイル
+const baseStyles = {
+  // 共通のトランジション
+  transition: 'all 0.3s ease',
+  
+  // 共通のボーダーラディウス
+  borderRadius: {
+    small: 12,
+    medium: 18,
+    large: 20,
+    round: 25,
+    circle: '50%',
+  },
+  
+  // 共通のボックスシャドウ
+  boxShadow: {
+    default: '0 4px 20px rgba(0, 0, 0, 0.5)',
+    hover: '0 6px 25px rgba(0, 0, 0, 0.7)',
+    glow: '0 0 20px rgba(255, 255, 255, 0.2)',
+  },
+  
+  // 共通の背景グラデーション
+  background: {
+    primary: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
+    secondary: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+    success: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+    danger: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+    gray: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+  },
+  
+  // 共通のボーダー
+  border: {
+    transparent: '2px solid rgba(255, 255, 255, 0.1)',
+    white: '1px solid rgba(255, 255, 255, 0.2)',
+    none: 'none',
+  },
+  
+  // 共通のカラー
+  color: {
+    white: '#fff',
+    gray: {
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+    },
+  },
+};
+
+// スタイルファクトリー関数
+const createButtonStyle = (variant: 'primary' | 'secondary' | 'danger' | 'gray', size: 'small' | 'medium' | 'large' = 'medium') => {
+  const sizeConfig = {
+    small: { padding: '8px 16px', fontSize: 12 },
+    medium: { padding: '12px 24px', fontSize: 14 },
+    large: { padding: '16px 32px', fontSize: 16 },
+  };
+  
+  const variantConfig = {
+    primary: {
+      background: baseStyles.background.primary,
+      color: baseStyles.color.white,
+      border: baseStyles.border.none,
+    },
+    secondary: {
+      background: 'rgba(255, 255, 255, 0.1)',
+      color: baseStyles.color.white,
+      border: baseStyles.border.white,
+    },
+    danger: {
+      background: baseStyles.background.danger,
+      color: baseStyles.color.white,
+      border: baseStyles.border.none,
+    },
+    gray: {
+      background: baseStyles.background.gray,
+      color: baseStyles.color.white,
+      border: baseStyles.border.none,
+    },
+  };
+  
+  return {
+    ...sizeConfig[size],
+    ...variantConfig[variant],
+    borderRadius: baseStyles.borderRadius.round,
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    boxShadow: baseStyles.boxShadow.default,
+    transition: baseStyles.transition,
+    backdropFilter: 'blur(10px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: size === 'large' ? 140 : 120,
+  };
+};
+
+const createInputStyle = (variant: 'default' | 'large' = 'default') => {
+  const sizeConfig = {
+    default: { padding: '14px 20px', fontSize: 14 },
+    large: { padding: '18px 24px', fontSize: 16 },
+  };
+  
+  return {
+    ...sizeConfig[variant],
+    flex: 1,
+    minWidth: 0,
+    borderRadius: baseStyles.borderRadius.large,
+    border: baseStyles.border.transparent,
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: baseStyles.color.white,
+    outline: 'none',
+    backdropFilter: 'blur(10px)',
+    transition: baseStyles.transition,
+  };
+};
+
+const createNotificationStyle = (type: 'error' | 'success' | 'info' = 'info') => {
+  const typeConfig = {
+    error: {
+      background: 'rgba(220, 38, 38, 0.2)',
+      border: '1px solid rgba(220, 38, 38, 0.4)',
+      color: '#fca5a5',
+    },
+    success: {
+      background: 'rgba(34, 197, 94, 0.2)',
+      border: '1px solid rgba(34, 197, 94, 0.4)',
+      color: '#86efac',
+    },
+    info: {
+      background: 'rgba(59, 130, 246, 0.2)',
+      border: '1px solid rgba(59, 130, 246, 0.4)',
+      color: '#93c5fd',
+    },
+  };
+  
+  return {
+    ...typeConfig[type],
+    borderRadius: baseStyles.borderRadius.small,
+    padding: '12px 16px',
+    marginBottom: 20,
+    fontSize: 14,
+    backdropFilter: 'blur(10px)',
+    maxWidth: 500,
+    margin: '0 auto 20px',
+  };
+};
+
+// レスポンシブ対応のヘルパー関数
+const getResponsiveInputStyle = () => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  return createInputStyle(isMobile ? 'default' : 'large');
+};
+
+const getResponsiveTitleStyle = () => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  return {
+    fontSize: isMobile ? 'clamp(36px, 6vw, 48px)' : 'clamp(48px, 8vw, 72px)',
+    fontWeight: 900,
+    letterSpacing: 2,
+    display: 'inline-flex' as const,
+    alignItems: 'center' as const,
+    gap: isMobile ? 12 : 16,
+    color: baseStyles.color.white,
+    textShadow: '0 0 30px rgba(255, 255, 255, 0.3)',
+    marginBottom: 20,
+    flexWrap: 'wrap' as const,
+    justifyContent: 'center' as const,
+  };
+};
+
+// ホバー効果のスタイル
+const createHoverStyle = (baseStyle: any) => ({
+  ...baseStyle,
+  transform: 'translateY(-2px)',
+  boxShadow: baseStyles.boxShadow.hover,
+});
+
 export default function StartView({
   prompt, setPrompt, loading, onSend, onKeyDown,
 }: StartViewProps) {
   const { isListening, isSupported, error, startListening, stopListening, transcript, interimTranscript } = useSpeechRecognition();
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   // 音声認識結果をプロンプトに設定
   React.useEffect(() => {
@@ -33,87 +212,80 @@ export default function StartView({
     }
   };
 
+  // 動的スタイル生成
+  const getSendButtonStyle = () => {
+    const baseStyle = {
+      ...createButtonStyle('primary'),
+      width: 56,
+      height: 56,
+      borderRadius: baseStyles.borderRadius.medium,
+      fontSize: 20,
+      flexShrink: 0,
+    };
+    
+    return hoveredButton === 'send' ? createHoverStyle(baseStyle) : baseStyle;
+  };
+
+  const getVoiceButtonStyle = () => {
+    const baseStyle = {
+      ...createButtonStyle(isListening ? 'danger' : 'gray'),
+    };
+    
+    return hoveredButton === 'voice' ? createHoverStyle(baseStyle) : baseStyle;
+  };
+
+  const getActionButtonStyle = (buttonId: string) => {
+    const baseStyle = createButtonStyle('secondary');
+    return hoveredButton === buttonId ? createHoverStyle(baseStyle) : baseStyle;
+  };
+
   return (
-    <div style={{ 
-      textAlign: 'center', 
-      width: '100%', 
-      position: 'relative', 
+    <div style={{
+      textAlign: 'center',
+      width: '100%',
+      position: 'relative',
       zIndex: 1,
       paddingTop: 100,
       paddingLeft: 20,
       paddingRight: 20,
     }}>
+      {/* ヘッダーセクション */}
       <div style={{ marginBottom: 60 }}>
-        <div
-          style={{
-            fontSize: 'clamp(48px, 8vw, 72px)',
-            fontWeight: 900,
-            letterSpacing: 2,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 16,
-            color: '#fff',
-            textShadow: '0 0 30px rgba(255, 255, 255, 0.3)',
-            marginBottom: 20,
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          <span 
-            aria-hidden 
-            style={{ 
-              display: 'inline-block', 
-              width: 48, 
-              height: 48, 
-              borderRadius: '50%', 
-              border: '4px solid #333',
-              position: 'relative',
-              background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-              boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)',
-            }}
-          >
-            <span style={{ 
-              position: 'absolute', 
-              left: -8, 
-              top: '50%', 
-              width: 32, 
-              height: 4, 
-              background: '#fff', 
+        <div style={getResponsiveTitleStyle()}>
+          <span aria-hidden style={{
+            display: 'inline-block',
+            width: 48,
+            height: 48,
+            borderRadius: baseStyles.borderRadius.circle,
+            border: '4px solid #333',
+            position: 'relative',
+            background: baseStyles.background.secondary,
+            boxShadow: baseStyles.boxShadow.glow,
+          }}>
+            <span style={{
+              position: 'absolute',
+              left: -8,
+              top: '50%',
+              width: 32,
+              height: 4,
+              background: baseStyles.color.white,
               transform: 'translateY(-50%) rotate(-25deg)',
               borderRadius: 2,
             }} />
           </span>
           Clock
         </div>
-        <div style={{
-          fontSize: 18,
-          color: '#aaa',
-          fontWeight: 300,
-          letterSpacing: 1,
-        }}>
+        <div className="text-lg text-gray-300 font-light tracking-wide">
           あなたのAIアシスタント
         </div>
-        <div style={{
-          fontSize: 12,
-          color: '#666',
-          fontWeight: 300,
-          marginTop: 10,
-          opacity: 0.7,
-        }}>
+        <div className="text-xs text-gray-500 font-light mt-2 opacity-70">
           💫 「S」キーで流れ星を呼び出せます
         </div>
       </div>
 
-      {/* 入力フィールドとボタン - モバイル対応 */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: 16,
-        marginBottom: 40,
-        maxWidth: '100%',
-        width: '100%',
-      }}>
-        {/* 入力フィールド */}
+      {/* 入力セクション */}
+      <div className="flex flex-col gap-4 mb-10 max-w-full w-full">
+        {/* 入力フィールドとボタン */}
         <div style={{
           display: 'flex',
           flexDirection: 'row',
@@ -127,97 +299,32 @@ export default function StartView({
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="どんなことでもお尋ねください (Enterで送信)"
-            style={{
-              flex: 1,
-              minWidth: 0, // 重要: flexboxでの縮小を許可
-              padding: '18px 24px',
-              borderRadius: 20,
-              border: '2px solid rgba(255, 255, 255, 0.1)',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#fff',
-              outline: 'none',
-              fontSize: 16,
-              backdropFilter: 'blur(10px)',
-              transition: 'all 0.3s ease',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            }}
+            style={getResponsiveInputStyle()}
+            className="focus:border-white/30 focus:bg-white/10"
           />
           
-          {/* 送信ボタン */}
           <button 
             onClick={onSend} 
             disabled={loading} 
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 18,
-              border: 'none',
-              background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: 20,
-              fontWeight: 'bold',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-              transition: 'all 0.3s ease',
-              flexShrink: 0, // ボタンのサイズを固定
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-            }}
+            style={getSendButtonStyle()}
+            onMouseEnter={() => setHoveredButton('send')}
+            onMouseLeave={() => setHoveredButton(null)}
+            className="disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '...' : '↑'}
           </button>
         </div>
         
-        {/* 音声入力ボタン - 別行に配置 */}
+        {/* 音声入力ボタン */}
         {isSupported && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            width: '100%',
-          }}>
+          <div className="flex justify-center w-full">
             <button
               onClick={handleVoiceToggle}
               disabled={loading}
-              style={{
-                padding: '12px 24px',
-                borderRadius: 25,
-                border: 'none',
-                background: isListening 
-                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                  : 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: 16,
-                fontWeight: 'bold',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                minWidth: 140,
-                justifyContent: 'center',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-              }}
+              style={getVoiceButtonStyle()}
+              onMouseEnter={() => setHoveredButton('voice')}
+              onMouseLeave={() => setHoveredButton(null)}
+              className="disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isListening ? '⏹️ 停止' : '🎤 音声検索'}
             </button>
@@ -225,37 +332,16 @@ export default function StartView({
         )}
       </div>
 
-      {/* 音声認識エラー表示 */}
+      {/* 通知セクション */}
       {error && (
-        <div style={{
-          background: 'rgba(220, 38, 38, 0.2)',
-          border: '1px solid rgba(220, 38, 38, 0.4)',
-          borderRadius: 12,
-          padding: '12px 16px',
-          marginBottom: 20,
-          color: '#fca5a5',
-          fontSize: 14,
-          backdropFilter: 'blur(10px)',
-          maxWidth: 500,
-          margin: '0 auto 20px',
-        }}>
+        <div style={createNotificationStyle('error')}>
           {error}
         </div>
       )}
 
-      {/* 音声認識状態表示 */}
       {isListening && (
         <div style={{
-          background: 'rgba(34, 197, 94, 0.2)',
-          border: '1px solid rgba(34, 197, 94, 0.4)',
-          borderRadius: 12,
-          padding: '12px 16px',
-          marginBottom: 20,
-          color: '#86efac',
-          fontSize: 14,
-          backdropFilter: 'blur(10px)',
-          maxWidth: 500,
-          margin: '0 auto 20px',
+          ...createNotificationStyle('success'),
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -264,117 +350,45 @@ export default function StartView({
             width: 12,
             height: 12,
             background: '#22c55e',
-            borderRadius: '50%',
+            borderRadius: baseStyles.borderRadius.circle,
             animation: 'pulse 1.5s infinite',
           }} />
           音声を認識中...
         </div>
       )}
 
-      {/* 音声認識の暫定結果表示 */}
       {interimTranscript && (
         <div style={{
-          background: 'rgba(59, 130, 246, 0.2)',
-          border: '1px solid rgba(59, 130, 246, 0.4)',
-          borderRadius: 12,
-          padding: '12px 16px',
-          marginBottom: 20,
-          color: '#93c5fd',
-          fontSize: 14,
-          backdropFilter: 'blur(10px)',
-          maxWidth: 500,
-          margin: '0 auto 20px',
+          ...createNotificationStyle('info'),
           fontStyle: 'italic',
         }}>
           認識中: {interimTranscript}
         </div>
       )}
 
-      {/* アクションボタン - モバイル対応 */}
-      <div style={{ 
-        display: 'flex', 
-        gap: 16, 
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-        padding: '0 20px',
-      }}>
+      {/* アクションボタンセクション */}
+      <div className="flex gap-4 justify-center flex-wrap px-5">
         <button 
           onClick={() => setShowVoiceSettings(true)}
-          style={{
-            padding: '12px 24px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: 25,
-            cursor: 'pointer',
-            fontSize: 14,
-            fontWeight: 500,
-            transition: 'all 0.3s ease',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            minWidth: 120,
-            justifyContent: 'center',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
+          style={getActionButtonStyle('voiceSettings')}
+          onMouseEnter={() => setHoveredButton('voiceSettings')}
+          onMouseLeave={() => setHoveredButton(null)}
         >
           🎵 音声設定
         </button>
-        <button style={{
-          padding: '12px 24px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          color: '#fff',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: 25,
-          cursor: 'pointer',
-          fontSize: 14,
-          fontWeight: 500,
-          transition: 'all 0.3s ease',
-          backdropFilter: 'blur(10px)',
-          minWidth: 120,
-          justifyContent: 'center',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          e.currentTarget.style.transform = 'translateY(0)';
-        }}
+        
+        <button 
+          style={getActionButtonStyle('createImage')}
+          onMouseEnter={() => setHoveredButton('createImage')}
+          onMouseLeave={() => setHoveredButton(null)}
         >
           🎨 画像を作成
         </button>
-        <button style={{
-          padding: '12px 24px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          color: '#fff',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: 25,
-          cursor: 'pointer',
-          fontSize: 14,
-          fontWeight: 500,
-          transition: 'all 0.3s ease',
-          backdropFilter: 'blur(10px)',
-          minWidth: 120,
-          justifyContent: 'center',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          e.currentTarget.style.transform = 'translateY(0)';
-        }}
+        
+        <button 
+          style={getActionButtonStyle('editImage')}
+          onMouseEnter={() => setHoveredButton('editImage')}
+          onMouseLeave={() => setHoveredButton(null)}
         >
           ✏️ 画像を編集
         </button>
