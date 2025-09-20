@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
 import Post from "@/components/Post";
@@ -83,6 +84,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   // usels全ユーザー情報を格納
   const [userMap, setUserMap] = useState<
     Record<
@@ -96,6 +98,11 @@ export default function Home() {
       }
     >
   >({});
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // 初回マウント時にusels全件取得
   useEffect(() => {
@@ -178,100 +185,125 @@ export default function Home() {
 
   // 投稿取得 & ユーザー情報取得
   const fetchTodos = async () => {
-    const { data: todosData, error: todosError } = await supabase
-      .from("todos")
-      .select("*");
-    if (todosError) {
-      console.error("Error fetching todos:", todosError);
-      return;
-    }
-    // 投稿に紐づくuser_id一覧
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const userIds = Array.from(
-      new Set(
-        (todosData ?? [])
-          .map((todo: any) => todo.user_id)
-          .filter(
-            (id: string | null | undefined) =>
-              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
-          )
-      )
-    );
-    // uselsから該当ユーザー情報をまとめて取得
-    let usersData: any[] = [];
-    let usersError: any = null;
-    if (userIds.length > 0) {
-      const { data, error } = await supabase
-        .from("usels")
-        .select("user_id, icon_url, username, setID, isBunkatsu") // ← isBunkatsuを追加
-        .in("user_id", userIds);
-      usersData = data ?? [];
-      usersError = error;
-      if (usersError) {
-        console.error("Error fetching users:", usersError);
+    try {
+      const { data: todosData, error: todosError } = await supabase
+        .from("todos")
+        .select("*");
+      
+      if (todosError) {
+        console.error("Error fetching todos:", todosError);
+        setError("投稿の読み込みに失敗しました");
+        return;
       }
-    }
-    // user_id→iconUrl, displayName, setIDのMap作成
-    const userMap: Record<
-      string,
-      {
-        iconUrl?: string;
-        displayName?: string;
-        setID?: string;
-        username?: string;
-        isBunkatsu?: boolean; // ← 追加
-      }
-    > = {};
-    (usersData ?? []).forEach((user: any) => {
-      userMap[user.user_id] = {
-        iconUrl: getPublicIconUrl(user.icon_url),
-        displayName: user.username || "User",
-        setID: user.setID || "",
-        username: user.username || "",
-        isBunkatsu: user.isBunkatsu ?? false, // ← 追加
-      };
-    });
-    setUserMap(userMap);
 
-    // ログインユーザーID取得
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id ?? null;
+      // 投稿に紐づくuser_id一覧
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const userIds = Array.from(
+        new Set(
+          (todosData ?? [])
+            .map((todo: any) => todo.user_id)
+            .filter(
+              (id: string | null | undefined) =>
+                !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
+            )
+        )
+      );
 
-    // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
-    const todosWithStatus = await Promise.all(
-      (todosData ?? []).map(async (todo: any) => {
-        if (!isValidUserId(userId)) {
-          return { ...todo, liked: false, bookmarked: false };
-        }
+      // uselsから該当ユーザー情報をまとめて取得
+      let usersData: any[] = [];
+      let usersError: any = null;
+      
+      if (userIds.length > 0) {
         try {
-          const postIdNum = Number(todo.id);
-          const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
-            supabase
-              .from("likes")
-              .select("on")
-              .eq("post_id", postIdNum)
-              .eq("user_id", userId as string)
-              .maybeSingle(),
-            supabase
-              .from("bookmarks")
-              .select("on")
-              .eq("post_id", postIdNum)
-              .eq("user_id", userId as string)
-              .maybeSingle(),
-          ]);
-          return {
-            ...todo,
-            liked: likeData?.on === true,
-            bookmarked: bookmarkData?.on === true,
-          };
-        } catch (e) {
-          console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
-          return { ...todo, liked: false, bookmarked: false };
+          const { data, error } = await supabase
+            .from("usels")
+            .select("user_id, icon_url, username, setID, isBunkatsu")
+            .in("user_id", userIds);
+          usersData = data ?? [];
+          usersError = error;
+          
+          if (usersError) {
+            console.error("Error fetching users:", usersError);
+            // エラーが発生しても処理を続行（ユーザー情報なしで投稿を表示）
+          }
+        } catch (error) {
+          console.error("Error in user data fetch:", error);
+          // エラーが発生しても処理を続行
         }
-      })
-    );
-    setPosts(todosWithStatus);
+      }
+
+      // user_id→iconUrl, displayName, setIDのMap作成
+      const userMap: Record<
+        string,
+        {
+          iconUrl?: string;
+          displayName?: string;
+          setID?: string;
+          username?: string;
+          isBunkatsu?: boolean;
+        }
+      > = {};
+      
+      (usersData ?? []).forEach((user: any) => {
+        userMap[user.user_id] = {
+          iconUrl: getPublicIconUrl(user.icon_url),
+          displayName: user.username || "User",
+          setID: user.setID || "",
+          username: user.username || "",
+          isBunkatsu: user.isBunkatsu ?? false,
+        };
+      });
+      setUserMap(userMap);
+
+      // ログインユーザーID取得（エラーハンドリングを追加）
+      let userId = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        userId = userData?.user?.id ?? null;
+      } catch (error) {
+        console.warn("Error getting user session:", error);
+        userId = null;
+      }
+
+      // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
+      const todosWithStatus = await Promise.all(
+        (todosData ?? []).map(async (todo: any) => {
+          if (!isValidUserId(userId)) {
+            return { ...todo, liked: false, bookmarked: false };
+          }
+          try {
+            const postIdNum = Number(todo.id);
+            const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
+              supabase
+                .from("likes")
+                .select("on")
+                .eq("post_id", postIdNum)
+                .eq("user_id", userId as string)
+                .maybeSingle(),
+              supabase
+                .from("bookmarks")
+                .select("on")
+                .eq("post_id", postIdNum)
+                .eq("user_id", userId as string)
+                .maybeSingle(),
+            ]);
+            return {
+              ...todo,
+              liked: likeData?.on === true,
+              bookmarked: bookmarkData?.on === true,
+            };
+          } catch (e) {
+            console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
+            return { ...todo, liked: false, bookmarked: false };
+          }
+        })
+      );
+      setPosts(todosWithStatus);
+    } catch (error) {
+      console.error("fetchTodos: Unexpected error:", error);
+      setError("データの読み込み中にエラーが発生しました");
+    }
   };
 
   // 1秒ごとに再レンダリングして残り時間を更新
@@ -526,15 +558,55 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex h-screen">
           {/* デスクトップ: 左サイドバー */}
           <div className="hidden lg:block w-64 flex-shrink-0">
-            <Sidebar />
+            {isClient && <Sidebar />}
           </div>
           
           {/* メインコンテンツ */}
           <div className="flex-1 max-w-2xl mx-auto lg:border-r border-gray-800 relative z-10 overflow-y-auto pb-20 lg:pb-0">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
-              {/* モバイル: タイトルのみ */}
-              <h1 className="text-xl font-bold">ホーム</h1>
+              {/* モバイル: タイトルと認証ボタン */}
+              <div className="lg:hidden flex items-center justify-between">
+                <h1 className="text-xl font-bold">ホーム</h1>
+                {isClient && (
+                  <div className="flex items-center space-x-2">
+                    {user ? (
+                      <div className="flex items-center space-x-2">
+                        {/* ユーザーアイコン */}
+                        <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                          {user.user_metadata?.displayName?.charAt(0) ||
+                           user.user_metadata?.username?.charAt(0) ||
+                           user.email?.charAt(0) ||
+                           "U"}
+                        </div>
+                        <span className="text-sm text-gray-400">
+                          {user.user_metadata?.displayName || 
+                           user.user_metadata?.username || 
+                           "ユーザー"}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href="/auth/login"
+                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                        >
+                          ログイン
+                        </Link>
+                        <Link
+                          href="/auth/signup"
+                          className="px-3 py-1 text-sm border border-green-600 text-green-400 rounded-full hover:bg-green-900/30 transition-colors"
+                        >
+                          サインアップ
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* デスクトップ: タイトルのみ */}
+              <h1 className="hidden lg:block text-xl font-bold">ホーム</h1>
               
               {authError && (
                 <div className="mt-2 bg-red-900/40 border border-red-700 text-red-200 text-sm p-3 rounded">
@@ -548,7 +620,7 @@ export default function Home() {
             </div>
             
             {/* 投稿フォーム */}
-            <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
+            {isClient && <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />}
             
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
@@ -627,8 +699,8 @@ export default function Home() {
         </div>
 
         {/* モバイルナビゲーション */}
-        <MobileNavigation />
-        <MobileExtendedNavigation />
+        {isClient && <MobileNavigation />}
+        {isClient && <MobileExtendedNavigation />}
       </div>
     </>
   );

@@ -18,6 +18,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false)
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // username 用のサニタイズとランダム生成
   const sanitizeBaseName = (name: string) => {
@@ -127,17 +133,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    if (!isClient) return;
+
     // 初期認証状態を取得
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[AuthDebug] initial session', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('[AuthDebug] Session error:', error);
+          // エラーが発生しても認証フローを続行
+        }
+        
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[AuthDebug] initial session', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+        }
+        
+        setUser(session?.user as AuthUser || null)
+        if (session?.user) {
+          ensureProfileWithRandomUsername(session.user as AuthUser)
+        }
+      } catch (error) {
+        console.error('[AuthDebug] Unexpected error in getInitialSession:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setUser(session?.user as AuthUser || null)
-      if (session?.user) {
-        ensureProfileWithRandomUsername(session.user as AuthUser)
-      }
-      setLoading(false)
     }
 
     getInitialSession()
@@ -145,23 +166,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[AuthDebug] onAuthStateChange', event, 'user:', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+        try {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[AuthDebug] onAuthStateChange', event, 'user:', session?.user?.id, 'provider:', session?.user?.app_metadata?.provider)
+          }
+          setUser(session?.user as AuthUser || null)
+          if (event === 'SIGNED_IN' && session?.user) {
+            ensureProfileWithRandomUsername(session.user as AuthUser)
+          }
+          if (event === 'SIGNED_OUT') {
+            // 念のためユーザーを明示的に null
+            setUser(null)
+          }
+        } catch (error) {
+          console.error('[AuthDebug] Error in onAuthStateChange:', error);
+          setUser(null);
+        } finally {
+          setLoading(false);
         }
-        setUser(session?.user as AuthUser || null)
-        if (event === 'SIGNED_IN' && session?.user) {
-          ensureProfileWithRandomUsername(session.user as AuthUser)
-        }
-        if (event === 'SIGNED_OUT') {
-          // 念のためユーザーを明示的に null
-          setUser(null)
-        }
-        setLoading(false)
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [isClient])
 
   const signUp = async (data: SignUpData) => {
     const { error } = await supabase.auth.signUp({
