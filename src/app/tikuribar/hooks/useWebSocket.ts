@@ -20,6 +20,8 @@ interface BarInfo {
   title: string;
   userCount: number;
   createdAt: number;
+  owner?: string; // オーナー名を追加
+  users?: BarUser[]; // ユーザーリストを追加
 }
 
 export function useWebSocket() {

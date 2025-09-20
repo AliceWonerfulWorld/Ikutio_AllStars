@@ -17,7 +17,8 @@ import {
   Sparkles,
   Radio,
   X,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -542,63 +543,69 @@ export default function TikuriBarPage() {
         </div>
       </div>
       
-      {/* ヘッダー */}
-      <div className="bg-black/60 backdrop-blur-xl border-b border-amber-500/30 p-5 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      {/* ヘッダー - レスポンシブ対応 */}
+      <div className="bg-black/60 backdrop-blur-xl border-b border-amber-500/30 p-4 sm:p-5 relative z-10">
+        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          {/* 左側: ホームボタンとタイトル */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            {/* ホームボタン */}
             <button
               onClick={() => router.push("/")}
-              className="group flex items-center space-x-2 bg-gradient-to-r from-gray-800/80 to-gray-700/80 hover:from-gray-700/80 hover:to-gray-600/80 text-white px-5 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg"
+              className="group flex items-center space-x-2 bg-gradient-to-r from-gray-800/80 to-gray-700/80 hover:from-gray-700/80 hover:to-gray-600/80 text-white px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-gray-600/50 shadow-lg flex-shrink-0"
             >
-              <Home size={18} className="group-hover:rotate-12 transition-transform duration-300" />
-              <span className="font-medium">ホーム</span>
+              <Home size={16} className="sm:w-[18px] sm:h-[18px] group-hover:rotate-12 transition-transform duration-300" />
+              <span className="font-medium text-sm sm:text-base">ホーム</span>
             </button>
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg shadow-lg backdrop-blur-sm border border-amber-400/50">
-                <Wine size={22} className="text-white" />
+            
+            {/* タイトルセクション */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-2 sm:p-2.5 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg shadow-lg backdrop-blur-sm border border-amber-400/50 flex-shrink-0">
+                <Wine size={18} className="sm:w-[22px] sm:h-[22px] text-white" />
               </div>
-              <div>
-                <h1 className="text-2.5xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-2.5xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent truncate">
                   TikuriBAR
                 </h1>
-                <p className="text-amber-400 text-sm font-medium">〜 音声で繋がる社交場 〜</p>
+                <p className="text-amber-400 text-xs sm:text-sm font-medium truncate">
+                  〜 音声で繋がる社交場 〜
+                </p>
               </div>
             </div>
           </div>
           
-          {/* 接続状態表示 */}
-          <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-3.5 py-2 border border-amber-500/20">
-            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-amber-300 text-sm font-medium">
+          {/* 右側: 接続状態表示 */}
+          <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 border border-amber-500/20 flex-shrink-0">
+            <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <span className="text-amber-300 text-xs sm:text-sm font-medium">
               {isConnected ? '接続中' : '未接続'}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-7 relative z-10">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-7 relative z-10">
         {/* 魅力的なウェルカムセクション */}
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full mb-7 backdrop-blur-sm border border-amber-500/30 shadow-xl shadow-amber-500/20">
-            <Wine size={32} className="text-amber-400" />
+        <div className="text-center mb-10 sm:mb-14">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full mb-6 sm:mb-7 backdrop-blur-sm border border-amber-500/30 shadow-xl shadow-amber-500/20">
+            <Wine size={24} className="sm:w-8 sm:h-8 text-amber-400" />
           </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-amber-300 via-orange-300 to-amber-300 bg-clip-text text-transparent mb-5">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-300 via-orange-300 to-amber-300 bg-clip-text text-transparent mb-4 sm:mb-5">
             Welcome to TikuriBAR
           </h2>
-          <p className="text-lg text-amber-200 mb-7 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-amber-200 mb-6 sm:mb-7 max-w-xl mx-auto leading-relaxed px-4">
             高級バーのような雰囲気で、音声を通じて新しい出会いと会話を楽しむ特別な空間へようこそ
           </p>
-          <div className="flex items-center justify-center space-x-6 text-amber-300">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-6 text-amber-300">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
               <span className="text-sm">リアルタイム音声</span>
             </div>
-            <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
+            <div className="hidden sm:block w-1 h-1 bg-amber-500 rounded-full"></div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
               <span className="text-sm">高品質音声</span>
             </div>
-            <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
+            <div className="hidden sm:block w-1 h-1 bg-amber-500 rounded-full"></div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
               <span className="text-sm">プライベート空間</span>
@@ -607,67 +614,84 @@ export default function TikuriBarPage() {
         </div>
 
         {/* ライブスペース一覧 */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-7">
-            <div className="flex items-center">
-              <div className="p-2.5 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg mr-3 shadow-lg">
-                <Sparkles size={22} className="text-white" />
+        <div className="mb-10 sm:mb-12">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 sm:p-2.5 bg-gradient-to-r from-amber-500/80 to-orange-500/80 rounded-lg shadow-lg backdrop-blur-sm border border-amber-400/50">
+                <Wine size={18} className="sm:w-5 sm:h-5 text-white" />
               </div>
-              <h2 className="text-2.5xl font-bold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+              <h3 className="text-lg sm:text-xl font-bold text-white">
                 営業中のBAR
-              </h2>
+              </h3>
             </div>
-            
             <button
               onClick={getBars}
-              disabled={!isConnected}
-              className="bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 disabled:from-gray-600/80 disabled:to-gray-700/80 text-white px-5 py-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/25 flex items-center space-x-2 backdrop-blur-sm border border-amber-400/50"
+              className="flex items-center space-x-2 px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white rounded-lg transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-amber-400/50 shadow-lg"
             >
-              <Sparkles size={18} />
-              <span className="font-medium">更新</span>
+              <Sparkles size={16} className="sm:w-4 sm:h-4" />
+              <span className="text-sm sm:text-base font-medium">更新</span>
             </button>
           </div>
 
           {/* バーリスト */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-10">
             {availableBars.map((bar) => (
               <div
                 key={bar.id}
                 onClick={() => handleJoinBar(bar.id)}
-                className="group bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-xl p-5 border border-amber-500/30 cursor-pointer transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/20"
+                className="group bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-xl p-4 sm:p-5 border border-amber-500/30 cursor-pointer transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-amber-500/20"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold text-white group-hover:text-amber-300 transition-colors">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 space-y-2 sm:space-y-0">
+                  <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors truncate">
                     {bar.title}
                   </h3>
-                  <div className="flex items-center space-x-1">
-                    <Users size={16} className="text-amber-400" />
-                    <span className="text-amber-300 text-sm">{bar.userCount}</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs sm:text-sm text-green-400 font-medium">
+                      LIVE
+                    </span>
                   </div>
                 </div>
-                <p className="text-gray-400 text-sm mb-3">
-                  開店時間: {new Date(bar.createdAt).toLocaleTimeString('ja-JP')}
-                </p>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-red-400 text-sm font-medium">LIVE</span>
+                
+                <div className="flex items-center justify-between text-sm text-gray-300 mb-3">
+                  <div className="flex items-center space-x-1">
+                    <Users size={14} className="sm:w-4 sm:h-4" />
+                    <span>{(bar as any).userCount || 0}人が参加中</span>
+                  </div>
+                  <span className="text-xs">
+                    {(bar as any).createdAt ? new Date((bar as any).createdAt).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : '今すぐ'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-xs text-amber-400">
+                    <Crown size={12} className="sm:w-3 sm:h-3" />
+                    <span>バーテンダー: {(bar as any).owner || '不明'}</span>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    ID: {bar.id.slice(-8)}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* 新しいBAR開店ボタン */}
+        {/* 新しいBAR作成セクション */}
         <div className="text-center">
           {!showCreateForm ? (
             <button
               onClick={() => setShowCreateForm(true)}
               disabled={!isConnected}
-              className="group bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 disabled:from-gray-600/80 disabled:to-gray-700/80 text-white px-10 py-5 rounded-2xl transition-all duration-500 transform hover:scale-105 shadow-xl hover:shadow-amber-500/30 flex items-center space-x-4 mx-auto backdrop-blur-sm border border-amber-400/50 relative overflow-hidden"
+              className="group bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500/80 hover:to-orange-500/80 text-white px-6 py-4 sm:px-8 sm:py-5 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-amber-500/25 backdrop-blur-sm border border-amber-400/50 flex items-center space-x-3 mx-auto"
             >
-              <Wine size={26} className="group-hover:rotate-12 transition-transform duration-300 relative z-10" />
-              <span className="text-xl font-bold relative z-10">新しいBARを開店</span>
-              <Sparkles size={22} className="group-hover:animate-pulse relative z-10" />
+              <Wine size={20} className="sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform duration-300" />
+              <span className="text-base sm:text-lg font-bold">
+                新しいBARを開店
+              </span>
             </button>
           ) : (
             <div className="bg-gradient-to-br from-amber-900/20 via-black/60 to-orange-900/20 backdrop-blur-xl rounded-2xl p-6 border border-amber-500/30 max-w-md mx-auto shadow-xl shadow-amber-500/10">
