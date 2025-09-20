@@ -40,11 +40,13 @@ export default function StartView({
       position: 'relative', 
       zIndex: 1,
       paddingTop: 100,
+      paddingLeft: 20,
+      paddingRight: 20,
     }}>
       <div style={{ marginBottom: 60 }}>
         <div
           style={{
-            fontSize: 72,
+            fontSize: 'clamp(48px, 8vw, 72px)',
             fontWeight: 900,
             letterSpacing: 2,
             display: 'inline-flex',
@@ -53,6 +55,8 @@ export default function StartView({
             color: '#fff',
             textShadow: '0 0 30px rgba(255, 255, 255, 0.3)',
             marginBottom: 20,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
           }}
         >
           <span 
@@ -100,86 +104,69 @@ export default function StartView({
         </div>
       </div>
 
-      <div style={{ display: 'inline-flex', gap: 12, marginBottom: 40 }}>
-        <input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="どんなことでもお尋ねください (Enterで送信)"
-          style={{
-            flex: 1,
-            minWidth: 400,
-            padding: '18px 24px',
-            borderRadius: 20,
-            border: '2px solid rgba(255, 255, 255, 0.1)',
-            background: 'rgba(255, 255, 255, 0.05)',
-            color: '#fff',
-            outline: 'none',
-            fontSize: 16,
-            backdropFilter: 'blur(10px)',
-            transition: 'all 0.3s ease',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-          }}
-        />
-        
-        {/* 送信ボタン（左側に移動） */}
-        <button 
-          onClick={onSend} 
-          disabled={loading} 
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 18,
-            border: 'none',
-            background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: 20,
-            fontWeight: 'bold',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-            transition: 'all 0.3s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
-          }}
-        >
-          {loading ? '...' : '↑'}
-        </button>
-        
-        {/* 音声入力ボタン（右側に移動） */}
-        {isSupported && (
-          <button
-            onClick={handleVoiceToggle}
-            disabled={loading}
+      {/* 入力フィールドとボタン - モバイル対応 */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        gap: 16,
+        marginBottom: 40,
+        maxWidth: '100%',
+        width: '100%',
+      }}>
+        {/* 入力フィールド */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 12,
+          width: '100%',
+          maxWidth: 600,
+          margin: '0 auto',
+        }}>
+          <input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="どんなことでもお尋ねください (Enterで送信)"
+            style={{
+              flex: 1,
+              minWidth: 0, // 重要: flexboxでの縮小を許可
+              padding: '18px 24px',
+              borderRadius: 20,
+              border: '2px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: '#fff',
+              outline: 'none',
+              fontSize: 16,
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            }}
+          />
+          
+          {/* 送信ボタン */}
+          <button 
+            onClick={onSend} 
+            disabled={loading} 
             style={{
               width: 56,
               height: 56,
               borderRadius: 18,
               border: 'none',
-              background: isListening 
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+              background: 'linear-gradient(135deg, #333 0%, #1a1a1a 100%)',
               color: '#fff',
               cursor: 'pointer',
               fontSize: 20,
               fontWeight: 'bold',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
               transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              flexShrink: 0, // ボタンのサイズを固定
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -190,8 +177,51 @@ export default function StartView({
               e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
             }}
           >
-            {isListening ? '⏹️' : '🎤'}
+            {loading ? '...' : '↑'}
           </button>
+        </div>
+        
+        {/* 音声入力ボタン - 別行に配置 */}
+        {isSupported && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+          }}>
+            <button
+              onClick={handleVoiceToggle}
+              disabled={loading}
+              style={{
+                padding: '12px 24px',
+                borderRadius: 25,
+                border: 'none',
+                background: isListening 
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: 16,
+                fontWeight: 'bold',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                minWidth: 140,
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.7)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)';
+              }}
+            >
+              {isListening ? '⏹️ 停止' : '🎤 音声検索'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -260,7 +290,14 @@ export default function StartView({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+      {/* アクションボタン - モバイル対応 */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 16, 
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        padding: '0 20px',
+      }}>
         <button 
           onClick={() => setShowVoiceSettings(true)}
           style={{
@@ -277,6 +314,8 @@ export default function StartView({
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            minWidth: 120,
+            justifyContent: 'center',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
@@ -300,6 +339,8 @@ export default function StartView({
           fontWeight: 500,
           transition: 'all 0.3s ease',
           backdropFilter: 'blur(10px)',
+          minWidth: 120,
+          justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
@@ -323,6 +364,8 @@ export default function StartView({
           fontWeight: 500,
           transition: 'all 0.3s ease',
           backdropFilter: 'blur(10px)',
+          minWidth: 120,
+          justifyContent: 'center',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';

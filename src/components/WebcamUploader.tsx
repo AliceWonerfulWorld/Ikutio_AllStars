@@ -33,6 +33,7 @@ export default function WebcamToTable() {
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [recent, setRecent] = useState<Stamp[]>([]);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // --- utils ---
   const drawCoverToCanvas = (
@@ -86,26 +87,85 @@ export default function WebcamToTable() {
 
   const startCamera = async () => {
     setMsg(null);
+    setCameraError(null);
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+      // モバイル対応のカメラ設定
+      const constraints: MediaStreamConstraints = {
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: { ideal: "user" },
+          // モバイルでの安定性向上のため追加制約
+          frameRate: { ideal: 30, max: 60 }
+        },
         audio: false,
-      });
+      };
+
+      // まず理想的な設定で試行
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (error) {
+        // フォールバック: より緩い制約で再試行
+        console.warn("理想的なカメラ設定で失敗、フォールバック設定を試行:", error);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
       const v = videoRef.current!;
       v.srcObject = stream;
-      await v.play();
-      setStreaming(true);
+      
+      // モバイルでの再生問題を回避
+      v.playsInline = true;
+      v.muted = true;
+      
+      try {
+        await v.play();
+        setStreaming(true);
+        setMsg("カメラが正常に起動しました");
+      } catch (playError) {
+        console.error("動画再生エラー:", playError);
+        setCameraError("カメラの再生に失敗しました。ページを再読み込みしてください。");
+        // ストリームを停止
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      
     } catch (e: any) {
-      setMsg(`カメラ起動に失敗: ${e?.message ?? e}`);
+      console.error("カメラ起動エラー:", e);
+      
+      let errorMessage = "カメラ起動に失敗しました";
+      
+      if (e.name === "NotAllowedError") {
+        errorMessage = "カメラへのアクセスが拒否されました。ブラウザの設定でカメラの許可を確認してください。";
+      } else if (e.name === "NotFoundError") {
+        errorMessage = "カメラが見つかりません。デバイスにカメラが接続されているか確認してください。";
+      } else if (e.name === "NotSupportedError") {
+        errorMessage = "このブラウザはカメラをサポートしていません。HTTPS接続が必要な場合があります。";
+      } else if (e.name === "NotReadableError") {
+        errorMessage = "カメラが他のアプリケーションで使用されています。他のアプリを閉じてから再試行してください。";
+      } else if (e.message) {
+        errorMessage = `カメラエラー: ${e.message}`;
+      }
+      
+      setCameraError(errorMessage);
+      setMsg(errorMessage);
     }
   };
 
   const stopCamera = () => {
     setStreaming(false);
+    setCameraError(null);
     const v = videoRef.current;
     const stream = v?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (v) v.srcObject = null;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    if (v) {
+      v.srcObject = null;
+    }
   };
 
   const capture = () => {
@@ -212,6 +272,35 @@ export default function WebcamToTable() {
           {/* カメラオーバーレイ */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           
+          {/* カメラエラー表示 */}
+          {cameraError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+              <div className="text-center p-6 max-w-sm mx-auto">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">カメラエラー</h3>
+                <p className="text-gray-300 text-sm mb-4">{cameraError}</p>
+                <div className="space-y-2">
+                  <button
+                    onClick={startCamera}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg font-medium transition-all duration-200"
+                  >
+                    再試行
+                  </button>
+                  <button
+                    onClick={() => setCameraError(null)}
+                    className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* コントロールパネル */}
           <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
             {!streaming ? (
@@ -252,9 +341,9 @@ export default function WebcamToTable() {
         {/* プレビュー & 保存セクション */}
         {previewUrl && (
           <div className="p-6 border-t border-gray-800">
-            <div className="flex items-start space-x-6">
+            <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-6">
               {/* プレビュー画像 */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 mx-auto sm:mx-0">
                 <img
                   src={previewUrl}
                   alt="プレビュー"
@@ -263,16 +352,16 @@ export default function WebcamToTable() {
               </div>
               
               {/* アクションボタン */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">撮影完了</h3>
-                <p className="text-gray-400 mb-4">この画像でREALctionを作成しますか？</p>
+              <div className="flex-1 w-full sm:w-auto">
+                <h3 className="text-lg font-semibold text-white mb-2 text-center sm:text-left">撮影完了</h3>
+                <p className="text-gray-400 mb-4 text-center sm:text-left">この画像でREALctionを作成しますか？</p>
                 
                 {/* ボタン群 */}
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                   <button
                     onClick={upload}
                     disabled={uploading}
-                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25"
+                    className="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25"
                   >
                     {uploading ? (
                       <>
@@ -295,7 +384,7 @@ export default function WebcamToTable() {
                   <button
                     onClick={() => setPreviewUrl(null)}
                     disabled={uploading}
-                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 disabled:from-gray-800 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg"
+                    className="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 disabled:from-gray-800 disabled:to-gray-700 text-white rounded-xl font-medium transition-all duration-200 disabled:cursor-not-allowed shadow-lg"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -312,7 +401,7 @@ export default function WebcamToTable() {
       {/* ステータスメッセージ */}
       {msg && (
         <div className={`px-4 py-3 rounded-xl border ${
-          msg.includes('失敗') ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'
+          msg.includes('失敗') || msg.includes('エラー') ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'
         }`}>
           {msg}
         </div>
@@ -320,7 +409,7 @@ export default function WebcamToTable() {
 
       {/* 最近のREALction */}
       <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
           <div>
             <h2 className="text-xl font-semibold text-white">最近のREALction</h2>
             <p className="text-gray-400 text-sm">過去に作成したリアクション</p>
