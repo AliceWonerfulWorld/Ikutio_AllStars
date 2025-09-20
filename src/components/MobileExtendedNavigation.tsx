@@ -11,11 +11,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function MobileExtendedNavigation() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -26,46 +32,50 @@ export default function MobileExtendedNavigation() {
 
   // 拡張メニューのアイテム
   const extendedMenuItems = [
-    { icon: Clock, label: "Clock", href: "/glok" },
-    { icon: Heart, label: "リアクション", href: "/reactions" },
-    { icon: Camera, label: "REALction", href: "/realction" },
-    { icon: CloudSun, label: "天気Yohoo!", href: "/weather" },
-    { icon: Wine, label: "TikuriBAR", href: "/tikuribar" },
+    { icon: Clock, label: "Clock", href: "/glok", color: "text-yellow-400" },
+    { icon: Heart, label: "リアクション", href: "/reactions", color: "text-pink-400" },
+    { icon: Camera, label: "REALction", href: "/realction", color: "text-purple-400" },
+    { icon: CloudSun, label: "天気Yohoo!", href: "/weather", color: "text-cyan-400" },
+    { icon: Wine, label: "TikuriBAR", href: "/tikuribar", color: "text-green-400" },
   ];
 
   return (
     <>
       {/* 拡張ボタン */}
-      <div className="lg:hidden fixed bottom-0 right-4 mb-20 z-50">
+      <div className="lg:hidden fixed bottom-0 right-3 mb-20 z-50 safe-area-pb">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
+          className={`p-3 rounded-full shadow-xl transition-all duration-300 transform ${
             isExpanded
-              ? "bg-red-600 text-white"
-              : "bg-blue-600 text-white hover:bg-blue-700"
+              ? "bg-red-500 text-white scale-110 rotate-45"
+              : "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105"
           }`}
         >
-          {isExpanded ? <X size={24} /> : <MoreHorizontal size={24} />}
+          {isExpanded ? <X size={20} /> : <MoreHorizontal size={20} />}
         </button>
       </div>
 
       {/* 拡張メニュー */}
-      {isExpanded && (
-        <div className="lg:hidden fixed bottom-20 right-4 z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-4 space-y-3">
-            {extendedMenuItems.map((item) => (
+      {isExpanded && isClient && (
+        <div className="lg:hidden fixed bottom-20 right-3 z-50 animate-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[180px]">
+            {extendedMenuItems.map((item, index) => (
               <Link
                 key={item.label}
                 href={item.href}
                 onClick={() => setIsExpanded(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive(item.href)
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    ? "bg-blue-600/80 text-white scale-105"
+                    : "text-gray-300 hover:bg-gray-800/80 hover:text-white hover:scale-105"
                 }`}
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animation: 'slideInFromRight 0.3s ease-out forwards'
+                }}
               >
-                <item.icon size={20} />
-                <span className="font-medium">{item.label}</span>
+                <item.icon size={18} className={item.color} />
+                <span className="font-medium text-sm">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -73,12 +83,37 @@ export default function MobileExtendedNavigation() {
       )}
 
       {/* オーバーレイ */}
-      {isExpanded && (
+      {isExpanded && isClient && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/30 z-40 animate-in fade-in duration-200"
           onClick={() => setIsExpanded(false)}
         />
       )}
+
+      {/* カスタムCSSアニメーション */}
+      <style jsx>{`
+        @keyframes slideInFromRight {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes slideInFromBottom {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </>
   );
 }
