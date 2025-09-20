@@ -10,6 +10,8 @@ import {
   Palette,
   Globe,
   Trash2,
+  Menu,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
@@ -65,6 +67,7 @@ type Saves = {
 
 function SettingsPageContent() {
   const [activeTab, setActiveTab] = useState("profile");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     setID: "", // 追加
     username: "",
@@ -564,62 +567,146 @@ function SettingsPageContent() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto flex">
-        {/* サイドバー */}
-        <div className="w-64 flex-shrink-0">
-          <Sidebar />
+      {/* モバイル用ヘッダー */}
+      <div className="lg:hidden sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/"
+              className="hover:bg-gray-800 p-2 rounded-full transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <h1 className="text-xl font-bold">設定</h1>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="hover:bg-gray-800 p-2 rounded-full transition-colors"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
+      </div>
 
-        {/* メインコンテンツ */}
-        <div className="flex-1 max-w-4xl mx-auto">
-          {/* ヘッダー */}
-          <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/"
-                className="hover:bg-gray-800 p-2 rounded-full transition-colors"
-              >
-                <ArrowLeft size={20} />
-              </Link>
-              <h1 className="text-xl font-bold">設定</h1>
-            </div>
+      {/* デスクトップ用レイアウト */}
+      <div className="hidden lg:block max-w-7xl mx-auto">
+        <div className="flex">
+          {/* サイドバー */}
+          <div className="w-64 flex-shrink-0">
+            <Sidebar />
           </div>
 
-          <div className="flex">
-            {/* 設定タブ */}
-            <div className="w-64 border-r border-gray-800 p-4">
-              <nav className="space-y-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      activeTab === tab.id
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "text-gray-500 hover:text-white hover:bg-gray-800"
-                    }`}
-                  >
-                    <tab.icon size={20} />
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* 設定内容 */}
-            <div className="flex-1 p-6">
-              {renderTabContent()}
-
-              {/* 保存ボタン */}
-              <div className="mt-8 pt-6 border-t border-gray-800">
-                <button
-                  onClick={handleSave}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
+          {/* メインコンテンツ */}
+          <div className="flex-1 max-w-4xl mx-auto">
+            {/* ヘッダー */}
+            <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4">
+              <div className="flex items-center space-x-4">
+                <Link
+                  href="/"
+                  className="hover:bg-gray-800 p-2 rounded-full transition-colors"
                 >
-                  設定を保存
-                </button>
+                  <ArrowLeft size={20} />
+                </Link>
+                <h1 className="text-xl font-bold">設定</h1>
               </div>
             </div>
+
+            <div className="flex">
+              {/* 設定タブ */}
+              <div className="w-64 border-r border-gray-800 p-4">
+                <nav className="space-y-2">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                        activeTab === tab.id
+                          ? "bg-blue-500/20 text-blue-400"
+                          : "text-gray-500 hover:text-white hover:bg-gray-800"
+                      }`}
+                    >
+                      <tab.icon size={20} />
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+
+              {/* 設定内容 */}
+              <div className="flex-1 p-6">
+                {renderTabContent()}
+
+                {/* 保存ボタン */}
+                <div className="mt-8 pt-6 border-t border-gray-800">
+                  <button
+                    onClick={handleSave}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
+                  >
+                    設定を保存
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* モバイル用レイアウト */}
+      <div className="lg:hidden">
+        {/* モバイルメニューオーバーレイ */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileMenuOpen(false)} />
+        )}
+
+        {/* モバイルメニュー */}
+        <div className={`fixed top-0 left-0 h-full w-64 bg-black border-r border-gray-800 transform transition-transform duration-300 z-50 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold">設定メニュー</h2>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="hover:bg-gray-800 p-2 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <nav className="space-y-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                    activeTab === tab.id
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "text-gray-500 hover:text-white hover:bg-gray-800"
+                  }`}
+                >
+                  <tab.icon size={20} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* モバイル設定内容 */}
+        <div className="p-4 pt-6">
+          {renderTabContent()}
+
+          {/* 保存ボタン */}
+          <div className="mt-8 pt-6 border-t border-gray-800">
+            <button
+              onClick={handleSave}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors"
+            >
+              設定を保存
+            </button>
           </div>
         </div>
       </div>
