@@ -45,6 +45,12 @@ const getImageUrl = (image_url?: string) => {
 export default function Sidebar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // uselsテーブルから追加情報を取得
   const [userMeta, setUserMeta] = useState<{
@@ -55,20 +61,25 @@ export default function Sidebar() {
 
   useEffect(() => {
     const fetchUserMeta = async () => {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from("usels")
-        .select("setID, icon_url, username")
-        .eq("user_id", user.id)
-        .single();
-      if (!error && data) {
-        setUserMeta(data);
-      } else {
+      if (!user || !isClient) return;
+      try {
+        const { data, error } = await supabase
+          .from("usels")
+          .select("setID, icon_url, username")
+          .eq("user_id", user.id)
+          .single();
+        if (!error && data) {
+          setUserMeta(data);
+        } else {
+          setUserMeta(null);
+        }
+      } catch (error) {
+        console.error("Error fetching user meta:", error);
         setUserMeta(null);
       }
     };
     fetchUserMeta();
-  }, [user]);
+  }, [user, isClient]);
 
   const menuItems = [
     { icon: Home, label: "ホーム", href: "/" },
@@ -130,7 +141,7 @@ export default function Sidebar() {
 
       {/* ユーザー情報（固定） */}
       <div className="flex-shrink-0 p-4 border-t border-gray-800 relative z-10">
-        {user ? (
+        {user && isClient ? (
           <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
             {/* アイコン画像表示 */}
             {userMeta?.icon_url ? (
@@ -197,7 +208,7 @@ export default function Sidebar() {
         )}
 
         {/* ログアウトボタン */}
-        {user && (
+        {user && isClient && (
           <button
             onClick={handleSignOut}
             className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors"
