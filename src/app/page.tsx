@@ -178,100 +178,125 @@ export default function Home() {
 
   // 投稿取得 & ユーザー情報取得
   const fetchTodos = async () => {
-    const { data: todosData, error: todosError } = await supabase
-      .from("todos")
-      .select("*");
-    if (todosError) {
-      console.error("Error fetching todos:", todosError);
-      return;
-    }
-    // 投稿に紐づくuser_id一覧
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const userIds = Array.from(
-      new Set(
-        (todosData ?? [])
-          .map((todo: any) => todo.user_id)
-          .filter(
-            (id: string | null | undefined) =>
-              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
-          )
-      )
-    );
-    // uselsから該当ユーザー情報をまとめて取得
-    let usersData: any[] = [];
-    let usersError: any = null;
-    if (userIds.length > 0) {
-      const { data, error } = await supabase
-        .from("usels")
-        .select("user_id, icon_url, username, setID, isBunkatsu") // ← isBunkatsuを追加
-        .in("user_id", userIds);
-      usersData = data ?? [];
-      usersError = error;
-      if (usersError) {
-        console.error("Error fetching users:", usersError);
+    try {
+      const { data: todosData, error: todosError } = await supabase
+        .from("todos")
+        .select("*");
+      
+      if (todosError) {
+        console.error("Error fetching todos:", todosError);
+        setError("投稿の読み込みに失敗しました");
+        return;
       }
-    }
-    // user_id→iconUrl, displayName, setIDのMap作成
-    const userMap: Record<
-      string,
-      {
-        iconUrl?: string;
-        displayName?: string;
-        setID?: string;
-        username?: string;
-        isBunkatsu?: boolean; // ← 追加
-      }
-    > = {};
-    (usersData ?? []).forEach((user: any) => {
-      userMap[user.user_id] = {
-        iconUrl: getPublicIconUrl(user.icon_url),
-        displayName: user.username || "User",
-        setID: user.setID || "",
-        username: user.username || "",
-        isBunkatsu: user.isBunkatsu ?? false, // ← 追加
-      };
-    });
-    setUserMap(userMap);
 
-    // ログインユーザーID取得
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id ?? null;
+      // 投稿に紐づくuser_id一覧
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const userIds = Array.from(
+        new Set(
+          (todosData ?? [])
+            .map((todo: any) => todo.user_id)
+            .filter(
+              (id: string | null | undefined) =>
+                !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
+            )
+        )
+      );
 
-    // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
-    const todosWithStatus = await Promise.all(
-      (todosData ?? []).map(async (todo: any) => {
-        if (!isValidUserId(userId)) {
-          return { ...todo, liked: false, bookmarked: false };
-        }
+      // uselsから該当ユーザー情報をまとめて取得
+      let usersData: any[] = [];
+      let usersError: any = null;
+      
+      if (userIds.length > 0) {
         try {
-          const postIdNum = Number(todo.id);
-          const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
-            supabase
-              .from("likes")
-              .select("on")
-              .eq("post_id", postIdNum)
-              .eq("user_id", userId as string)
-              .maybeSingle(),
-            supabase
-              .from("bookmarks")
-              .select("on")
-              .eq("post_id", postIdNum)
-              .eq("user_id", userId as string)
-              .maybeSingle(),
-          ]);
-          return {
-            ...todo,
-            liked: likeData?.on === true,
-            bookmarked: bookmarkData?.on === true,
-          };
-        } catch (e) {
-          console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
-          return { ...todo, liked: false, bookmarked: false };
+          const { data, error } = await supabase
+            .from("usels")
+            .select("user_id, icon_url, username, setID, isBunkatsu")
+            .in("user_id", userIds);
+          usersData = data ?? [];
+          usersError = error;
+          
+          if (usersError) {
+            console.error("Error fetching users:", usersError);
+            // エラーが発生しても処理を続行（ユーザー情報なしで投稿を表示）
+          }
+        } catch (error) {
+          console.error("Error in user data fetch:", error);
+          // エラーが発生しても処理を続行
         }
-      })
-    );
-    setPosts(todosWithStatus);
+      }
+
+      // user_id→iconUrl, displayName, setIDのMap作成
+      const userMap: Record<
+        string,
+        {
+          iconUrl?: string;
+          displayName?: string;
+          setID?: string;
+          username?: string;
+          isBunkatsu?: boolean;
+        }
+      > = {};
+      
+      (usersData ?? []).forEach((user: any) => {
+        userMap[user.user_id] = {
+          iconUrl: getPublicIconUrl(user.icon_url),
+          displayName: user.username || "User",
+          setID: user.setID || "",
+          username: user.username || "",
+          isBunkatsu: user.isBunkatsu ?? false,
+        };
+      });
+      setUserMap(userMap);
+
+      // ログインユーザーID取得（エラーハンドリングを追加）
+      let userId = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        userId = userData?.user?.id ?? null;
+      } catch (error) {
+        console.warn("Error getting user session:", error);
+        userId = null;
+      }
+
+      // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
+      const todosWithStatus = await Promise.all(
+        (todosData ?? []).map(async (todo: any) => {
+          if (!isValidUserId(userId)) {
+            return { ...todo, liked: false, bookmarked: false };
+          }
+          try {
+            const postIdNum = Number(todo.id);
+            const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
+              supabase
+                .from("likes")
+                .select("on")
+                .eq("post_id", postIdNum)
+                .eq("user_id", userId as string)
+                .maybeSingle(),
+              supabase
+                .from("bookmarks")
+                .select("on")
+                .eq("post_id", postIdNum)
+                .eq("user_id", userId as string)
+                .maybeSingle(),
+            ]);
+            return {
+              ...todo,
+              liked: likeData?.on === true,
+              bookmarked: bookmarkData?.on === true,
+            };
+          } catch (e) {
+            console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
+            return { ...todo, liked: false, bookmarked: false };
+          }
+        })
+      );
+      setPosts(todosWithStatus);
+    } catch (error) {
+      console.error("fetchTodos: Unexpected error:", error);
+      setError("データの読み込み中にエラーが発生しました");
+    }
   };
 
   // 1秒ごとに再レンダリングして残り時間を更新
