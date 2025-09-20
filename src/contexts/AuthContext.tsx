@@ -18,6 +18,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false)
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // username 用のサニタイズとランダム生成
   const sanitizeBaseName = (name: string) => {
@@ -127,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    if (!isClient) return;
+
     // 初期認証状態を取得
     const getInitialSession = async () => {
       try {
@@ -180,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [isClient])
 
   const signUp = async (data: SignUpData) => {
     const { error } = await supabase.auth.signUp({

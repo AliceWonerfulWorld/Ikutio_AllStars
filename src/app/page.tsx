@@ -83,6 +83,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   // usels全ユーザー情報を格納
   const [userMap, setUserMap] = useState<
     Record<
@@ -96,6 +97,11 @@ export default function Home() {
       }
     >
   >({});
+
+  // クライアントサイドでのみ実行されることを保証
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // 初回マウント時にusels全件取得
   useEffect(() => {
@@ -551,7 +557,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex h-screen">
           {/* デスクトップ: 左サイドバー */}
           <div className="hidden lg:block w-64 flex-shrink-0">
-            <Sidebar />
+            {isClient && <Sidebar />}
           </div>
           
           {/* メインコンテンツ */}
@@ -573,7 +579,7 @@ export default function Home() {
             </div>
             
             {/* 投稿フォーム */}
-            <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />
+            {isClient && <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />}
             
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
@@ -652,8 +658,8 @@ export default function Home() {
         </div>
 
         {/* モバイルナビゲーション */}
-        <MobileNavigation />
-        <MobileExtendedNavigation />
+        {isClient && <MobileNavigation />}
+        {isClient && <MobileExtendedNavigation />}
       </div>
     </>
   );
