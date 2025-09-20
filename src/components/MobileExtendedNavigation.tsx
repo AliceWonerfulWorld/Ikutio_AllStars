@@ -79,26 +79,17 @@ export default function MobileExtendedNavigation() {
 
   return (
     <>
-      {/* 拡張ボタン */}
-      <div className="lg:hidden fixed bottom-0 right-3 mb-20 z-50 safe-area-pb">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`p-3 rounded-full shadow-xl transition-all duration-300 transform ${
-            isExpanded
-              ? "bg-red-500 text-white scale-110 rotate-45"
-              : user
-              ? "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105"
-              : "bg-gray-600 text-white hover:bg-gray-700 hover:scale-105"
-          }`}
-        >
-          {isExpanded ? <X size={20} /> : <MoreHorizontal size={20} />}
-        </button>
-      </div>
-
       {/* 拡張メニュー */}
       {isExpanded && isClient && (
-        <div className="lg:hidden fixed bottom-20 right-3 z-50 animate-in slide-in-from-bottom-2 duration-300">
-          <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[180px]">
+        <div className="lg:hidden fixed bottom-24 right-3 z-40 animate-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[180px] max-h-[60vh] overflow-y-auto">
+            {/* メニューヘッダー */}
+            <div className="px-2 py-1 border-b border-gray-700 mb-2">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                その他のメニュー
+              </span>
+            </div>
+            
             {extendedMenuItems.map((item, index) => (
               <div key={item.label}>
                 {item.isLogout ? (
@@ -137,10 +128,38 @@ export default function MobileExtendedNavigation() {
         </div>
       )}
 
+      {/* 拡張ボタン - より分かりやすいデザイン */}
+      <div className="lg:hidden fixed bottom-0 right-3 mb-20 z-50 safe-area-pb">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`relative p-3 rounded-full shadow-xl transition-all duration-300 transform ${
+            isExpanded
+              ? "bg-gray-700 text-gray-300 scale-105 border-2 border-gray-500"
+              : user
+              ? "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105"
+              : "bg-gray-600 text-white hover:bg-gray-700 hover:scale-105"
+          }`}
+        >
+          {/* アイコン */}
+          <div className="relative">
+            {isExpanded ? (
+              <X size={20} className="text-white" />
+            ) : (
+              <MoreHorizontal size={20} />
+            )}
+          </div>
+          
+          {/* 状態インジケーター */}
+          {isExpanded && (
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-900"></div>
+          )}
+        </button>
+      </div>
+
       {/* オーバーレイ */}
       {isExpanded && isClient && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-40 animate-in fade-in duration-200"
+          className="lg:hidden fixed inset-0 bg-black/30 z-30 animate-in fade-in duration-200"
           onClick={() => setIsExpanded(false)}
         />
       )}
@@ -166,6 +185,15 @@ export default function MobileExtendedNavigation() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
           }
         }
       `}</style>
