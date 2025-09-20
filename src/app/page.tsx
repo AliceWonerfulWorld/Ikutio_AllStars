@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
 import Post from "@/components/Post";
@@ -564,8 +565,48 @@ export default function Home() {
           <div className="flex-1 max-w-2xl mx-auto lg:border-r border-gray-800 relative z-10 overflow-y-auto pb-20 lg:pb-0">
             {/* ヘッダー */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 z-40">
-              {/* モバイル: タイトルのみ */}
-              <h1 className="text-xl font-bold">ホーム</h1>
+              {/* モバイル: タイトルと認証ボタン */}
+              <div className="lg:hidden flex items-center justify-between">
+                <h1 className="text-xl font-bold">ホーム</h1>
+                {isClient && (
+                  <div className="flex items-center space-x-2">
+                    {user ? (
+                      <div className="flex items-center space-x-2">
+                        {/* ユーザーアイコン */}
+                        <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                          {user.user_metadata?.displayName?.charAt(0) ||
+                           user.user_metadata?.username?.charAt(0) ||
+                           user.email?.charAt(0) ||
+                           "U"}
+                        </div>
+                        <span className="text-sm text-gray-400">
+                          {user.user_metadata?.displayName || 
+                           user.user_metadata?.username || 
+                           "ユーザー"}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href="/auth/login"
+                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                        >
+                          ログイン
+                        </Link>
+                        <Link
+                          href="/auth/signup"
+                          className="px-3 py-1 text-sm border border-green-600 text-green-400 rounded-full hover:bg-green-900/30 transition-colors"
+                        >
+                          サインアップ
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* デスクトップ: タイトルのみ */}
+              <h1 className="hidden lg:block text-xl font-bold">ホーム</h1>
               
               {authError && (
                 <div className="mt-2 bg-red-900/40 border border-red-700 text-red-200 text-sm p-3 rounded">

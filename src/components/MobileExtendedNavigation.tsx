@@ -8,15 +8,29 @@ import {
   Camera,
   MoreHorizontal,
   X,
+  LogOut,
+  Settings,
+  LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+
+// 拡張メニューアイテムの型定義
+interface ExtendedMenuItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  color: string;
+  isLogout?: boolean;
+}
 
 export default function MobileExtendedNavigation() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const { user, signOut } = useAuth();
 
   // クライアントサイドでのみ実行されることを保証
   useEffect(() => {
@@ -30,14 +44,38 @@ export default function MobileExtendedNavigation() {
     return pathname.startsWith(href);
   };
 
-  // 拡張メニューのアイテム
-  const extendedMenuItems = [
-    { icon: Clock, label: "Clock", href: "/glok", color: "text-yellow-400" },
-    { icon: Heart, label: "リアクション", href: "/reactions", color: "text-pink-400" },
-    { icon: Camera, label: "REALction", href: "/realction", color: "text-purple-400" },
-    { icon: CloudSun, label: "天気Yohoo!", href: "/weather", color: "text-cyan-400" },
-    { icon: Wine, label: "TikuriBAR", href: "/tikuribar", color: "text-green-400" },
-  ];
+  // ログイン状態に応じた拡張メニューアイテム
+  const getExtendedMenuItems = (): ExtendedMenuItem[] => {
+    const baseItems: ExtendedMenuItem[] = [
+      { icon: Clock, label: "Clock", href: "/glok", color: "text-yellow-400" },
+      { icon: Heart, label: "リアクション", href: "/reactions", color: "text-pink-400" },
+      { icon: Camera, label: "REALction", href: "/realction", color: "text-purple-400" },
+      { icon: CloudSun, label: "天気Yohoo!", href: "/weather", color: "text-cyan-400" },
+      { icon: Wine, label: "TikuriBAR", href: "/tikuribar", color: "text-green-400" },
+    ];
+
+    if (user) {
+      // ログイン時は設定とログアウトを追加
+      return [
+        ...baseItems,
+        { icon: Settings, label: "設定", href: "/settings", color: "text-gray-400" },
+        { icon: LogOut, label: "ログアウト", href: "#", color: "text-red-400", isLogout: true },
+      ];
+    }
+
+    return baseItems;
+  };
+
+  const extendedMenuItems = getExtendedMenuItems();
+
+  const handleItemClick = async (item: ExtendedMenuItem) => {
+    if (item.isLogout) {
+      await signOut();
+      setIsExpanded(false);
+    } else {
+      setIsExpanded(false);
+    }
+  };
 
   return (
     <>
@@ -48,7 +86,9 @@ export default function MobileExtendedNavigation() {
           className={`p-3 rounded-full shadow-xl transition-all duration-300 transform ${
             isExpanded
               ? "bg-red-500 text-white scale-110 rotate-45"
-              : "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105"
+              : user
+              ? "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105"
+              : "bg-gray-600 text-white hover:bg-gray-700 hover:scale-105"
           }`}
         >
           {isExpanded ? <X size={20} /> : <MoreHorizontal size={20} />}
@@ -60,23 +100,38 @@ export default function MobileExtendedNavigation() {
         <div className="lg:hidden fixed bottom-20 right-3 z-50 animate-in slide-in-from-bottom-2 duration-300">
           <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[180px]">
             {extendedMenuItems.map((item, index) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setIsExpanded(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive(item.href)
-                    ? "bg-blue-600/80 text-white scale-105"
-                    : "text-gray-300 hover:bg-gray-800/80 hover:text-white hover:scale-105"
-                }`}
-                style={{
-                  animationDelay: `${index * 50}ms`,
-                  animation: 'slideInFromRight 0.3s ease-out forwards'
-                }}
-              >
-                <item.icon size={18} className={item.color} />
-                <span className="font-medium text-sm">{item.label}</span>
-              </Link>
+              <div key={item.label}>
+                {item.isLogout ? (
+                  <button
+                    onClick={() => handleItemClick(item)}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-300 hover:bg-red-900/80 hover:text-red-300 hover:scale-105 w-full text-left"
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animation: 'slideInFromRight 0.3s ease-out forwards'
+                    }}
+                  >
+                    <item.icon size={18} className={item.color} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    onClick={() => handleItemClick(item)}
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      isActive(item.href)
+                        ? "bg-blue-600/80 text-white scale-105"
+                        : "text-gray-300 hover:bg-gray-800/80 hover:text-white hover:scale-105"
+                    }`}
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animation: 'slideInFromRight 0.3s ease-out forwards'
+                    }}
+                  >
+                    <item.icon size={18} className={item.color} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </Link>
+                )}
+              </div>
             ))}
           </div>
         </div>

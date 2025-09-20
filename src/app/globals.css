@@ -51,6 +51,27 @@ body {
   }
 }
 
+/* 認証ボタン用のスタイル */
+.auth-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.auth-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* モバイルナビゲーションのレスポンシブ調整 */
+@media (max-width: 480px) {
+  .mobile-nav-item {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .mobile-nav-label {
+    font-size: 0.75rem;
+  }
+}
+
 /* 既存のCSSに追加 */
 @keyframes spin {
   0% { transform: rotate(0deg); }
