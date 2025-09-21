@@ -6,13 +6,12 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import { supabase } from "@/utils/supabase/client";
-// 🔧 共通型定義をインポート
 import { PostType } from "@/types/post";
 
 export default function BookmarksPage() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -22,259 +21,343 @@ export default function BookmarksPage() {
     fetchUserId();
   }, []);
 
+  // R2画像URL変換関数
+  const getPublicIconUrl = (iconUrl?: string) => {
+    if (!iconUrl) return "";
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+    }
+    return iconUrl;
+  };
+
   useEffect(() => {
-    const fetchBookmarks = async () => {
+    const fetchBookmarksWithUserInfo = async () => {
       if (!userId) return;
-      // ブックマーク済みのpost_id一覧取得
-      const { data: bookmarks } = await supabase
-        .from("bookmarks")
-        .select("post_id")
-        .eq("user_id", userId)
-        .eq("on", true);
+      
+      try {
+        setLoading(true);
+        
+        // 1. ブックマーク済みのpost_id一覧取得
+        const { data: bookmarks } = await supabase
+          .from("bookmarks")
+          .select("post_id")
+          .eq("user_id", userId)
+          .eq("on", true);
 
-      const postIds = (bookmarks ?? []).map((b: any) => b.post_id);
-      if (postIds.length === 0) {
-        setPosts([]);
-        return;
-      }
-      // 投稿情報取得
-      const { data: todos } = await supabase
-        .from("todos")
-        .select("*")
-        .in("id", postIds);
+        const postIds = (bookmarks ?? []).map((b: any) => b.post_id);
+        if (postIds.length === 0) {
+          setPosts([]);
+          setLoading(false);
+          return;
+        }
 
-      // いいね・ブックマーク状態を取得して反映
-      const postsWithStatus = await Promise.all(
-        (todos ?? []).map(async (post: any) => {
-          // いいね状態
-          const { data: likeData } = await supabase
+        // 2. 投稿情報取得
+        const { data: todos } = await supabase
+          .from("todos")
+          .select("*")
+          .in("id", postIds)
+          .order("created_at", { ascending: false });
+
+        if (!todos || todos.length === 0) {
+          setPosts([]);
+          setLoading(false);
+          return;
+        }
+
+        // 3. 投稿者のユーザーIDを抽出
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const userIds = Array.from(
+          new Set(
+            todos
+              .map((todo: any) => todo.user_id)
+              .filter((id: string | null | undefined) =>
+                !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
+              )
+          )
+        );
+
+        console.log("📋 投稿データ:", todos);
+        console.log("👥 ユーザーID一覧:", userIds);
+
+        // 🔧 ホーム画面と同じ方法でユーザー情報を取得
+        const [usersResult, likesResult, bookmarksResult] = await Promise.all([
+          // 🔧 ホーム画面と同じカラムを取得
+          userIds.length > 0
+            ? supabase
+                .from("usels")
+                .select("user_id, icon_url, username, setID, isBunkatsu") // 🔧 display_nameを削除、isBunkatsuを追加
+                .in("user_id", userIds)
+            : Promise.resolve({ data: [], error: null }),
+          
+          // いいね状態を一括取得
+          supabase
             .from("likes")
-            .select("on")
-            .eq("post_id", post.id)
+            .select("post_id, on")
             .eq("user_id", userId)
-            .maybeSingle();
-
-          // ブックマーク状態
-          const { data: bookmarkData } = await supabase
+            .in("post_id", postIds),
+          
+          // ブックマーク状態を一括取得
+          supabase
             .from("bookmarks")
-            .select("on")
-            .eq("post_id", post.id)
+            .select("post_id, on")
             .eq("user_id", userId)
-            .maybeSingle();
+            .in("post_id", postIds)
+        ]);
 
+        const { data: usersData, error: usersError } = usersResult;
+        const { data: likesData } = likesResult;
+        const { data: bookmarksData } = bookmarksResult;
+
+        console.log("👤 取得したユーザーデータ:", usersData);
+        console.log("❌ ユーザーデータ取得エラー:", usersError);
+
+        // 🔧 ホーム画面と同じ方法でユーザーマップを作成
+        const userMap: Record<string, any> = {};
+        (usersData ?? []).forEach((user: any) => {
+          console.log(`🔍 ユーザーマップ作成: ${user.user_id} -> username: ${user.username}, setID: ${user.setID}`);
+          userMap[user.user_id] = {
+            iconUrl: getPublicIconUrl(user.icon_url),
+            displayName: user.username || "User", // 🔧 ホーム画面と同じ
+            setID: user.setID || "", // 🔧 ホーム画面と同じ
+            username: user.username || "", // 🔧 ホーム画面と同じ
+            isBunkatsu: user.isBunkatsu ?? false,
+          };
+        });
+
+        console.log("🗺️ 完成したユーザーマップ:", userMap);
+
+        // 6. リアクションマップを作成
+        const likesMap = new Map();
+        const bookmarksMap = new Map();
+        
+        (likesData ?? []).forEach((like: any) => {
+          likesMap.set(like.post_id, like.on);
+        });
+        
+        (bookmarksData ?? []).forEach((bookmark: any) => {
+          bookmarksMap.set(bookmark.post_id, bookmark.on);
+        });
+
+        // 7. 投稿データにユーザー情報を統合
+        const postsWithUserInfo = todos.map((post: any) => {
+          const userInfo = userMap[post.user_id] || {};
+          const postIdNum = Number(post.id);
+          
+          console.log(`📝 投稿 ${post.id} の統合:`, {
+            post_user_id: post.user_id,
+            userInfo: userInfo,
+            finalUsername: userInfo.username || post.username || "Unknown User",
+            finalSetID: userInfo.setID || post.username || "unknown"
+          });
+          
           return {
             ...post,
-            liked: likeData?.on === true,
-            bookmarked: bookmarkData?.on === true,
+            liked: likesMap.get(postIdNum) || false,
+            bookmarked: bookmarksMap.get(postIdNum) || false,
+            // 🚀 ユーザー情報を正しく設定
+            user_icon_url: userInfo.iconUrl || "",
+            displayName: userInfo.displayName || post.username || "Unknown User",
+            setID: userInfo.setID || post.username || "unknown",
+            username: userInfo.username || post.username || "Unknown User",
           };
-        })
-      );
+        });
 
-      setPosts(postsWithStatus);
+        console.log("✅ 最終的な投稿データ:", postsWithUserInfo);
+        setPosts(postsWithUserInfo);
+      } catch (error) {
+        console.error("Error fetching bookmarks:", error);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchBookmarks();
+
+    fetchBookmarksWithUserInfo();
   }, [userId]);
 
-  // いいね追加/解除
+  // いいね追加/解除（楽観的更新対応）
   const handleLike = async (postId: string) => {
     if (!userId) return;
-    const postIdNum = Number(postId);
 
-    // 既にいいね済みかチェック
-    const { data: likeData } = await supabase
-      .from("likes")
-      .select("id, on")
-      .eq("post_id", postIdNum)
-      .eq("user_id", userId)
-      .single();
-
-    // 現在のlikes取得
-    const { data: todoData } = await supabase
-      .from("todos")
-      .select("likes")
-      .eq("id", postIdNum)
-      .single();
-    const currentLikes = todoData?.likes ?? 0;
-
-    if (likeData?.on) {
-      // いいね解除
-      await supabase
-        .from("likes")
-        .update({ on: false })
-        .eq("post_id", postIdNum)
-        .eq("user_id", userId);
-      await supabase
-        .from("todos")
-        .update({ likes: Math.max(currentLikes - 1, 0) })
-        .eq("id", postIdNum);
-    } else {
-      // いいね（新規 or 再いいね）
-      if (likeData) {
-        await supabase
-          .from("likes")
-          .update({ on: true })
-          .eq("post_id", postIdNum)
-          .eq("user_id", userId);
-        await supabase
-          .from("todos")
-          .update({ likes: currentLikes + 1 })
-          .eq("id", postIdNum);
-      } else {
-        await supabase.from("likes").insert({
-          post_id: postIdNum,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          on: true,
-        });
-        await supabase
-          .from("todos")
-          .update({ likes: currentLikes + 1 })
-          .eq("id", postIdNum);
-      }
-    }
-    // 状態更新
-    const fetchBookmarks = async () => {
-      if (!userId) return;
-      // ブックマーク済みのpost_id一覧取得
-      const { data: bookmarks } = await supabase
-        .from("bookmarks")
-        .select("post_id")
-        .eq("user_id", userId)
-        .eq("on", true);
-
-      const postIds = (bookmarks ?? []).map((b: any) => b.post_id);
-      if (postIds.length === 0) {
-        setPosts([]);
-        return;
-      }
-      // 投稿情報取得
-      const { data: todos } = await supabase
-        .from("todos")
-        .select("*")
-        .in("id", postIds);
-
-      // いいね・ブックマーク状態を取得して反映
-      const postsWithStatus = await Promise.all(
-        (todos ?? []).map(async (post: any) => {
-          // いいね状態
-          const { data: likeData } = await supabase
-            .from("likes")
-            .select("on")
-            .eq("post_id", post.id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          // ブックマーク状態
-          const { data: bookmarkData } = await supabase
-            .from("bookmarks")
-            .select("on")
-            .eq("post_id", post.id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          return {
-            ...post,
-            liked: likeData?.on === true,
-            bookmarked: bookmarkData?.on === true,
-          };
+    try {
+      // 🚀 楽観的更新: UIを即座に更新
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const isCurrentlyLiked = post.liked;
+            return {
+              ...post,
+              liked: !isCurrentlyLiked,
+              likes: isCurrentlyLiked 
+                ? Math.max(post.likes - 1, 0) 
+                : post.likes + 1
+            };
+          }
+          return post;
         })
       );
 
-      setPosts(postsWithStatus);
-    };
-    fetchBookmarks();
+      const postIdNum = Number(postId);
+
+      // バックグラウンドでDB更新
+      const { data: likeData } = await supabase
+        .from("likes")
+        .select("id, on")
+        .eq("post_id", postIdNum)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const { data: todoData } = await supabase
+        .from("todos")
+        .select("likes")
+        .eq("id", postIdNum)
+        .single();
+      const currentLikes = todoData?.likes ?? 0;
+
+      if (likeData?.on) {
+        // いいね解除
+        await Promise.all([
+          supabase
+            .from("likes")
+            .update({ on: false })
+            .eq("post_id", postIdNum)
+            .eq("user_id", userId),
+          supabase
+            .from("todos")
+            .update({ likes: Math.max(currentLikes - 1, 0) })
+            .eq("id", postIdNum)
+        ]);
+      } else {
+        // いいね処理
+        if (likeData) {
+          await Promise.all([
+            supabase
+              .from("likes")
+              .update({ on: true })
+              .eq("post_id", postIdNum)
+              .eq("user_id", userId),
+            supabase
+              .from("todos")
+              .update({ likes: currentLikes + 1 })
+              .eq("id", postIdNum)
+          ]);
+        } else {
+          await Promise.all([
+            supabase.from("likes").insert({
+              post_id: postIdNum,
+              user_id: userId,
+              created_at: new Date().toISOString(),
+              on: true,
+            }),
+            supabase
+              .from("todos")
+              .update({ likes: currentLikes + 1 })
+              .eq("id", postIdNum)
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleLike:", error);
+      // エラー時は元に戻す
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              liked: !post.liked,
+              likes: post.liked 
+                ? Math.max(post.likes - 1, 0) 
+                : post.likes + 1
+            };
+          }
+          return post;
+        })
+      );
+    }
   };
 
-  // ブックマーク追加/解除
+  // ブックマーク追加/解除（楽観的更新対応）
   const handleBookmark = async (postId: string) => {
     if (!userId) return;
-    const postIdNum = Number(postId);
 
-    // 既にブックマーク済みかチェック
-    const { data: bookmarkData } = await supabase
-      .from("bookmarks")
-      .select("id, on")
-      .eq("post_id", postIdNum)
-      .eq("user_id", userId)
-      .single();
-
-    if (bookmarkData?.on) {
-      // ブックマーク解除
-      await supabase
-        .from("bookmarks")
-        .update({ on: false })
-        .eq("post_id", postIdNum)
-        .eq("user_id", userId);
-    } else {
-      // ブックマーク（新規 or 再ブックマーク）
-      if (bookmarkData) {
-        await supabase
-          .from("bookmarks")
-          .update({ on: true })
-          .eq("post_id", postIdNum)
-          .eq("user_id", userId);
-      } else {
-        await supabase.from("bookmarks").insert({
-          post_id: postIdNum,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          on: true,
-        });
-      }
-    }
-    // 状態更新
-    const fetchBookmarks = async () => {
-      if (!userId) return;
-      // ブックマーク済みのpost_id一覧取得
-      const { data: bookmarks } = await supabase
-        .from("bookmarks")
-        .select("post_id")
-        .eq("user_id", userId)
-        .eq("on", true);
-
-      const postIds = (bookmarks ?? []).map((b: any) => b.post_id);
-      if (postIds.length === 0) {
-        setPosts([]);
-        return;
-      }
-      // 投稿情報取得
-      const { data: todos } = await supabase
-        .from("todos")
-        .select("*")
-        .in("id", postIds);
-
-      // いいね・ブックマーク状態を取得して反映
-      const postsWithStatus = await Promise.all(
-        (todos ?? []).map(async (post: any) => {
-          // いいね状態
-          const { data: likeData } = await supabase
-            .from("likes")
-            .select("on")
-            .eq("post_id", post.id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          // ブックマーク状態
-          const { data: bookmarkData } = await supabase
-            .from("bookmarks")
-            .select("on")
-            .eq("post_id", post.id)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          return {
-            ...post,
-            liked: likeData?.on === true,
-            bookmarked: bookmarkData?.on === true,
-          };
+    try {
+      // 🚀 楽観的更新: UIを即座に更新
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              bookmarked: !post.bookmarked
+            };
+          }
+          return post;
         })
       );
 
-      setPosts(postsWithStatus);
-    };
-    fetchBookmarks();
+      const postIdNum = Number(postId);
 
+      // バックグラウンドでDB更新
+      const { data: bookmarkData } = await supabase
+        .from("bookmarks")
+        .select("id, on")
+        .eq("post_id", postIdNum)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (bookmarkData?.on) {
+        // ブックマーク解除
+        await supabase
+          .from("bookmarks")
+          .update({ on: false })
+          .eq("post_id", postIdNum)
+          .eq("user_id", userId);
+      } else {
+        // ブックマーク追加
+        if (bookmarkData) {
+          await supabase
+            .from("bookmarks")
+            .update({ on: true })
+            .eq("post_id", postIdNum)
+            .eq("user_id", userId);
+        } else {
+          await supabase.from("bookmarks").insert({
+            post_id: postIdNum,
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            on: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleBookmark:", error);
+      // エラー時は元に戻す
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              bookmarked: !post.bookmarked
+            };
+          }
+          return post;
+        })
+      );
+    }
   };
+
+  // ローディング表示
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>ブックマークを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -318,26 +401,26 @@ export default function BookmarksPage() {
                   post={{
                     id: post.id,
                     user_id: post.user_id,
-                    username: post.username,
+                    username: post.username || "Unknown User", // 🔧 統合されたユーザー名
                     title: post.title,
                     created_at: post.created_at,
                     tags: post.tags || [],
-                    replies: [], // 🔧 空配列で初期化
+                    replies: [],
                     likes: post.likes,
                     bookmarked: post.bookmarked ?? false,
                     image_url: post.image_url,
-                    user_icon_url: post.user_icon_url,
-                    displayName: post.displayName,
-                    setID: post.setID,
-                    stamps: [] // 🔧 空配列で初期化
+                    user_icon_url: post.user_icon_url || "", // 🔧 統合されたアイコンURL
+                    displayName: post.displayName || post.username || "Unknown User",
+                    setID: post.setID || post.username || "unknown", // 🔧 統合されたsetID
+                    stamps: []
                   }}
                   liked={post.liked === true}
                   bookmarked={post.bookmarked === true}
                   onLike={() => handleLike(post.id)}
                   onBookmark={() => handleBookmark(post.id)}
                   stampList={[]}
-                  currentUserId={userId || undefined} // 🔧 null を undefined に変換
-                  currentUserName={userId ? "User" : "User"}
+                  currentUserId={userId || undefined}
+                  currentUserName={post.username || "User"}
                 />
               ))
             )}
@@ -363,45 +446,6 @@ export default function BookmarksPage() {
                   <span className="text-gray-400">総ブックマーク数</span>
                   <span className="text-white font-semibold">
                     {posts.length}件
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">プログラミング関連</span>
-                  <span className="text-white font-semibold">
-                    {
-                      posts.filter((post) =>
-                        post.tags.some((tag) =>
-                          [
-                            "プログラミング",
-                            "Next.js",
-                            "Supabase",
-                            "React",
-                            "JavaScript",
-                          ].includes(tag)
-                        )
-                      ).length
-                    }
-                    件
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">その他</span>
-                  <span className="text-white font-semibold">
-                    {
-                      posts.filter(
-                        (post) =>
-                          !post.tags.some((tag) =>
-                            [
-                              "プログラミング",
-                              "Next.js",
-                              "Supabase",
-                              "React",
-                              "JavaScript",
-                            ].includes(tag)
-                          )
-                      ).length
-                    }
-                    件
                   </span>
                 </div>
               </div>
