@@ -10,6 +10,8 @@ import {
   Edit3,
   Save,
   X,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
@@ -32,9 +34,64 @@ interface FormData {
   following: number;
   follower: number;
   iconUrl?: string;
-  bannerUrl?: string; // バナー画像URLを追加
-  isBunkatsu?: boolean; // 追加
+  bannerUrl?: string;
+  isBunkatsu?: boolean;
 }
+
+// モーダルコンポーネント
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
+const Modal = ({ isOpen, onClose, title, message, type }: ModalProps) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-6 h-6 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="w-6 h-6 text-red-500" />;
+      default:
+        return <AlertCircle className="w-6 h-6 text-blue-500" />;
+    }
+  };
+
+  const getButtonColor = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-600 hover:bg-green-700';
+      case 'error':
+        return 'bg-red-600 hover:bg-red-700';
+      default:
+        return 'bg-blue-600 hover:bg-blue-700';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700">
+        <div className="flex items-center space-x-3 mb-4">
+          {getIcon()}
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </div>
+        <p className="text-gray-300 mb-6">{message}</p>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className={`px-4 py-2 rounded-full text-white font-medium transition-colors ${getButtonColor()}`}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function ProfilePageContent() {
   const [isEditing, setIsEditing] = useState(false);
@@ -50,15 +107,37 @@ function ProfilePageContent() {
     following: 150,
     follower: 1200,
     iconUrl: undefined,
-    bannerUrl: undefined, // バナー画像URLを追加
-    isBunkatsu: false, // 追加
+    bannerUrl: undefined,
+    isBunkatsu: false,
   });
   const [uploading, setUploading] = useState(false);
-  const [bannerUploading, setBannerUploading] = useState(false); // バナーアップロード用の状態を追加
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [followerCount, setFollowerCount] = useState<number>(0);
-  const [loading, setLoading] = useState(true); // ローディング状態を追加
+  const [loading, setLoading] = useState(true);
+
+  // モーダル状態
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  // モーダル表示関数
+  const showModal = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setModal({ isOpen: true, title, message, type });
+  };
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   // 画像URL変換関数をメモ化
   const getPublicIconUrl = useCallback((iconUrl?: string) => {
@@ -140,7 +219,7 @@ function ProfilePageContent() {
             username: userData.username || "user",
             bio: userData.bio || "プログラミングが好きです。Next.jsとReactを勉強中です。",
             location: userData.location || "東京, 日本",
-            website: userData.website || "https://example.com",
+            website: userData.site || "https://example.com", // 🔧 website → site に変更
             birthDate: userData.birth_date || "1990-01-01",
             joinDate: userData.join_date || "2024年1月",
             following: userData.following || 150,
@@ -187,27 +266,27 @@ function ProfilePageContent() {
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id;
     if (!userId) {
-      alert("ユーザーIDが取得できませんでした");
+      showModal("エラー", "ユーザーIDが取得できませんでした", "error");
       return;
     }
     const updateData = {
-      setID: formData.setID || "",
-      username: formData.displayName || "",
-      introduction: formData.bio || "",
-      place: formData.location || "",
-      site: formData.website || "",
-      birth_date: formData.birthDate ? formData.birthDate : null,
+      setID: formData.setID,
+      username: formData.displayName,
+      introduction: formData.bio,
+      place: formData.location,
+      site: formData.website, // 🔧 website → site に変更
+      birth_date: formData.birthDate,
       follow: Number(formData.following) || 0,
-      isBunkatsu: formData.isBunkatsu ?? false, // 追加
+      isBunkatsu: formData.isBunkatsu ?? false,
     };
     const { error } = await supabase
       .from("usels")
       .update(updateData)
       .eq("user_id", userId);
     if (error) {
-      alert("プロフィールの更新に失敗しました: " + error.message);
+      showModal("更新エラー", `プロフィールの更新に失敗しました: ${error.message}`, "error");
     } else {
-      alert("プロフィールが更新されました！");
+      showModal("更新完了", "プロフィールが更新されました！", "success");
       setIsEditing(false);
     }
   };
@@ -221,54 +300,48 @@ function ProfilePageContent() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("画像ファイルのみアップロードできます");
+      showModal("ファイルエラー", "画像ファイルのみアップロードできます", "error");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert("画像サイズは5MB以下にしてください");
+      showModal("サイズエラー", "画像サイズは5MB以下にしてください", "error");
       return;
     }
-    setUploading(true);
+
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id;
     if (!userId) {
-      alert("ユーザーIDが取得できませんでした");
-      setUploading(false);
+      showModal("エラー", "ユーザーIDが取得できませんでした", "error");
       return;
     }
-    let fileExt = file.name.split(".").pop();
-    if (!fileExt) fileExt = "png";
-    const fileName = `icon_${userId}_${Date.now()}.${fileExt}`;
 
-    // ファイルをbase64化
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      // APIへPOST
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64, fileName }),
-      });
-      if (!res.ok) {
-        alert("アイコンアップロード失敗");
-        setUploading(false);
-        return;
-      }
-      const { imageUrl } = await res.json();
-      // Supabaseに保存
-      await supabase
+    setUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}-icon-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("images")
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+      const iconUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
         .from("usels")
-        .update({ icon_url: imageUrl })
+        .update({ icon_url: iconUrl })
         .eq("user_id", userId);
+      if (updateError) throw updateError;
 
-      setFormData((prev) => ({
-        ...prev,
-        iconUrl: imageUrl,
-      }));
+      setFormData(prev => ({ ...prev, iconUrl }));
+      showModal("アップロード完了", "アイコンが更新されました！", "success");
+    } catch (error) {
+      showModal("アップロードエラー", "アイコンアップロードに失敗しました", "error");
+    } finally {
       setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   // バナー画像アップロード処理
@@ -276,55 +349,48 @@ function ProfilePageContent() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("画像ファイルのみアップロードできます");
+      showModal("ファイルエラー", "画像ファイルのみアップロードできます", "error");
       return;
     }
     if (file.size > 10 * 1024 * 1024) { // バナーは10MBまで
-      alert("画像サイズは10MB以下にしてください");
+      showModal("サイズエラー", "画像サイズは10MB以下にしてください", "error");
       return;
     }
-    setBannerUploading(true);
+
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id;
     if (!userId) {
-      alert("ユーザーIDが取得できませんでした");
-      setBannerUploading(false);
+      showModal("エラー", "ユーザーIDが取得できませんでした", "error");
       return;
     }
-    let fileExt = file.name.split(".").pop();
-    if (!fileExt) fileExt = "png";
-    const fileName = `banner_${userId}_${Date.now()}.${fileExt}`;
 
-    // ファイルをbase64化
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      // APIへPOST
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64, fileName }),
-      });
-      if (!res.ok) {
-        alert("バナー画像アップロード失敗");
-        setBannerUploading(false);
-        return;
-      }
-      const { imageUrl } = await res.json();
-      // Supabaseに保存
-      await supabase
+    setBannerUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}-banner-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("images")
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+      const bannerUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
         .from("usels")
-        .update({ banner_url: imageUrl })
+        .update({ banner_url: bannerUrl })
         .eq("user_id", userId);
+      if (updateError) throw updateError;
 
-      setFormData((prev) => ({
-        ...prev,
-        bannerUrl: imageUrl,
-      }));
+      setFormData(prev => ({ ...prev, bannerUrl }));
+      showModal("アップロード完了", "バナー画像が更新されました！", "success");
+    } catch (error) {
+      showModal("アップロードエラー", "バナー画像アップロードに失敗しました", "error");
+    } finally {
       setBannerUploading(false);
-      alert("バナー画像が更新されました！");
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   // ローディング中の表示
@@ -786,6 +852,15 @@ function ProfilePageContent() {
       {/* モバイルナビゲーション */}
       <MobileNavigation />
       <MobileExtendedNavigation />
+      
+      {/* モーダル */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+      />
     </div>
   );
 }
