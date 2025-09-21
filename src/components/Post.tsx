@@ -45,7 +45,7 @@ export default function Post({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false); // 🚀 全リプライ表示制御
-  const [showReactions, setShowReactions] = useState(true); // 🚀 リアクション表示制御
+  const [showReactions, setShowReactions] = useState(false); // 🚀 リアクション表示制御 - デフォルトを false に変更
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [showStampPicker, setShowStampPicker] = useState(false);
@@ -794,34 +794,11 @@ export default function Post({
                     })}
                   </div>
 
-                  {/* リアクション追加ボタン */}
-                  <div className="mt-3 pt-3 border-t border-gray-700/30">
-                    <button
-                      className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-600/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40 hover:border-gray-500/50 transition-all duration-300 text-sm"
-                      onClick={() => setShowStampPicker(!showStampPicker)}
-                      disabled={loading}
-                    >
-                      <Smile size={16} />
-                      <span>リアクションを追加</span>
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
 
-            {/* 🚀 リアクションがない場合の追加ボタン */}
-            {!showReactions && totalReactions === 0 && (
-              <div className="mt-3">
-                <button
-                  className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-600/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40 hover:border-gray-500/50 transition-all duration-300 text-sm"
-                  onClick={() => setShowStampPicker(!showStampPicker)}
-                  disabled={loading}
-                >
-                  <Smile size={16} />
-                  <span>リアクションを追加</span>
-                </button>
-              </div>
-            )}
+            {/* 🚀 リアクションがない場合の追加ボタンも削除 */}
 
             {/* 🚀 改善されたスタンプピッカー（モーダル風） */}
             {showStampPicker && (
