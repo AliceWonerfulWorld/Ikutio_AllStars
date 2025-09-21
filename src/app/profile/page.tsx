@@ -135,8 +135,8 @@ function ProfilePageContent() {
           console.error("Error fetching user data:", userError);
         } else if (userData) {
           setFormData({
-            setID: userData.id || "",
-            displayName: userData.display_name || "ユーザー",
+            setID: userData.setID || userData.username || "user", // 🔧 正しいsetIDフィールドを使用
+            displayName: userData.username || userData.display_name || "ユーザー", // 🔧 usernameを優先
             username: userData.username || "user",
             bio: userData.bio || "プログラミングが好きです。Next.jsとReactを勉強中です。",
             location: userData.location || "東京, 日本",
