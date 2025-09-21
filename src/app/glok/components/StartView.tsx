@@ -65,12 +65,12 @@ export default function StartView({
 
   const clockHandStyle: CSSProperties = {
     width: '4px',
-    height: '32px', // さらに長くして円周をはみ出させる
+    height: '32px',
     backgroundColor: '#ffffff',
     borderRadius: '2px',
     position: 'absolute',
     transformOrigin: 'center center',
-    transform: 'translate(-8px, -4px) rotate(250deg)', // 角度をもう少し垂直に近く（200deg → 250deg）
+    transform: 'translate(-8px, -4px) rotate(250deg)',
     boxShadow: '0 0 4px rgba(255, 255, 255, 0.2)',
   };
 

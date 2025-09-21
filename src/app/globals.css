@@ -34,7 +34,8 @@ body {
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 html::-webkit-scrollbar-track,
@@ -46,21 +47,25 @@ body::-webkit-scrollbar-track,
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 100, 0.4);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 120, 0.6);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox用のスクロールバースタイル */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 /* サイドバーのスクロールバー - 目立たないように調整 */
 .sidebar-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .sidebar-scroll::-webkit-scrollbar-track {
@@ -68,99 +73,75 @@ body::-webkit-scrollbar-thumb:hover,
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 3px;
-  transition: background 0.2s ease;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-/* モバイルナビゲーション用のアニメーション */
-@keyframes slideInFromBottom {
-  from {
-    transform: translateY(100%) scale(0.9);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
+/* メインコンテンツのスクロールバー - 目立たないように調整 */
+.main-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
-@keyframes slideOutToBottom {
-  from {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(100%) scale(0.9);
-    opacity: 0;
-  }
+.main-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
+.main-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.main-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 通知コンポーネントのスタイル */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+}
+
+.notification {
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 4px solid #3b82f6;
+  backdrop-filter: blur(10px);
+  transform: translateX(100%);
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.notification.error {
+  border-left-color: #ef4444;
+}
+
+.notification.success {
+  border-left-color: #10b981;
+}
+
+.notification.warning {
+  border-left-color: #f59e0b;
+}
+
+@keyframes slideIn {
   to {
     transform: translateX(0);
-    opacity: 1;
   }
 }
 
-@keyframes slideOutToRight {
+/* モバイルナビゲーションのアニメーション */
+@keyframes slideUp {
   from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-}
-
-/* バウンスアニメーション */
-@keyframes bounceIn {
-  0% {
-    transform: scale(0.3) translateY(100%);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05) translateY(-10%);
-    opacity: 0.8;
-  }
-  70% {
-    transform: scale(0.9) translateY(5%);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes bounceOut {
-  0% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-  30% {
-    transform: scale(1.05) translateY(-5%);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(0.3) translateY(100%);
-    opacity: 0;
-  }
-}
-
-/* フェードアニメーション */
-@keyframes fadeInUp {
-  from {
-    transform: translateY(30px);
+    transform: translateY(100%);
     opacity: 0;
   }
   to {
@@ -169,167 +150,145 @@ body::-webkit-scrollbar-thumb:hover,
   }
 }
 
-@keyframes fadeOutDown {
+@keyframes slideDown {
   from {
     transform: translateY(0);
     opacity: 1;
   }
   to {
-    transform: translateY(30px);
+    transform: translateY(100%);
     opacity: 0;
   }
 }
 
-/* 認証ボタン用のスタイル */
-.auth-button {
-  @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105;
+.mobile-nav-enter {
+  animation: slideUp 0.3s ease-out;
 }
 
-.auth-button-secondary {
-  @apply bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200;
+.mobile-nav-exit {
+  animation: slideDown 0.3s ease-out;
 }
 
-/* 通知バッジ */
-.notification-badge {
-  @apply absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse;
-}
-
-/* プルスアニメーション */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: .5;
-  }
-}
-
-/* ローディングスピナー */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-spinner {
-  animation: spin 1s linear infinite;
-}
-
-/* フェードイン・アウト */
+/* 拡張メニューのアニメーション */
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
 @keyframes fadeOut {
   from {
     opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-/* スケールアニメーション */
-@keyframes scaleIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  to {
     transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes scaleOut {
-  from {
-    transform: scale(1);
-    opacity: 1;
   }
   to {
-    transform: scale(0.9);
     opacity: 0;
+    transform: scale(0.95);
   }
 }
 
-/* ボタンホバーアニメーション */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.extended-menu-enter {
+  animation: fadeIn 0.2s ease-out;
 }
 
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.extended-menu-exit {
+  animation: fadeOut 0.2s ease-out;
 }
 
-/* グラデーションテキスト */
-.gradient-text {
-  background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* メニューアイテムのアニメーション */
+@keyframes itemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* カスタムスクロールバー */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.extended-menu-item {
+  animation: itemSlideIn 0.3s ease-out;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+.extended-menu-item:nth-child(1) { animation-delay: 0.05s; }
+.extended-menu-item:nth-child(2) { animation-delay: 0.1s; }
+.extended-menu-item:nth-child(3) { animation-delay: 0.15s; }
+.extended-menu-item:nth-child(4) { animation-delay: 0.2s; }
+.extended-menu-item:nth-child(5) { animation-delay: 0.25s; }
+.extended-menu-item:nth-child(6) { animation-delay: 0.3s; }
+
+/* 認証画面のアニメーション */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.5);
-  border-radius: 3px;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.7);
+.animation-delay-1000 {
+  animation-delay: 1s;
 }
 
-/* メニューアニメーション用のユーティリティクラス */
-.menu-enter {
-  animation: bounceIn 0.4s ease-out forwards;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-.menu-exit {
-  animation: bounceOut 0.3s ease-in forwards;
+.animation-delay-3000 {
+  animation-delay: 3s;
 }
 
-.menu-item-enter {
-  animation: fadeInUp 0.3s ease-out forwards;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
-.menu-item-exit {
-  animation: fadeOutDown 0.2s ease-in forwards;
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
 }
 
-/* 拡張メニュー専用アニメーション */
-.menu-container-enter {
-  animation: slideInFromBottom 0.35s ease-out forwards;
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
 }
 
-.menu-container-exit {
-  animation: slideOutToBottom 0.3s ease-in forwards;
+/* グラスモーフィズム効果 */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.menu-item-stagger {
-  animation: slideInFromRight 0.3s ease-out forwards;
+/* カスタムフォーカス効果 */
+.focus-ring {
+  transition: all 0.3s ease;
 }
 
-/* スクロールバーを完全に隠すためのユーティリティクラス */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.3);
 }
 
-.hide-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
