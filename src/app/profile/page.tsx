@@ -32,6 +32,7 @@ interface FormData {
   following: number;
   follower: number;
   iconUrl?: string;
+  bannerUrl?: string; // バナー画像URLを追加
   isBunkatsu?: boolean; // 追加
 }
 
@@ -49,9 +50,11 @@ function ProfilePageContent() {
     following: 150,
     follower: 1200,
     iconUrl: undefined,
+    bannerUrl: undefined, // バナー画像URLを追加
     isBunkatsu: false, // 追加
   });
   const [uploading, setUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false); // バナーアップロード用の状態を追加
   const [posts, setPosts] = useState<any[]>([]);
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [followerCount, setFollowerCount] = useState<number>(0);
@@ -83,6 +86,7 @@ function ProfilePageContent() {
             following: userData.following || 150,
             follower: userData.follower || 1200,
             iconUrl: userData.icon_url || undefined,
+            bannerUrl: userData.banner_url || undefined, // バナー画像URLを追加
             isBunkatsu: userData.isBunkatsu ?? false, // 追加
           });
         }
@@ -100,6 +104,7 @@ function ProfilePageContent() {
           follow: userData?.follow || 0,
           follower: 0,
           iconUrl: userData?.icon_url || "",
+          bannerUrl: userData?.banner_url || "", // バナー画像URLを追加
           isBunkatsu: userData?.isBunkatsu ?? false, // 追加
         }));
 
@@ -231,6 +236,62 @@ function ProfilePageContent() {
     reader.readAsDataURL(file);
   };
 
+  // バナー画像アップロード処理
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルのみアップロードできます");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { // バナーは10MBまで
+      alert("画像サイズは10MB以下にしてください");
+      return;
+    }
+    setBannerUploading(true);
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      setBannerUploading(false);
+      return;
+    }
+    let fileExt = file.name.split(".").pop();
+    if (!fileExt) fileExt = "png";
+    const fileName = `banner_${userId}_${Date.now()}.${fileExt}`;
+
+    // ファイルをbase64化
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      // APIへPOST
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, fileName }),
+      });
+      if (!res.ok) {
+        alert("バナー画像アップロード失敗");
+        setBannerUploading(false);
+        return;
+      }
+      const { imageUrl } = await res.json();
+      // Supabaseに保存
+      await supabase
+        .from("usels")
+        .update({ banner_url: imageUrl })
+        .eq("user_id", userId);
+
+      setFormData((prev) => ({
+        ...prev,
+        bannerUrl: imageUrl,
+      }));
+      setBannerUploading(false);
+      alert("バナー画像が更新されました！");
+    };
+    reader.readAsDataURL(file);
+  };
+
   function getPublicIconUrl(iconUrl?: string) {
     if (!iconUrl) return "";
     // cloudflarestorage.com の場合 r2.dev に変換
@@ -242,6 +303,18 @@ function ProfilePageContent() {
       return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
     }
     return iconUrl;
+  }
+
+  // バナー画像のURL変換関数を追加
+  function getPublicBannerUrl(bannerUrl?: string) {
+    if (!bannerUrl) return "";
+    // cloudflarestorage.com の場合 r2.dev に変換
+    if (bannerUrl.includes("cloudflarestorage.com")) {
+      const filename = bannerUrl.split("/").pop();
+      if (!filename) return "";
+      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+    }
+    return bannerUrl;
   }
 
   return (
@@ -276,11 +349,48 @@ function ProfilePageContent() {
 
           {/* プロフィールヘッダー */}
           <div className="relative">
-            {/* カバー画像 */}
-            <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative">
-              <button className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors">
+            {/* カバー画像 - バナー画像を表示 */}
+            <div className="h-32 sm:h-48 relative">
+              {formData.bannerUrl ? (
+                <Image
+                  src={getPublicBannerUrl(formData.bannerUrl)}
+                  alt="banner"
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // バナー画像読み込み失敗時はグラデーション背景を表示
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      const fallback = parent.querySelector('.banner-fallback') as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null}
+              
+              {/* フォールバック背景（デフォルトのグラデーション） */}
+              <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: formData.bannerUrl ? 'none' : 'block' }} />
+              
+              {/* バナー編集ボタン */}
+              <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
                 <Camera size={20} />
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  disabled={bannerUploading}
+                />
+              </label>
+              
+              {/* アップロード中の表示 */}
+              {bannerUploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="text-white">アップロード中...</div>
+                </div>
+              )}
             </div>
 
             {/* プロフィール画像と編集ボタン */}

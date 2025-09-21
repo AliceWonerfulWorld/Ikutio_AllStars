@@ -8,6 +8,7 @@ import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Calendar } from "lucide-react";
+import { Camera } from "lucide-react"; // バナー画像アップロード用のアイコンを追加
 
 interface UserProfile {
   id: string;
@@ -20,6 +21,7 @@ interface UserProfile {
   birth_date: string;
   join_date: string;
   icon_url?: string;
+  banner_url?: string; // バナー画像URLを追加
   following: number;
   follower: number;
 }
@@ -34,6 +36,17 @@ function getPublicIconUrl(iconUrl?: string) {
   return iconUrl;
 }
 
+// バナー画像のURL変換関数を追加
+function getPublicBannerUrl(bannerUrl?: string) {
+  if (!bannerUrl) return "";
+  if (bannerUrl.includes("cloudflarestorage.com")) {
+    const filename = bannerUrl.split("/").pop();
+    if (!filename) return "";
+    return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+  }
+  return bannerUrl;
+}
+
 export default function UserProfilePage() {
   const { userId } = useParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -43,6 +56,8 @@ export default function UserProfilePage() {
   const [posts, setPosts] = useState<any[]>([]); // 投稿一覧用
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [followerCount, setFollowerCount] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false); // バナーアップロード用の状態を追加
 
   useEffect(() => {
     // ログインユーザーID取得
@@ -70,6 +85,7 @@ export default function UserProfilePage() {
           birth_date: data.birth_date || "",
           join_date: data.join_date || "",
           icon_url: data.icon_url || undefined,
+          banner_url: data.banner_url || undefined, // バナー画像URLを追加
           following: data.following || 0,
           follower: data.follower || 0,
           setID: data.setID || "user",
@@ -145,6 +161,63 @@ export default function UserProfilePage() {
     setIsFollowing(false);
   };
 
+  // バナー画像アップロード処理（この関数は実際には個別ユーザーページでは不要）
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルのみアップロードできます");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("画像サイズは10MB以下にしてください");
+      return;
+    }
+    setBannerUploading(true);
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      setBannerUploading(false);
+      return;
+    }
+    let fileExt = file.name.split(".").pop();
+    if (!fileExt) fileExt = "png";
+    const fileName = `banner_${userId}_${Date.now()}.${fileExt}`;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, fileName }),
+      });
+      if (!res.ok) {
+        alert("バナー画像アップロード失敗");
+        setBannerUploading(false);
+        return;
+      }
+      const { imageUrl } = await res.json();
+      await supabase
+        .from("usels")
+        .update({ banner_url: imageUrl })
+        .eq("user_id", userId);
+
+      // 型安全な更新
+      setProfile((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          banner_url: imageUrl,
+        };
+      });
+      setBannerUploading(false);
+      alert("バナー画像が更新されました！");
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (loading) return <div className="text-white p-8">Loading...</div>;
   if (!profile)
     return <div className="text-white p-8">ユーザーが見つかりません</div>;
@@ -173,7 +246,49 @@ export default function UserProfilePage() {
             </div>
           </div>
           <div className="relative">
-            <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" />
+            {/* カバー画像 - バナー画像を表示 */}
+            <div className="h-32 sm:h-48 relative">
+              {profile.banner_url ? (
+                <Image
+                  src={getPublicBannerUrl(profile.banner_url)}
+                  alt="banner"
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // バナー画像読み込み失敗時はグラデーション背景を表示
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      const fallback = parent.querySelector('.banner-fallback') as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null}
+              
+              {/* フォールバック背景（デフォルトのグラデーション） */}
+              <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: profile.banner_url ? 'none' : 'block' }} />
+              
+              {/* バナー編集ボタン */}
+              <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
+                <Camera size={20} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  disabled={bannerUploading}
+                />
+              </label>
+              
+              {/* アップロード中の表示 */}
+              {bannerUploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="text-white">アップロード中...</div>
+                </div>
+              )}
+            </div>
             <div className="px-4 pb-4">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 sm:-mt-16 space-y-4 sm:space-y-0">
                 <div className="relative">
