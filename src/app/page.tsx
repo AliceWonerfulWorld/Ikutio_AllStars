@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -49,6 +49,14 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// 期限切れ判定関数
+function isPostExpired(createdAt: string): boolean {
+  const created = new Date(createdAt).getTime();
+  const now = Date.now();
+  const expires = created + 24 * 60 * 60 * 1000;
+  return now >= expires;
+}
+
 // 🗑️ ローカルの型定義を削除（インポートした型を使用）
 // type ReplyType = { ... } ← 削除
 // type StanpType = { ... } ← 削除  
@@ -58,6 +66,7 @@ function getRemainingTime(createdAt: string) {
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
 export default function Home() {
+  // state定義
   const { user, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +88,63 @@ export default function Home() {
   >({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 楽観的更新用のstate
+  const [optimisticPosts, setOptimisticPosts] = useState<PostType[]>([]);
+
+  // 🚀 fetchTodos関数への参照を保持
+  const fetchTodosRef = useRef<(() => Promise<void>) | null>(null);
+
+  // 楽観的更新ハンドラー
+  const handleOptimisticPost = useCallback((newPost: PostType) => {
+    setOptimisticPosts(prev => [newPost, ...prev]);
+  }, []);
+
+  // 🚀 楽観的更新の置き換え/削除ハンドラー
+  const handleOptimisticUpdate = useCallback((tempId: string, realPost: any) => {
+    setOptimisticPosts(prev => {
+      if (realPost === null) {
+        // 削除（エラー時）
+        return prev.filter(post => post.id !== tempId);
+      } else {
+        // 置き換え（成功時）
+        return prev.map(post => 
+          post.id === tempId ? realPost : post
+        );
+      }
+    });
+
+    // 🔧 実際のデータも更新（重複回避のため）
+    if (realPost && realPost.id !== tempId) {
+      setPosts(prevPosts => {
+        // 同じIDの投稿が既に存在する場合は追加しない
+        const exists = prevPosts.some(post => post.id === realPost.id);
+        if (!exists) {
+          return [realPost, ...prevPosts];
+        }
+        return prevPosts;
+      });
+    }
+  }, []);
+
+  // 投稿追加後の処理（楽観的更新をクリア）
+  const handlePostAdded = useCallback(() => {
+    // 🚀 楽観的更新をクリアするのみ（再取得は行わない）
+    setOptimisticPosts([]);
+  }, []);
+
+  // 表示用の投稿一覧（楽観的更新 + 実際のデータ）
+  const displayPosts = useMemo(() => {
+    // 楽観的更新の投稿を先頭に追加
+    const combined = [...optimisticPosts, ...posts];
+    // 重複を除去（実際のデータが取得されたら楽観的更新を除去）
+    const uniquePosts = combined.filter((post, index, arr) => 
+      index === arr.findIndex(p => 
+        p.id === post.id || (p.title === post.title && p.user_id === post.user_id)
+      )
+    );
+    return uniquePosts;
+  }, [optimisticPosts, posts]);
+
   // R2画像URL変換関数をメモ化
   const getPublicIconUrl = useCallback((iconUrl?: string) => {
     if (!iconUrl) return "";
@@ -96,12 +162,28 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      // 1. 投稿データを取得（最新50件に制限）
+      // 1. 投稿データを取得
       const { data: todosData, error: todosError } = await supabase
         .from("todos")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
+
+      console.log("🔍 Supabaseから取得した投稿数:", todosData?.length || 0);
+      
+      if (todosData) {
+        // 期限切れ投稿の確認
+        const now = Date.now();
+        todosData.forEach((todo: any) => {
+          const created = new Date(todo.created_at).getTime();
+          const expires = created + 24 * 60 * 60 * 1000;
+          const hoursRemaining = (expires - now) / (1000 * 60 * 60);
+          
+          if (hoursRemaining <= 0) {
+            console.log(`⚠️ 期限切れ投稿が表示されています: ${todo.id} (${Math.abs(hoursRemaining).toFixed(1)}時間超過)`);
+          }
+        });
+      }
 
       if (todosError) {
         console.error("Error fetching todos:", todosError);
@@ -114,11 +196,21 @@ export default function Home() {
         return;
       }
 
+      // 🚀 期限切れ投稿をフィルタリング
+      const validTodos = todosData.filter((todo: any) => 
+        !isPostExpired(todo.created_at)
+      );
+
+      if (validTodos.length === 0) {
+        setPosts([]);
+        return;
+      }
+
       // 2. ユーザーIDを抽出
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const userIds = Array.from(
         new Set(
-          todosData
+          validTodos // todosDataの代わりにvalidTodosを使用
             .map((todo: any) => todo.user_id)
             .filter((id: string | null | undefined) =>
               !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
@@ -136,7 +228,7 @@ export default function Home() {
       }
 
       // 4. 投稿IDを抽出
-      const postIds = todosData.map(todo => Number(todo.id));
+      const postIds = validTodos.map(todo => Number(todo.id)); // validTodosを使用
       
       // 🚀 5. 全データを並列で一括取得
       const [
@@ -258,7 +350,7 @@ export default function Home() {
       setStampList(stampListLocal);
 
       // 11. 投稿データにすべての情報を統合
-      const todosWithStatus = todosData.map((todo: any) => {
+      const todosWithStatus = validTodos.map((todo: any) => { // validTodosを使用
         const userInfo = userMapLocal[todo.user_id] || {};
         const postIdNum = Number(todo.id);
         
@@ -285,13 +377,11 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [getPublicIconUrl]);
+  }, [getPublicIconUrl, user]);
 
-  // 投稿追加時の処理
-  const handlePostAdded = useCallback(() => {
-    setTimeout(() => {
-      fetchTodos();
-    }, 300);
+  // 🔧 fetchTodos関数をrefに設定
+  useEffect(() => {
+    fetchTodosRef.current = fetchTodos;
   }, [fetchTodos]);
 
   // クライアントサイドでのみ実行
@@ -662,16 +752,23 @@ export default function Home() {
             </div>
             
             {/* 投稿フォーム */}
-            {isClient && <PostForm onPostAdded={handlePostAdded} r2PublicUrl={R2_PUBLIC_URL} />}
+            {isClient && (
+              <PostForm 
+                onPostAdded={handlePostAdded}
+                onOptimisticPost={handleOptimisticPost}
+                onOptimisticUpdate={handleOptimisticUpdate} // 🚀 新しいハンドラー
+                r2PublicUrl={R2_PUBLIC_URL} 
+              />
+            )}
             
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
-              {posts.length === 0 ? (
+              {displayPosts.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <p>まだ投稿がありません</p>
                 </div>
               ) : (
-                posts.map((todo) => {
+                displayPosts.map((todo) => {
                   const remaining = getRemainingTime(todo.created_at);
                   const result = todo.title;
                   const hours = Math.floor(
@@ -697,6 +794,13 @@ export default function Home() {
                           <span className="text-yellow-300 font-mono">
                             {remaining}
                           </span>
+                        </div>
+                      )}
+
+                      {/* 楽観的更新中の表示 */}
+                      {todo.isOptimistic && (
+                        <div className="absolute top-2 left-2 bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full z-10">
+                          投稿中...
                         </div>
                       )}
 

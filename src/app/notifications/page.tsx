@@ -12,8 +12,17 @@ import { Notification as NotificationType } from '@/types';
 import { supabase } from '@/utils/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// 拡張された通知タイプ
+interface EnhancedNotification extends NotificationType {
+  user_info?: {
+    username: string;
+    icon_url?: string;
+    setID: string;
+  } | null; // null も許可
+}
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [notifications, setNotifications] = useState<EnhancedNotification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,23 +47,44 @@ export default function NotificationsPage() {
     return notifications.filter(notification => !notification.read).length;
   }, [notifications]);
 
+  // ユーザー情報を取得する関数
+  const fetchUserInfo = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('usels')
+        .select('username, icon_url, setID')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user info:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error:', error);
+      return null;
+    }
+  };
+
   // 通知データの取得（最適化版）
   useEffect(() => {
     if (!user) return;
 
-    let isMounted = true; // コンポーネントのマウント状態を追跡
+    let isMounted = true;
 
     const fetchNotifications = async () => {
       try {
         setError(null);
         
-        // データベースクエリを最適化
-        const { data, error } = await supabase
+        // 通知データを取得
+        const { data: notificationsData, error } = await supabase
           .from('notifications')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(100); // 最新100件に制限
+          .limit(100);
 
         if (error) {
           console.error('Error fetching notifications:', error);
@@ -62,8 +92,44 @@ export default function NotificationsPage() {
           return;
         }
 
+        if (!isMounted) return;
+
+        // 各通知の送信者のユーザー情報を取得
+        console.log('🔍 Notifications data:', notificationsData);
+        
+        const enhancedNotifications = await Promise.all(
+          (notificationsData || []).map(async (notification) => {
+            console.log('🔍 Processing notification:', notification);
+            console.log('🔍 Notification data field:', notification.data);
+            
+            // dataフィールドから送信者IDを取得
+            let senderUserId = null;
+            if (notification.data) {
+              console.log('🔍 Data type:', typeof notification.data);
+              console.log('🔍 Data keys:', Object.keys(notification.data));
+              
+              // 送信者IDを取得
+              senderUserId = notification.data.likerId;
+              console.log('🔧 Using likerId:', senderUserId);
+              
+              if (senderUserId) {
+                const userInfo = await fetchUserInfo(senderUserId);
+                console.log('🔍 Retrieved user info:', userInfo);
+                
+                return {
+                  ...notification,
+                  user_info: userInfo || undefined
+                };
+              }
+            }
+            
+            console.log('🔍 No sender user ID found');
+            return notification;
+          })
+        );
+
         if (isMounted) {
-          setNotifications(data || []);
+          setNotifications(enhancedNotifications);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -88,14 +154,24 @@ export default function NotificationsPage() {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
+        async (payload) => {
           if (isMounted) {
             console.log('New notification received:', payload);
+            
+            // 新しい通知のユーザー情報を取得
+            let enhancedNotification = payload.new as EnhancedNotification;
+            if (payload.new.from_user_id) {
+              const userInfo = await fetchUserInfo(payload.new.from_user_id);
+              enhancedNotification = {
+                ...payload.new as NotificationType,
+                user_info: userInfo || undefined // null を undefined に変換
+              };
+            }
+            
             setNotifications(prev => {
-              // 重複を避ける
               const exists = prev.some(n => n.id === payload.new.id);
               if (exists) return prev;
-              return [payload.new as NotificationType, ...prev];
+              return [enhancedNotification, ...prev];
             });
           }
         }
@@ -113,7 +189,7 @@ export default function NotificationsPage() {
             setNotifications(prev =>
               prev.map(notification =>
                 notification.id === payload.new.id
-                  ? payload.new as NotificationType
+                  ? { ...notification, ...payload.new }
                   : notification
               )
             );
