@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase/client";
-import { Image, Smile, Calendar, MapPin, BarChart3, X, Clock } from "lucide-react";
+import { Image, Smile, Calendar, MapPin, BarChart3, X, Clock, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PostFormProps {
   onPostAdded?: () => void;
@@ -10,6 +11,7 @@ interface PostFormProps {
 }
 
 export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -18,60 +20,125 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
   const [postError, setPostError] = useState<string>("");
   const [remainingTime, setRemainingTime] = useState<string>("");
   const [showBanModal, setShowBanModal] = useState<boolean>(false);
+  
+  // ユーザープロフィール情報
+  const [userProfile, setUserProfile] = useState<{
+    icon_url?: string;
+    username?: string;
+    introduction?: string;
+  } | null>(null);
+
+  // R2のパブリック開発URL
+  const R2_PUBLIC_URL = r2PublicUrl || "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
+
+  // R2画像URL変換関数
+  function getPublicIconUrl(iconUrl?: string) {
+    if (!iconUrl) return "";
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `${R2_PUBLIC_URL}${filename}`;
+    }
+    return iconUrl;
+  }
 
   useEffect(() => {
-    // ログインユーザーのUID取得
-    supabase.auth.getUser().then(async ({ data }) => {
-      const uid = data?.user?.id ?? null;
-      setUserId(uid);
-      if (!uid) return;
-      // uselsからhas_posted取得
-      const { data: userRow } = await supabase
-        .from("usels")
-        .select("has_posted")
-        .eq("user_id", uid)
-        .single();
-      if (!userRow || userRow.has_posted === false) {
-        setCanPost(true); // 初回投稿OK
-        setPostError("");
-      } else {
-        // 2回目以降は24時間ルール
-        const { data: lastPost } = await supabase
-          .from("todos")
-          .select("created_at")
-          .eq("user_id", uid)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          // 0件の場合に 406 (Not Acceptable) を出さないよう single -> maybeSingle
-          .maybeSingle();
-        if (!lastPost) {
-          setCanPost(true);
-          setPostError("");
+    // ログインユーザーのUID取得とプロフィール情報取得
+    const fetchUserProfile = async () => {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        
+        if (authError) {
+          console.error('PostForm: 認証エラー:', authError);
           return;
         }
-        const last = new Date(lastPost.created_at);
-        const now = new Date();
-        const diffH = (now.getTime() - last.getTime()) / (1000 * 60 * 60);
-        if (diffH <= 24) {
-          setCanPost(true);
-          setPostError("");
-        } else {
-          setCanPost(false);
-          setPostError(
-            "前回投稿から24時間以上経過したため、これ以上投稿できません。"
-          );
-          // 残り時間を計算（次の投稿可能時刻まで）
-          const nextPostTime = new Date(last.getTime() + 24 * 60 * 60 * 1000);
-          const timeUntilNext = nextPostTime.getTime() - now.getTime();
-          if (timeUntilNext > 0) {
-            const hours = Math.floor(timeUntilNext / (1000 * 60 * 60));
-            const minutes = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
-            setRemainingTime(`${hours}時間${minutes}分`);
-          }
+
+        const uid = authData?.user?.id ?? null;
+        setUserId(uid);
+        
+        if (!uid) return;
+
+        // ユーザーデータを取得
+        const { data: userRow, error: userError } = await supabase
+          .from("usels")
+          .select("icon_url, username, introduction, has_posted")
+          .eq("user_id", uid)
+          .maybeSingle();
+
+        if (userError) {
+          console.error('PostForm: ユーザーデータ取得エラー:', userError);
+          return;
         }
+
+        if (userRow) {
+          setUserProfile({
+            icon_url: userRow.icon_url,
+            username: userRow.username,
+            introduction: userRow.introduction,
+          });
+
+          // 投稿制限のチェック
+          if (userRow.has_posted === false) {
+            setCanPost(true);
+            setPostError("");
+          } else {
+            // 2回目以降は24時間ルール
+            const { data: lastPost, error: lastPostError } = await supabase
+              .from("todos")
+              .select("created_at")
+              .eq("user_id", uid)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (lastPostError) {
+              console.error('PostForm: 最終投稿取得エラー:', lastPostError);
+              return;
+            }
+
+            if (!lastPost) {
+              setCanPost(true);
+              setPostError("");
+              return;
+            }
+            
+            const last = new Date(lastPost.created_at);
+            const now = new Date();
+            const diffH = (now.getTime() - last.getTime()) / (1000 * 60 * 60);
+            
+            if (diffH <= 24) {
+              setCanPost(true);
+              setPostError("");
+            } else {
+              setCanPost(false);
+              setPostError(
+                "前回投稿から24時間以上経過したため、これ以上投稿できません。"
+              );
+              // 残り時間を計算（次の投稿可能時刻まで）
+              const nextPostTime = new Date(last.getTime() + 24 * 60 * 60 * 1000);
+              const timeUntilNext = nextPostTime.getTime() - now.getTime();
+              if (timeUntilNext > 0) {
+                const hours = Math.floor(timeUntilNext / (1000 * 60 * 60));
+                const minutes = Math.floor((timeUntilNext % (1000 * 60 * 60)) / (1000 * 60));
+                setRemainingTime(`${hours}時間${minutes}分`);
+              }
+            }
+          }
+        } else {
+          // ユーザーデータが見つからない場合でも、基本的なプロフィール情報を設定
+          setUserProfile({
+            icon_url: undefined,
+            username: user?.user_metadata?.username || user?.email?.split('@')[0],
+            introduction: undefined,
+          });
+        }
+      } catch (error) {
+        console.error('PostForm: プロフィール情報取得で予期しないエラー:', error);
       }
-    });
-  }, []);
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   // 残り時間のカウントダウン
   useEffect(() => {
@@ -97,7 +164,7 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
             if (timeUntilNext <= 0) {
               setCanPost(true);
               setPostError("");
-              setRemainingTime(""); // nullの代わりに空文字列を使用
+              setRemainingTime("");
               setShowBanModal(false);
             } else {
               const hours = Math.floor(timeUntilNext / (1000 * 60 * 60));
@@ -205,6 +272,44 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
     setTags(extractTags(value));
   };
 
+  // ユーザーアイコンのレンダリング関数
+  const renderUserIcon = () => {
+    if (userProfile?.icon_url) {
+      const iconUrl = getPublicIconUrl(userProfile.icon_url);
+      
+      return (
+        <div className="relative">
+          <img
+            src={iconUrl}
+            alt={userProfile.username || "ユーザー"}
+            className="w-10 h-10 rounded-full object-cover"
+            onError={(e) => {
+              // 画像読み込みに失敗した場合はデフォルトアイコンを表示
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+          {/* フォールバックアイコン */}
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold absolute top-0 left-0" style={{ display: 'none' }}>
+            {userProfile?.username?.charAt(0)?.toUpperCase() || 
+             user?.email?.charAt(0)?.toUpperCase() || 
+             'U'}
+          </div>
+        </div>
+      );
+    }
+
+    // アイコンがない場合のデフォルト表示
+    return (
+      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold">
+        {userProfile?.username?.charAt(0)?.toUpperCase() || 
+         user?.email?.charAt(0)?.toUpperCase() || 
+         'U'}
+      </div>
+    );
+  };
+
   // BANモーダルコンポーネント
   const BanModal = () => {
     if (!showBanModal) return null;
@@ -288,9 +393,8 @@ export default function PostForm({ onPostAdded, r2PublicUrl }: PostFormProps) {
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex-shrink-0 flex items-center justify-center text-white font-semibold">
-              U
-            </div>
+            {/* ユーザーアイコン */}
+            {renderUserIcon()}
 
             <div className="flex-1">
               <div className="relative w-full min-h-[120px]">
