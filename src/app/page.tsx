@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -66,6 +66,7 @@ function isPostExpired(createdAt: string): boolean {
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
 
 export default function Home() {
+  // state定義
   const { user, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +87,63 @@ export default function Home() {
     >
   >({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 楽観的更新用のstate
+  const [optimisticPosts, setOptimisticPosts] = useState<PostType[]>([]);
+
+  // 🚀 fetchTodos関数への参照を保持
+  const fetchTodosRef = useRef<(() => Promise<void>) | null>(null);
+
+  // 楽観的更新ハンドラー
+  const handleOptimisticPost = useCallback((newPost: PostType) => {
+    setOptimisticPosts(prev => [newPost, ...prev]);
+  }, []);
+
+  // 🚀 楽観的更新の置き換え/削除ハンドラー
+  const handleOptimisticUpdate = useCallback((tempId: string, realPost: any) => {
+    setOptimisticPosts(prev => {
+      if (realPost === null) {
+        // 削除（エラー時）
+        return prev.filter(post => post.id !== tempId);
+      } else {
+        // 置き換え（成功時）
+        return prev.map(post => 
+          post.id === tempId ? realPost : post
+        );
+      }
+    });
+
+    // 🔧 実際のデータも更新（重複回避のため）
+    if (realPost && realPost.id !== tempId) {
+      setPosts(prevPosts => {
+        // 同じIDの投稿が既に存在する場合は追加しない
+        const exists = prevPosts.some(post => post.id === realPost.id);
+        if (!exists) {
+          return [realPost, ...prevPosts];
+        }
+        return prevPosts;
+      });
+    }
+  }, []);
+
+  // 投稿追加後の処理（楽観的更新をクリア）
+  const handlePostAdded = useCallback(() => {
+    // 🚀 楽観的更新をクリアするのみ（再取得は行わない）
+    setOptimisticPosts([]);
+  }, []);
+
+  // 表示用の投稿一覧（楽観的更新 + 実際のデータ）
+  const displayPosts = useMemo(() => {
+    // 楽観的更新の投稿を先頭に追加
+    const combined = [...optimisticPosts, ...posts];
+    // 重複を除去（実際のデータが取得されたら楽観的更新を除去）
+    const uniquePosts = combined.filter((post, index, arr) => 
+      index === arr.findIndex(p => 
+        p.id === post.id || (p.title === post.title && p.user_id === post.user_id)
+      )
+    );
+    return uniquePosts;
+  }, [optimisticPosts, posts]);
 
   // R2画像URL変換関数をメモ化
   const getPublicIconUrl = useCallback((iconUrl?: string) => {
@@ -319,13 +377,11 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [getPublicIconUrl]);
+  }, [getPublicIconUrl, user]);
 
-  // 投稿追加時の処理
-  const handlePostAdded = useCallback(() => {
-    setTimeout(() => {
-      fetchTodos();
-    }, 300);
+  // 🔧 fetchTodos関数をrefに設定
+  useEffect(() => {
+    fetchTodosRef.current = fetchTodos;
   }, [fetchTodos]);
 
   // クライアントサイドでのみ実行
@@ -696,16 +752,23 @@ export default function Home() {
             </div>
             
             {/* 投稿フォーム */}
-            {isClient && <PostForm onPostAdded={handlePostAdded} r2PublicUrl={R2_PUBLIC_URL} />}
+            {isClient && (
+              <PostForm 
+                onPostAdded={handlePostAdded}
+                onOptimisticPost={handleOptimisticPost}
+                onOptimisticUpdate={handleOptimisticUpdate} // 🚀 新しいハンドラー
+                r2PublicUrl={R2_PUBLIC_URL} 
+              />
+            )}
             
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
-              {posts.length === 0 ? (
+              {displayPosts.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <p>まだ投稿がありません</p>
                 </div>
               ) : (
-                posts.map((todo) => {
+                displayPosts.map((todo) => {
                   const remaining = getRemainingTime(todo.created_at);
                   const result = todo.title;
                   const hours = Math.floor(
@@ -731,6 +794,13 @@ export default function Home() {
                           <span className="text-yellow-300 font-mono">
                             {remaining}
                           </span>
+                        </div>
+                      )}
+
+                      {/* 楽観的更新中の表示 */}
+                      {todo.isOptimistic && (
+                        <div className="absolute top-2 left-2 bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded-full z-10">
+                          投稿中...
                         </div>
                       )}
 

@@ -35,6 +35,7 @@ export type PostType = {
   // 🚀 拡張プロパティ（オプション）
   replies_data?: ReplyType[]; // リプライデータ配列
   stamps_data?: StanpType[];  // スタンプデータ配列
+  isOptimistic?: boolean;     // 🚀 楽観的更新フラグ
 };
 
 // Postコンポーネント用の型
@@ -53,4 +54,5 @@ export type PostComponentType = {
   displayName?: string;
   setID?: string;
   stamps?: StanpType[];
+  isOptimistic?: boolean; // 🚀 楽観的更新フラグ
 };
