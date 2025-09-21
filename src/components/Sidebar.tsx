@@ -142,7 +142,10 @@ export default function Sidebar() {
       {/* ユーザー情報（固定） */}
       <div className="flex-shrink-0 p-4 border-t border-gray-800 relative z-10">
         {user && isClient ? (
-          <div className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer">
+          <Link
+            href="/profile"
+            className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-800 transition-colors cursor-pointer block"
+          >
             {/* アイコン画像表示 */}
             {userMeta?.icon_url ? (
               (() => {
@@ -195,7 +198,7 @@ export default function Sidebar() {
                   "user"}
               </div>
             </div>
-          </div>
+          </Link>
         ) : (
           <div className="text-center">
             <Link
