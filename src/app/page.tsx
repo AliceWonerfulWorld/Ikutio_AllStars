@@ -49,6 +49,14 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
+// 期限切れ判定関数
+function isPostExpired(createdAt: string): boolean {
+  const created = new Date(createdAt).getTime();
+  const now = Date.now();
+  const expires = created + 24 * 60 * 60 * 1000;
+  return now >= expires;
+}
+
 // 🗑️ ローカルの型定義を削除（インポートした型を使用）
 // type ReplyType = { ... } ← 削除
 // type StanpType = { ... } ← 削除  
@@ -96,12 +104,28 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      // 1. 投稿データを取得（最新50件に制限）
+      // 1. 投稿データを取得
       const { data: todosData, error: todosError } = await supabase
         .from("todos")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
+
+      console.log("🔍 Supabaseから取得した投稿数:", todosData?.length || 0);
+      
+      if (todosData) {
+        // 期限切れ投稿の確認
+        const now = Date.now();
+        todosData.forEach((todo: any) => {
+          const created = new Date(todo.created_at).getTime();
+          const expires = created + 24 * 60 * 60 * 1000;
+          const hoursRemaining = (expires - now) / (1000 * 60 * 60);
+          
+          if (hoursRemaining <= 0) {
+            console.log(`⚠️ 期限切れ投稿が表示されています: ${todo.id} (${Math.abs(hoursRemaining).toFixed(1)}時間超過)`);
+          }
+        });
+      }
 
       if (todosError) {
         console.error("Error fetching todos:", todosError);
@@ -114,11 +138,21 @@ export default function Home() {
         return;
       }
 
+      // 🚀 期限切れ投稿をフィルタリング
+      const validTodos = todosData.filter((todo: any) => 
+        !isPostExpired(todo.created_at)
+      );
+
+      if (validTodos.length === 0) {
+        setPosts([]);
+        return;
+      }
+
       // 2. ユーザーIDを抽出
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const userIds = Array.from(
         new Set(
-          todosData
+          validTodos // todosDataの代わりにvalidTodosを使用
             .map((todo: any) => todo.user_id)
             .filter((id: string | null | undefined) =>
               !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
@@ -136,7 +170,7 @@ export default function Home() {
       }
 
       // 4. 投稿IDを抽出
-      const postIds = todosData.map(todo => Number(todo.id));
+      const postIds = validTodos.map(todo => Number(todo.id)); // validTodosを使用
       
       // 🚀 5. 全データを並列で一括取得
       const [
@@ -258,7 +292,7 @@ export default function Home() {
       setStampList(stampListLocal);
 
       // 11. 投稿データにすべての情報を統合
-      const todosWithStatus = todosData.map((todo: any) => {
+      const todosWithStatus = validTodos.map((todo: any) => { // validTodosを使用
         const userInfo = userMapLocal[todo.user_id] || {};
         const postIdNum = Number(todo.id);
         
