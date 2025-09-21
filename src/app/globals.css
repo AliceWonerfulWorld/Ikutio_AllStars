@@ -30,17 +30,178 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* モバイルナビゲーション用のアニメーション */
-@keyframes slideInFromBottom {
-  from {
-    transform: translateY(100%);
-  }
+/* 全体的なスクロールバーのスタイル - 目立たないように調整 */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Firefox用のスクロールバースタイル */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* サイドバーのスクロールバー - 目立たないように調整 */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* メインコンテンツのスクロールバー - 目立たないように調整 */
+.main-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.main-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 通知コンポーネントのスタイル */
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+}
+
+.notification {
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 4px solid #3b82f6;
+  backdrop-filter: blur(10px);
+  transform: translateX(100%);
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.notification.error {
+  border-left-color: #ef4444;
+}
+
+.notification.success {
+  border-left-color: #10b981;
+}
+
+.notification.warning {
+  border-left-color: #f59e0b;
+}
+
+@keyframes slideIn {
   to {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-@keyframes slideInFromRight {
+/* モバイルナビゲーションのアニメーション */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.mobile-nav-enter {
+  animation: slideUp 0.3s ease-out;
+}
+
+.mobile-nav-exit {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* 拡張メニューのアニメーション */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.extended-menu-enter {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.extended-menu-exit {
+  animation: fadeOut 0.2s ease-out;
+}
+
+/* メニューアイテムのアニメーション */
+@keyframes itemSlideIn {
   from {
     opacity: 0;
     transform: translateX(20px);
@@ -51,263 +212,83 @@ body {
   }
 }
 
-/* 認証ボタン用のスタイル */
-.auth-button {
-  transition: all 0.2s ease-in-out;
+.extended-menu-item {
+  animation: itemSlideIn 0.3s ease-out;
 }
 
-.auth-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
+.extended-menu-item:nth-child(1) { animation-delay: 0.05s; }
+.extended-menu-item:nth-child(2) { animation-delay: 0.1s; }
+.extended-menu-item:nth-child(3) { animation-delay: 0.15s; }
+.extended-menu-item:nth-child(4) { animation-delay: 0.2s; }
+.extended-menu-item:nth-child(5) { animation-delay: 0.25s; }
+.extended-menu-item:nth-child(6) { animation-delay: 0.3s; }
 
-/* モバイルナビゲーションのレスポンシブ調整 */
-@media (max-width: 480px) {
-  .mobile-nav-item {
-    padding: 0.5rem 0.25rem;
+/* 認証画面のアニメーション */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
   }
-  
-  .mobile-nav-label {
-    font-size: 0.75rem;
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
-/* 既存のCSSに追加 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-/* グローバルスクロールバーのカスタマイズ */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+.animation-delay-1000 {
+  animation-delay: 1s;
 }
 
-/* Webkit系ブラウザ用のスクロールバー */
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
+.animation-delay-3000 {
+  animation-delay: 3s;
 }
 
-*::-webkit-scrollbar-thumb {
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* グラスモーフィズム効果 */
+.glass {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  transition: background 0.2s ease;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-*::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
-/* サイドバー専用のスクロールバー（より細く、目立たなく） */
-.sidebar-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
-}
-
-.sidebar-scroll::-webkit-scrollbar {
-  width: 3px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1.5px;
-  transition: background 0.2s ease;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* ホバー時のみスクロールバーを表示 */
-.sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* メインコンテンツエリアのスクロールバー */
-.main-content-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
-}
-
-.main-content-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.main-content-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.main-content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  transition: background 0.2s ease;
-}
-
-.main-content-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* レスポンシブ対応の改善 */
-@media (max-height: 600px) {
-  .sidebar-nav {
-    padding-bottom: 1rem;
-  }
-}
-
-@media (max-height: 500px) {
-  .sidebar-nav {
-    padding-bottom: 0.5rem;
-  }
-}
-
-/* ズーム対応 */
-@media (min-resolution: 1.5dppx) {
-  .sidebar-text {
-    font-size: 0.9rem;
-  }
-}
-
-@media (min-resolution: 2dppx) {
-  .sidebar-text {
-    font-size: 0.85rem;
-  }
-}
-
-/* ダークテーマ専用のスクロールバー */
-@media (prefers-color-scheme: dark) {
-  * {
-    scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
-  }
-  
-  *::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.05);
-  }
-  
-  *::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-  
-  .sidebar-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.03);
-  }
-  
-  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-/* スクロールバーを完全に隠すオプション（必要に応じて使用） */
-.hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
-}
-
-/* サイドバーのz-indexを確実に設定 */
-.sidebar-container {
-  position: relative;
-  z-index: 30;
-  background: #000000;
-}
-
-/* メインコンテンツのz-indexを調整 */
-.main-content {
-  position: relative;
-  z-index: 10;
-}
-
-/* ポップアップやモーダルのz-indexを調整 */
-.popup-overlay {
-  z-index: 40;
-}
-
-.modal-overlay {
-  z-index: 50;
-}
-
-/* リアクション要素のz-indexを調整 */
-.reaction-element {
-  z-index: 20;
-}
-
-/* 確実にサイドバーが最前面に来るように */
-.sidebar-fixed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  z-index: 30;
-  background: #000000;
-}
-
-/* レスポンシブ対応のための追加スタイル */
-@media (max-width: 1024px) {
-  .sidebar-scroll {
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* モバイルでのスクロール改善 */
-@media (max-width: 768px) {
-  .mobile-scroll {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
-}
-
-/* モーダル用のz-index */
-.modal-overlay {
-  z-index: 9999;
-}
-
-.modal-content {
-  z-index: 10000;
-}
-
-/* モバイルナビゲーション用のスタイル */
-.mobile-nav {
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* モバイルでのスクロール改善 */
-@media (max-width: 1024px) {
-  .mobile-scroll {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    padding-bottom: 80px; /* モバイルナビゲーションの高さ分 */
-  }
+/* カスタムフォーカス効果 */
+.focus-ring {
+  transition: all 0.3s ease;
 }
 
-/* 拡張メニューのアニメーション */
-.extended-menu {
-  animation: slideUp 0.3s ease-out;
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.3);
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
