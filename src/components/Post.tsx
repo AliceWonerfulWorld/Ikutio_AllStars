@@ -50,6 +50,15 @@ export default function Post({
   const [showStampPicker, setShowStampPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // 現在のユーザー情報を管理
+  const [currentUserInfo, setCurrentUserInfo] = useState<{
+    username: string;
+    icon_url?: string;
+  }>({
+    username: currentUserName,
+    icon_url: undefined
+  });
+  
   // 🔧 リプライの楽観的更新用のstate
   const [localReplies, setLocalReplies] = useState<ReplyType[]>(post.replies || []);
   
@@ -57,6 +66,33 @@ export default function Post({
   const [localStanps, setLocalStanps] = useState<StanpType[]>(post.stamps || []);
   
   const replyInputRef = useRef<HTMLInputElement>(null);
+
+  // 🔧 ユーザー情報を取得する関数
+  const fetchCurrentUserInfo = async () => {
+    if (!currentUserId) return;
+    
+    try {
+      const { data: userData } = await supabase
+        .from("usels")
+        .select("username, icon_url")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+      
+      if (userData) {
+        setCurrentUserInfo({
+          username: userData.username || currentUserName,
+          icon_url: userData.icon_url
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
+
+  // 🔧 コンポーネントマウント時にユーザー情報を取得
+  React.useEffect(() => {
+    fetchCurrentUserInfo();
+  }, [currentUserId]);
 
   // 🔧 localRepliesを使用してリプライ数を計算
   const repliesCount = localReplies.length;
@@ -97,25 +133,15 @@ export default function Post({
         return;
       }
 
-      // ユーザー情報をデータベースから取得
-      const { data: userData } = await supabase
-        .from("usels")
-        .select("username, icon_url")
-        .eq("user_id", user_id)
-        .maybeSingle();
-
-      const actualUsername = userData?.username || currentUserName || "User";
-      const actualIconUrl = userData?.icon_url;
-
-      // 楽観的更新
+      // 楽観的更新（現在のユーザー情報を使用）
       const optimisticReply: ReplyType = {
         id: tempId,
         post_id: Number(post.id),
         user_id: user_id,
         text: trimmedText,
         created_at: new Date().toISOString(),
-        username: actualUsername,
-        user_icon_url: actualIconUrl // 🔧 アイコン情報を追加
+        username: currentUserInfo.username,
+        user_icon_url: currentUserInfo.icon_url
       };
 
       setLocalReplies(prev => [...prev, optimisticReply]);
@@ -285,6 +311,38 @@ export default function Post({
   // リアクション数を計算
   const totalReactions = Object.values(stanpCountMap).reduce((sum, count) => sum + count, 0);
   const visibleReactions = stampList.filter((url) => (stanpCountMap[url] || 0) > 0);
+
+  // リプライ入力欄のアイコン表示部分を修正
+  const renderUserIcon = (username: string, icon_url?: string, size: string = "w-7 h-7") => {
+    if (icon_url) {
+      return (
+        <>
+          <img
+            src={getPublicIconUrl(icon_url)}
+            alt="icon"
+            className={`${size} rounded-full object-cover flex-shrink-0`}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                const fallback = parent.querySelector('.fallback-avatar') as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }
+            }}
+          />
+          <div className={`${size} bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 fallback-avatar hidden`}>
+            {username?.charAt(0) ?? "U"}
+          </div>
+        </>
+      );
+    }
+    
+    return (
+      <div className={`${size} bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+        {username?.charAt(0) ?? "U"}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 hover:bg-gray-950/50 transition-colors border-b border-gray-800/50">
@@ -498,9 +556,8 @@ export default function Post({
                     handleReply();
                   }}
                 >
-                  <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {currentUserName?.charAt(0) ?? "U"}
-                  </div>
+                  {renderUserIcon(currentUserInfo.username, currentUserInfo.icon_url)}
+                  
                   <input
                     ref={replyInputRef}
                     type="text"
@@ -561,25 +618,7 @@ export default function Post({
                     
                     return (
                       <div key={reply.id} className="flex items-start gap-3">
-                        {/* アイコン表示を改善 */}
-                        {reply.user_icon_url ? (
-                          <img
-                            src={getPublicIconUrl(reply.user_icon_url)}
-                            alt="icon"
-                            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const parent = e.currentTarget.parentElement;
-                              if (parent) {
-                                const fallback = parent.querySelector('.fallback-avatar') as HTMLElement;
-                                if (fallback) fallback.style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : null}
-                        <div className={`w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 fallback-avatar ${reply.user_icon_url ? 'hidden' : ''}`}>
-                          {reply.username?.charAt(0) ?? "?"}
-                        </div>
+                        {renderUserIcon(reply.username || "User", reply.user_icon_url)}
                         
                         <div className={`bg-gray-800/50 rounded-lg px-3 py-2 text-sm text-white flex-1 ${
                           isTempReply ? 'opacity-75' : ''
@@ -650,9 +689,8 @@ export default function Post({
                         handleReply();
                       }}
                     >
-                      <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {currentUserName?.charAt(0) ?? "U"}
-                      </div>
+                      {renderUserIcon(currentUserInfo.username, currentUserInfo.icon_url)}
+                      
                       <input
                         ref={replyInputRef}
                         type="text"
