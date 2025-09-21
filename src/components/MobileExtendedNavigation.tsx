@@ -31,6 +31,7 @@ export default function MobileExtendedNavigation() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const { user, signOut } = useAuth();
 
   // クライアントサイドでのみ実行されることを保証
@@ -76,8 +77,9 @@ export default function MobileExtendedNavigation() {
   };
 
   const handleOpen = () => {
-    setIsAnimating(true);
+    setShowMenu(true);
     setIsExpanded(true);
+    setIsAnimating(false);
   };
 
   const handleClose = () => {
@@ -86,7 +88,8 @@ export default function MobileExtendedNavigation() {
     setTimeout(() => {
       setIsExpanded(false);
       setIsAnimating(false);
-    }, 300); // アニメーション時間と同期
+      setShowMenu(false);
+    }, 350); // アニメーション時間と同期
   };
 
   // オーバーレイクリックでメニューを閉じる
@@ -99,26 +102,29 @@ export default function MobileExtendedNavigation() {
   return (
     <>
       {/* 拡張メニュー */}
-      {(isExpanded || isAnimating) && isClient && (
+      {showMenu && isClient && (
         <div 
-          className={`lg:hidden fixed bottom-24 right-3 z-40 transition-all duration-300 transform ${
+          className={`lg:hidden fixed bottom-24 right-3 z-40 transition-all duration-350 ease-out transform ${
             isExpanded && !isAnimating
-              ? "animate-in slide-in-from-bottom-2 opacity-100 scale-100"
+              ? "opacity-100 scale-100 translate-y-0"
               : isAnimating && !isExpanded
-              ? "animate-out slide-out-to-bottom-2 opacity-0 scale-95"
-              : "opacity-100 scale-100"
+              ? "opacity-0 scale-90 translate-y-8"
+              : "opacity-0 scale-90 translate-y-8"
           }`}
           style={{
-            animation: isAnimating && !isExpanded 
-              ? 'slideOutToBottom 0.3s ease-in forwards' 
-              : isExpanded && !isAnimating
-              ? 'slideInFromBottom 0.3s ease-out forwards'
-              : undefined
+            transformOrigin: 'bottom right'
           }}
         >
           <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[180px] max-h-[60vh] overflow-y-auto">
             {/* メニューヘッダー */}
-            <div className="px-2 py-1 border-b border-gray-700 mb-2">
+            <div className={`px-2 py-1 border-b border-gray-700 mb-2 transition-all duration-300 ${
+              isExpanded && !isAnimating
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-2"
+            }`}
+            style={{
+              transitionDelay: isExpanded && !isAnimating ? '50ms' : '0ms'
+            }}>
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 その他のメニュー
               </span>
@@ -127,13 +133,15 @@ export default function MobileExtendedNavigation() {
             {extendedMenuItems.map((item, index) => (
               <div 
                 key={item.label}
-                style={{
-                  animationDelay: isExpanded && !isAnimating ? `${index * 50}ms` : '0ms',
-                  animation: isExpanded && !isAnimating 
-                    ? 'slideInFromRight 0.3s ease-out forwards'
+                className={`transition-all duration-300 ease-out ${
+                  isExpanded && !isAnimating
+                    ? "opacity-100 translate-x-0 translate-y-0"
                     : isAnimating && !isExpanded
-                    ? `slideOutToRight 0.3s ease-in forwards`
-                    : undefined
+                    ? "opacity-0 translate-x-4 translate-y-2"
+                    : "opacity-0 translate-x-4 translate-y-2"
+                }`}
+                style={{
+                  transitionDelay: isExpanded && !isAnimating ? `${100 + index * 50}ms` : '0ms'
                 }}
               >
                 {item.isLogout ? (
