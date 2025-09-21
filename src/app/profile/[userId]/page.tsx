@@ -7,6 +7,8 @@ import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { Calendar } from "lucide-react";
+import { Camera } from "lucide-react"; // バナー画像アップロード用のアイコンを追加
 
 interface UserProfile {
   id: string;
@@ -19,6 +21,7 @@ interface UserProfile {
   birth_date: string;
   join_date: string;
   icon_url?: string;
+  banner_url?: string; // バナー画像URLを追加
   following: number;
   follower: number;
 }
@@ -33,6 +36,17 @@ function getPublicIconUrl(iconUrl?: string) {
   return iconUrl;
 }
 
+// バナー画像のURL変換関数を追加
+function getPublicBannerUrl(bannerUrl?: string) {
+  if (!bannerUrl) return "";
+  if (bannerUrl.includes("cloudflarestorage.com")) {
+    const filename = bannerUrl.split("/").pop();
+    if (!filename) return "";
+    return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+  }
+  return bannerUrl;
+}
+
 export default function UserProfilePage() {
   const { userId } = useParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -42,6 +56,8 @@ export default function UserProfilePage() {
   const [posts, setPosts] = useState<any[]>([]); // 投稿一覧用
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [followerCount, setFollowerCount] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false); // バナーアップロード用の状態を追加
 
   useEffect(() => {
     // ログインユーザーID取得
@@ -69,6 +85,7 @@ export default function UserProfilePage() {
           birth_date: data.birth_date || "",
           join_date: data.join_date || "",
           icon_url: data.icon_url || undefined,
+          banner_url: data.banner_url || undefined, // バナー画像URLを追加
           following: data.following || 0,
           follower: data.follower || 0,
           setID: data.setID || "user",
@@ -144,6 +161,63 @@ export default function UserProfilePage() {
     setIsFollowing(false);
   };
 
+  // バナー画像アップロード処理（この関数は実際には個別ユーザーページでは不要）
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルのみアップロードできます");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("画像サイズは10MB以下にしてください");
+      return;
+    }
+    setBannerUploading(true);
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      alert("ユーザーIDが取得できませんでした");
+      setBannerUploading(false);
+      return;
+    }
+    let fileExt = file.name.split(".").pop();
+    if (!fileExt) fileExt = "png";
+    const fileName = `banner_${userId}_${Date.now()}.${fileExt}`;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, fileName }),
+      });
+      if (!res.ok) {
+        alert("バナー画像アップロード失敗");
+        setBannerUploading(false);
+        return;
+      }
+      const { imageUrl } = await res.json();
+      await supabase
+        .from("usels")
+        .update({ banner_url: imageUrl })
+        .eq("user_id", userId);
+
+      // 型安全な更新
+      setProfile((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          banner_url: imageUrl,
+        };
+      });
+      setBannerUploading(false);
+      alert("バナー画像が更新されました！");
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (loading) return <div className="text-white p-8">Loading...</div>;
   if (!profile)
     return <div className="text-white p-8">ユーザーが見つかりません</div>;
@@ -172,7 +246,49 @@ export default function UserProfilePage() {
             </div>
           </div>
           <div className="relative">
-            <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" />
+            {/* カバー画像 - バナー画像を表示 */}
+            <div className="h-32 sm:h-48 relative">
+              {profile.banner_url ? (
+                <Image
+                  src={getPublicBannerUrl(profile.banner_url)}
+                  alt="banner"
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // バナー画像読み込み失敗時はグラデーション背景を表示
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      const fallback = parent.querySelector('.banner-fallback') as HTMLElement;
+                      if (fallback) fallback.style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null}
+              
+              {/* フォールバック背景（デフォルトのグラデーション） */}
+              <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: profile.banner_url ? 'none' : 'block' }} />
+              
+              {/* バナー編集ボタン */}
+              <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
+                <Camera size={20} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerUpload}
+                  disabled={bannerUploading}
+                />
+              </label>
+              
+              {/* アップロード中の表示 */}
+              {bannerUploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="text-white">アップロード中...</div>
+                </div>
+              )}
+            </div>
             <div className="px-4 pb-4">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end -mt-12 sm:-mt-16 space-y-4 sm:space-y-0">
                 <div className="relative">
@@ -265,7 +381,17 @@ export default function UserProfilePage() {
                   </div>
                 )}
                 <div className="flex items-center space-x-1">
-                  <span>{profile.birth_date}から登録</span>
+                  <span>
+                    {posts.length > 0 && posts[posts.length - 1]?.created_at
+                      ? (() => {
+                          const date = new Date(posts[posts.length - 1].created_at);
+                          const year = date.getFullYear();
+                          const month = date.getMonth() + 1;
+                          return `${year}年${month}月から Tikuru24を利用してます。`;
+                        })()
+                      : "Tikuru24を利用してます。"
+                    }
+                  </span>
                 </div>
               </div>
               <div className="flex space-x-6 text-sm">
@@ -283,27 +409,37 @@ export default function UserProfilePage() {
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
             {posts.map((post) => {
-              const rawIconUrl = profile?.icon_url;
               const publicIconUrl = getPublicIconUrl(profile?.icon_url);
               return (
                 <div
                   key={post.id}
                   className="p-4 hover:bg-gray-900/50 transition-colors"
+                  style={{ cursor: 'default' }} // インラインスタイルで確実に無効化
+                  onClick={(e) => e.preventDefault()} // クリックイベントを無効化
                 >
                   <div className="flex space-x-3">
                     {/* 投稿アイコン表示 */}
-                    {publicIconUrl && publicIconUrl.startsWith("https://") ? (
-                      <Image
-                        src={publicIconUrl}
-                        alt="icon"
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
+                    {publicIconUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={publicIconUrl}
+                          alt="icon"
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            // 画像読み込みに失敗した場合はデフォルトアイコンを表示
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        {/* フォールバックアイコン */}
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold absolute top-0 left-0" style={{ display: 'none' }}>
+                          {(profile?.username || "U").charAt(0)}
+                        </div>
+                      </div>
                     ) : (
                       <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                         {(profile?.username || "U").charAt(0)}
@@ -312,10 +448,10 @@ export default function UserProfilePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-semibold">
-                          {profile?.display_name}
+                          {profile?.username}
                         </span>
                         <span className="text-gray-400 text-sm">
-                          @{profile?.username}
+                          @{profile?.setID}
                         </span>
                         <span className="text-gray-400 text-sm">·</span>
                         <span className="text-gray-400 text-sm">
@@ -340,12 +476,8 @@ export default function UserProfilePage() {
                         </div>
                       )}
                       <div className="flex items-center space-x-6 text-sm text-gray-400">
-                        <button className="hover:text-blue-400 transition-colors">
-                          返信 {post.replies ?? 0}
-                        </button>
-                        <button className="hover:text-red-400 transition-colors">
-                          いいね {post.likes ?? 0}
-                        </button>
+                        <span style={{ cursor: 'default' }}>返信 {post.replies ?? 0}</span>
+                        <span style={{ cursor: 'default' }}>いいね {post.likes ?? 0}</span>
                       </div>
                     </div>
                   </div>
