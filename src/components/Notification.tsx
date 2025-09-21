@@ -85,6 +85,15 @@ export default function Notification({ notification, onMarkAsRead }: Notificatio
   const username = notification.user_info?.setID || notification.username || 'user';
   const iconUrl = notification.user_info?.icon_url;
 
+  // 🔧 動的にメッセージを生成
+  const generateMessage = () => {
+    if (notification.type === 'like' && notification.user_info?.username) {
+      return `${notification.user_info.username}さんがあなたの投稿にいいねしました`;
+    }
+    // 元のメッセージをフォールバックとして使用
+    return notification.message;
+  };
+
   return (
     <div 
       className={`p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800 cursor-pointer ${
@@ -134,7 +143,8 @@ export default function Notification({ notification, onMarkAsRead }: Notificatio
               </div>
               
               <h3 className="text-white font-medium mb-1">{notification.title}</h3>
-              <p className="text-gray-300 text-sm mb-2">{notification.message}</p>
+              {/* 🔧 動的に生成されたメッセージを使用 */}
+              <p className="text-gray-300 text-sm mb-2">{generateMessage()}</p>
               
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 text-xs">
