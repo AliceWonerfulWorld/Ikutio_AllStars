@@ -44,7 +44,7 @@ export default function MobileExtendedNavigation() {
     { icon: Heart, label: "リアクション", href: "/reactions", color: "text-pink-400" },
     { icon: Camera, label: "REALction", href: "/realction", color: "text-purple-400" },
     { icon: CloudSun, label: "天気Yahoo!", href: "/weather", color: "text-blue-400" },
-    { icon: Wine, label: "TikuriBAR", href: "/tikuribar", color: "text-amber-400" },
+    { icon: Wine, label: "TikuriBAR", href: "/tikuribar", color: "text-green-400" },
     { icon: Settings, label: "設定", href: "/settings", color: "text-gray-400" },
     ...(user ? [{ 
       icon: LogOut, 
