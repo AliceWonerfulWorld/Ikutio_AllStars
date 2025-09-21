@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 // 🔧 共通型定義をインポート
 import { PostComponentType, ReplyType, StanpType } from "@/types/post";
+import Link from "next/link";
 
 type PostProps = {
   post: PostComponentType; // 🔧 専用の型を使用
@@ -293,12 +294,22 @@ export default function Post({
   // R2画像URL変換関数（ユーザーアイコン用）
   const getPublicIconUrl = (iconUrl?: string) => {
     if (!iconUrl) return "";
+    
+    // 既に完全なURLの場合はそのまま返す
+    if (iconUrl.startsWith("http://") || iconUrl.startsWith("https://")) {
+      return iconUrl;
+    }
+    
+    // Cloudflare R2の場合の変換
     if (iconUrl.includes("cloudflarestorage.com")) {
       const filename = iconUrl.split("/").pop();
       if (!filename) return "";
       return `${R2_PUBLIC_URL}${filename}`;
     }
-    return iconUrl;
+    
+    // 相対パスの場合
+    const trimmed = iconUrl.trim();
+    return `${R2_PUBLIC_URL}${trimmed}`;
   };
 
   // 🚀 表示するリプライ数の制御
@@ -349,7 +360,7 @@ export default function Post({
       <div className="flex space-x-3">
         {/* アバター */}
         {post.user_icon_url ? (
-          <a href={`/profile/${post.user_id}`}>
+          <Link href={`/profile/${post.user_id}`}>
             <img
               src={getPublicIconUrl(post.user_icon_url)}
               alt="icon"
@@ -367,13 +378,13 @@ export default function Post({
             <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer hover:opacity-80 fallback-avatar" style={{ display: 'none' }}>
               {post.displayName?.charAt(0) ?? post.username?.charAt(0) ?? "?"}
             </div>
-          </a>
+          </Link>
         ) : (
-          <a href={`/profile/${post.user_id}`}>
+          <Link href={`/profile/${post.user_id}`}>
             <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer hover:opacity-80">
               {post.displayName?.charAt(0) ?? post.username?.charAt(0) ?? "?"}
             </div>
-          </a>
+          </Link>
         )}
 
         <div className="flex-1 min-w-0">

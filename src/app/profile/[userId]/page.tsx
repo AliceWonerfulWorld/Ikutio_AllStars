@@ -52,6 +52,7 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null); // エラー状態を追加
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]); // 投稿一覧用
   const [followingCount, setFollowingCount] = useState<number>(0);
@@ -69,15 +70,29 @@ export default function UserProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("usels")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-      if (!error && data) {
+      setError(null);
+      
+      try {
+        const { data, error } = await supabase
+          .from("usels")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+          
+        if (error) {
+          console.error("Profile fetch error:", error);
+          setError("ユーザー情報の取得に失敗しました");
+          return;
+        }
+        
+        if (!data) {
+          setError("ユーザーが見つかりません");
+          return;
+        }
+        
         setProfile({
           id: data.id,
-          display_name: data.display_name || "ユーザー",
+          display_name: data.display_name || data.username || "ユーザー",
           username: data.username || "user",
           bio: data.bio || "",
           location: data.location || "",
@@ -85,15 +100,22 @@ export default function UserProfilePage() {
           birth_date: data.birth_date || "",
           join_date: data.join_date || "",
           icon_url: data.icon_url || undefined,
-          banner_url: data.banner_url || undefined, // バナー画像URLを追加
+          banner_url: data.banner_url || undefined,
           following: data.following || 0,
           follower: data.follower || 0,
-          setID: data.setID || "user",
+          setID: data.setID || data.username || "user",
         });
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        setError("予期しないエラーが発生しました");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchProfile();
+    
+    if (userId) {
+      fetchProfile();
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -218,9 +240,42 @@ export default function UserProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  if (loading) return <div className="text-white p-8">Loading...</div>;
-  if (!profile)
-    return <div className="text-white p-8">ユーザーが見つかりません</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <Link href="/" className="text-blue-400 hover:underline">
+            ホームに戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4">ユーザーが見つかりません</p>
+          <Link href="/" className="text-blue-400 hover:underline">
+            ホームに戻る
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
