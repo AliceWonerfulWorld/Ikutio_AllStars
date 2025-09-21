@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -58,27 +58,87 @@ function ProfilePageContent() {
   const [posts, setPosts] = useState<any[]>([]);
   const [followingCount, setFollowingCount] = useState<number>(0);
   const [followerCount, setFollowerCount] = useState<number>(0);
+  const [loading, setLoading] = useState(true); // ローディング状態を追加
 
+  // 画像URL変換関数をメモ化
+  const getPublicIconUrl = useCallback((iconUrl?: string) => {
+    if (!iconUrl) return "";
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+    }
+    return iconUrl;
+  }, []);
+
+  const getPublicBannerUrl = useCallback((bannerUrl?: string) => {
+    if (!bannerUrl) return "";
+    if (bannerUrl.includes("cloudflarestorage.com")) {
+      const filename = bannerUrl.split("/").pop();
+      if (!filename) return "";
+      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
+    }
+    return bannerUrl;
+  }, []);
+
+  // メモ化されたアイコンURL
+  const memoizedIconUrl = useMemo(() => 
+    getPublicIconUrl(formData.iconUrl), 
+    [formData.iconUrl, getPublicIconUrl]
+  );
+
+  const memoizedBannerUrl = useMemo(() => 
+    getPublicBannerUrl(formData.bannerUrl), 
+    [formData.bannerUrl, getPublicBannerUrl]
+  );
+
+  // 初期データ取得を最適化
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data?.user;
-      if (user) {
-        const { data: userData, error } = await supabase
-          .from("usels")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
+    const fetchUserData = async () => {
+      setLoading(true);
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData?.user;
+        if (!user) {
+          setLoading(false);
+          return;
+        }
 
-        if (error) {
-          console.error("Error fetching user data:", error);
+        // 並列でデータを取得
+        const [userDataResult, postsResult, followingResult, followerResult] = await Promise.all([
+          supabase
+            .from("usels")
+            .select("*")
+            .eq("user_id", user.id)
+            .single(),
+          supabase
+            .from("todos")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("follows")
+            .select("id", { count: "exact", head: true })
+            .eq("follower_id", user.id),
+          supabase
+            .from("follows")
+            .select("id", { count: "exact", head: true })
+            .eq("followed_id", user.id)
+        ]);
+
+        const { data: userData, error: userError } = userDataResult;
+        const { data: userPosts, error: postsError } = postsResult;
+        const { count: followingCount } = followingResult;
+        const { count: followerCount } = followerResult;
+
+        if (userError) {
+          console.error("Error fetching user data:", userError);
         } else if (userData) {
           setFormData({
             setID: userData.id || "",
             displayName: userData.display_name || "ユーザー",
             username: userData.username || "user",
-            bio:
-              userData.bio ||
-              "プログラミングが好きです。Next.jsとReactを勉強中です。",
+            bio: userData.bio || "プログラミングが好きです。Next.jsとReactを勉強中です。",
             location: userData.location || "東京, 日本",
             website: userData.website || "https://example.com",
             birthDate: userData.birth_date || "1990-01-01",
@@ -86,52 +146,27 @@ function ProfilePageContent() {
             following: userData.following || 150,
             follower: userData.follower || 1200,
             iconUrl: userData.icon_url || undefined,
-            bannerUrl: userData.banner_url || undefined, // バナー画像URLを追加
-            isBunkatsu: userData.isBunkatsu ?? false, // 追加
+            bannerUrl: userData.banner_url || undefined,
+            isBunkatsu: userData.isBunkatsu ?? false,
           });
         }
 
-        setFormData((prev) => ({
-          ...prev,
-          setID: userData?.setID || "",
-          username: userData?.username || "",
-          displayName: userData?.username || "",
-          email: user.email || "",
-          bio: userData?.introduction || "",
-          location: userData?.place || "",
-          site: userData?.site || "",
-          birthDate: userData?.birth_date || "",
-          follow: userData?.follow || 0,
-          follower: 0,
-          iconUrl: userData?.icon_url || "",
-          bannerUrl: userData?.banner_url || "", // バナー画像URLを追加
-          isBunkatsu: userData?.isBunkatsu ?? false, // 追加
-        }));
-
-        // 投稿取得（自分のuser_idのみ）
-        const { data: userPosts, error: postsError } = await supabase
-          .from("todos")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
         if (postsError) {
           console.error("投稿取得エラー:", postsError);
+        } else {
+          setPosts(userPosts ?? []);
         }
-        setPosts(userPosts ?? []);
 
-        // フォロー数・フォロワー数取得
-        supabase
-          .from("follows")
-          .select("id", { count: "exact", head: true })
-          .eq("follower_id", user.id)
-          .then(({ count }) => setFollowingCount(count ?? 0));
-        supabase
-          .from("follows")
-          .select("id", { count: "exact", head: true })
-          .eq("followed_id", user.id)
-          .then(({ count }) => setFollowerCount(count ?? 0));
+        setFollowingCount(followingCount ?? 0);
+        setFollowerCount(followerCount ?? 0);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+
+    fetchUserData();
   }, []);
 
   const handleInputChange = (
@@ -292,29 +327,16 @@ function ProfilePageContent() {
     reader.readAsDataURL(file);
   };
 
-  function getPublicIconUrl(iconUrl?: string) {
-    if (!iconUrl) return "";
-    // cloudflarestorage.com の場合 r2.dev に変換
-    if (iconUrl.includes("cloudflarestorage.com")) {
-      // 例: https://da1ba209d61b3c9fb6834468fb0bb4f4.r2.cloudflarestorage.com/24sns/icon_xxx.png
-      // → https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/icon_xxx.png
-      const filename = iconUrl.split("/").pop();
-      if (!filename) return "";
-      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
-    }
-    return iconUrl;
-  }
-
-  // バナー画像のURL変換関数を追加
-  function getPublicBannerUrl(bannerUrl?: string) {
-    if (!bannerUrl) return "";
-    // cloudflarestorage.com の場合 r2.dev に変換
-    if (bannerUrl.includes("cloudflarestorage.com")) {
-      const filename = bannerUrl.split("/").pop();
-      if (!filename) return "";
-      return `https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/${filename}`;
-    }
-    return bannerUrl;
+  // ローディング中の表示
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>プロフィールを読み込み中...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -351,15 +373,16 @@ function ProfilePageContent() {
           <div className="relative">
             {/* カバー画像 - バナー画像を表示 */}
             <div className="h-32 sm:h-48 relative">
-              {formData.bannerUrl ? (
+              {memoizedBannerUrl ? (
                 <Image
-                  src={getPublicBannerUrl(formData.bannerUrl)}
+                  src={memoizedBannerUrl}
                   alt="banner"
                   fill
                   className="object-cover"
                   referrerPolicy="no-referrer"
+                  priority // 優先読み込み
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   onError={(e) => {
-                    // バナー画像読み込み失敗時はグラデーション背景を表示
                     e.currentTarget.style.display = 'none';
                     const parent = e.currentTarget.parentElement;
                     if (parent) {
@@ -370,8 +393,8 @@ function ProfilePageContent() {
                 />
               ) : null}
               
-              {/* フォールバック背景（デフォルトのグラデーション） */}
-              <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: formData.bannerUrl ? 'none' : 'block' }} />
+              {/* フォールバック背景 */}
+              <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: memoizedBannerUrl ? 'none' : 'block' }} />
               
               {/* バナー編集ボタン */}
               <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
@@ -397,19 +420,19 @@ function ProfilePageContent() {
             <div className="px-4 pb-4">
               <div className="flex justify-between items-end -mt-12 sm:-mt-16">
                 <div className="relative">
-                  {/* 画像表示 - タップ可能にする */}
                   <label className="cursor-pointer">
-                    {formData.iconUrl &&
-                    getPublicIconUrl(formData.iconUrl).startsWith("https://") ? (
+                    {memoizedIconUrl ? (
                       <Image
-                        src={getPublicIconUrl(formData.iconUrl)}
+                        src={memoizedIconUrl}
                         alt="icon"
                         width={128}
                         height={128}
                         className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-black object-cover hover:opacity-80 transition-opacity"
                         referrerPolicy="no-referrer"
+                        priority // 優先読み込み
+                        sizes="(max-width: 768px) 80px, 128px"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
+                          e.currentTarget.style.display = "none";
                         }}
                       />
                     ) : (
