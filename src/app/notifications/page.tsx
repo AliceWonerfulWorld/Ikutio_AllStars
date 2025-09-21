@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Check, X } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Notification from '@/components/Notification';
 import MobileNavigation from '@/components/MobileNavigation';
@@ -15,7 +16,15 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // 未ログイン時はログイン画面にリダイレクト
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth/login');
+    }
+  }, [user, authLoading, router]);
 
   // 通知データの取得
   useEffect(() => {
@@ -68,6 +77,8 @@ export default function NotificationsPage() {
   }, [user]);
 
   const handleMarkAsRead = async (id: string) => {
+    if (!user) return;
+    
     try {
       await supabase
         .from('notifications')
@@ -87,11 +98,13 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!user) return;
+    
     try {
       await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
@@ -102,11 +115,13 @@ export default function NotificationsPage() {
   };
 
   const handleClearAll = async () => {
+    if (!user) return;
+    
     try {
       await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       setNotifications([]);
     } catch (error) {
@@ -121,10 +136,14 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  if (loading) {
+  // 認証ローディング中または未ログイン時はローディング画面を表示
+  if (authLoading || loading || !user) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-gray-400">読み込み中...</p>
+        </div>
       </div>
     );
   }
