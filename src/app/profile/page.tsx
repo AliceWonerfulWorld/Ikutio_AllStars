@@ -48,7 +48,22 @@ interface ModalProps {
 }
 
 const Modal = ({ isOpen, onClose, title, message, type }: ModalProps) => {
-  if (!isOpen) return null;
+  const [isVisible, setIsVisible] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // 少し遅延させてアニメーションを開始
+      setTimeout(() => setIsVisible(true), 10);
+    } else {
+      setIsVisible(false);
+      // アニメーション完了後にDOMから削除
+      setTimeout(() => setShouldRender(false), 300);
+    }
+  }, [isOpen]);
+
+  if (!shouldRender) return null;
 
   const getIcon = () => {
     switch (type) {
@@ -73,17 +88,39 @@ const Modal = ({ isOpen, onClose, title, message, type }: ModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700">
+    <div 
+      className={`fixed inset-0 flex items-center justify-center z-50 p-4 transition-all duration-300 ease-out ${
+        isVisible 
+          ? 'bg-black/50 opacity-100' 
+          : 'bg-black/0 opacity-0'
+      }`}
+      onClick={onClose}
+    >
+      <div 
+        className={`bg-gray-900 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-700 transition-all duration-300 ease-out transform ${
+          isVisible 
+            ? 'scale-100 opacity-100 translate-y-0' 
+            : 'scale-95 opacity-0 translate-y-4'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center space-x-3 mb-4">
-          {getIcon()}
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <div className={`transition-all duration-300 delay-100 ${isVisible ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}>
+            {getIcon()}
+          </div>
+          <h3 className={`text-lg font-semibold text-white transition-all duration-300 delay-150 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2'}`}>
+            {title}
+          </h3>
         </div>
-        <p className="text-gray-300 mb-6">{message}</p>
+        <p className={`text-gray-300 mb-6 transition-all duration-300 delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          {message}
+        </p>
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className={`px-4 py-2 rounded-full text-white font-medium transition-colors ${getButtonColor()}`}
+            className={`px-4 py-2 rounded-full text-white font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 delay-250 ${getButtonColor()} ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+            }`}
           >
             OK
           </button>
