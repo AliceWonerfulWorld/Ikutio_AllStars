@@ -1,10 +1,33 @@
 import { Notification as NotificationType } from '@/types';
 import { Heart, UserPlus, AtSign, MessageCircle, Bookmark, Bell, ArrowRight } from 'lucide-react';
 
+// 拡張された通知タイプ
+interface EnhancedNotification extends NotificationType {
+  user_info?: {
+    username: string;
+    icon_url?: string;
+    setID: string;
+  } | null; // 🔧 | null を追加
+}
+
 interface NotificationProps {
-  notification: NotificationType;
+  notification: EnhancedNotification;
   onMarkAsRead: (id: string) => void;
 }
+
+// R2のパブリック開発URL
+const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
+
+// 画像URL変換関数
+const getPublicIconUrl = (iconUrl?: string) => {
+  if (!iconUrl) return "";
+  if (iconUrl.includes("cloudflarestorage.com")) {
+    const filename = iconUrl.split("/").pop();
+    if (!filename) return "";
+    return `${R2_PUBLIC_URL}${filename}`;
+  }
+  return iconUrl;
+};
 
 export default function Notification({ notification, onMarkAsRead }: NotificationProps) {
   const formatDate = (dateString: string) => {
@@ -57,6 +80,11 @@ export default function Notification({ notification, onMarkAsRead }: Notificatio
     }
   };
 
+  // ユーザー情報を取得（user_infoがあれば使用、なければフォールバック）
+  const displayName = notification.user_info?.username || notification.displayName || 'ユーザー';
+  const username = notification.user_info?.setID || notification.username || 'user';
+  const iconUrl = notification.user_info?.icon_url;
+
   return (
     <div 
       className={`p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800 cursor-pointer ${
@@ -76,15 +104,32 @@ export default function Notification({ notification, onMarkAsRead }: Notificatio
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-1">
                 {notification.type !== 'system' && (
-                  <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                    {getAvatarLetter(notification.username)}
-                  </div>
+                  <>
+                    {/* ユーザーアイコン */}
+                    {iconUrl ? (
+                      <img
+                        src={getPublicIconUrl(iconUrl)}
+                        alt="ユーザーアイコン"
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold ${iconUrl ? 'hidden' : ''}`}
+                    >
+                      {getAvatarLetter(displayName)}
+                    </div>
+                  </>
                 )}
                 <span className="font-semibold text-white text-sm">
-                  {notification.displayName}
+                  {displayName}
                 </span>
                 {notification.type !== 'system' && (
-                  <span className="text-gray-500 text-sm">@{notification.username}</span>
+                  <span className="text-gray-500 text-sm">@{username}</span>
                 )}
               </div>
               
