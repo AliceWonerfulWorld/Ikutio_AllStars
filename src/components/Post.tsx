@@ -41,7 +41,8 @@ export default function Post({
 }: PostProps) {
   // ローカルstate
   const [showReplyInput, setShowReplyInput] = useState(false);
-  const [showReplies, setShowReplies] = useState(false); // 🚀 リプライ表示/非表示制御
+  const [showReplies, setShowReplies] = useState(false);
+  const [showAllReplies, setShowAllReplies] = useState(false); // 🚀 全リプライ表示制御
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [showStampPicker, setShowStampPicker] = useState(false);
@@ -261,6 +262,13 @@ export default function Post({
     return iconUrl;
   };
 
+  // 🚀 表示するリプライ数の制御
+  const INITIAL_REPLY_COUNT = 3; // 最初に表示するリプライ数
+  const displayedReplies = showAllReplies 
+    ? localReplies 
+    : localReplies.slice(0, INITIAL_REPLY_COUNT);
+  const hiddenRepliesCount = Math.max(0, localReplies.length - INITIAL_REPLY_COUNT);
+
   return (
     <div className="p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800">
       <div className="flex space-x-3">
@@ -369,12 +377,14 @@ export default function Post({
               }`}
               onClick={() => {
                 if (localReplies.length > 0) {
-                  // 🚀 リプライがある場合は表示切り替え
                   setShowReplies(!showReplies);
+                  // リプライを閉じる時は全表示もリセット
+                  if (showReplies) {
+                    setShowAllReplies(false);
+                  }
                 } else {
-                  // リプライがない場合は入力欄を表示
                   setShowReplyInput(!showReplyInput);
-                setTimeout(() => replyInputRef.current?.focus(), 100);
+                  setTimeout(() => replyInputRef.current?.focus(), 100);
                 }
               }}
             >
@@ -429,51 +439,86 @@ export default function Post({
             </button>
           </div>
 
-          {/* 🚀 シンプルなインタラクションエリア */}
+          {/* 🚀 改善されたリプライセクション */}
           <div className="mt-3 space-y-3">
-            {/* 折りたたみ可能なリプライ一覧（ヘッダーなし） */}
+            {/* 折りたたみ可能なリプライ一覧 */}
             {localReplies.length > 0 && (
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                showReplies ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                showReplies ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
               }`}>
-                <div className="space-y-3 ml-2">
-                  {localReplies.map((reply) => {
-                    const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
-                    
-                    return (
-                      <div key={reply.id} className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                          {reply.username?.charAt(0) ?? "?"}
-                        </div>
-                        <div className={`bg-gray-800/40 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-white flex-1 border border-gray-700/20 ${
-                          isTempReply ? 'opacity-75' : ''
-                        }`}>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className="font-semibold text-sm text-blue-300">
-                              {reply.username ?? "User"}
-                            </span>
-                            <span className="text-gray-400 text-xs">
-                              {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                            {isTempReply && (
-                              <span className="text-yellow-400 text-xs flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-                                <span>送信中</span>
+                <div className="ml-2">
+                  {/* スクロール可能なリプライコンテナ */}
+                  <div className="max-h-80 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                    {displayedReplies.map((reply) => {
+                      const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
+                      
+                      return (
+                        <div key={reply.id} className="flex items-start gap-3 animate-in slide-in-from-left-2 duration-300">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            {reply.username?.charAt(0) ?? "?"}
+                          </div>
+                          <div className={`bg-gray-800/40 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-white flex-1 border border-gray-700/20 ${
+                            isTempReply ? 'opacity-75' : ''
+                          }`}>
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="font-semibold text-sm text-blue-300">
+                                {reply.username ?? "User"}
                               </span>
-                            )}
-                          </div>
-                          <div className="text-gray-200 leading-relaxed">
-                            {reply.text}
+                              <span className="text-gray-400 text-xs">
+                                {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {isTempReply && (
+                                <span className="text-yellow-400 text-xs flex items-center space-x-1">
+                                  <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+                                  <span>送信中</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-gray-200 leading-relaxed">
+                              {reply.text}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
 
-                  {/* リプライ追加ボタン（リプライ表示時のみ） */}
+                  {/* 🚀 「+○件のリプライを表示」ボタン */}
+                  {hiddenRepliesCount > 0 && !showAllReplies && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => setShowAllReplies(true)}
+                        className="flex items-center justify-center space-x-2 w-full py-2 text-blue-400 hover:text-blue-300 text-sm transition-colors border border-blue-400/20 rounded-lg hover:bg-blue-500/5 group"
+                      >
+                        <MessageCircle size={14} />
+                        <span>+{hiddenRepliesCount}件のリプライを表示</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" className="group-hover:translate-y-0.5 transition-transform">
+                          <path d="M6 8L2 4h8l-4 4z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 🚀 「折りたたむ」ボタン（全表示時のみ） */}
+                  {showAllReplies && hiddenRepliesCount > 0 && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => setShowAllReplies(false)}
+                        className="flex items-center justify-center space-x-2 w-full py-2 text-gray-400 hover:text-gray-300 text-sm transition-colors border border-gray-600/20 rounded-lg hover:bg-gray-500/5 group"
+                      >
+                        <MessageCircle size={14} />
+                        <span>リプライを折りたたむ</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" className="group-hover:-translate-y-0.5 transition-transform rotate-180">
+                          <path d="M6 8L2 4h8l-4 4z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* リプライ追加ボタン */}
                   <div className="mt-3">
                     <button
                       onClick={() => {
@@ -490,7 +535,7 @@ export default function Post({
               </div>
             )}
 
-            {/* スタンプセクション */}
+            {/* スタンプセクション（カウント0は非表示） */}
             {Object.keys(stanpCountMap).filter(url => stanpCountMap[url] > 0).length > 0 && (
               <div className="ml-2">
                 <div className="flex flex-wrap gap-2">
