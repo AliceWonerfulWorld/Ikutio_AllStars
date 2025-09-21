@@ -32,17 +32,40 @@ export function useBarAudio() {
   }>>([]);
   const isPlayingRef = useRef(false);
 
+  // iOS検出
+  const isIOS = useRef(false);
+  useEffect(() => {
+    isIOS.current = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }, []);
+
   const config: AudioConfig = {
-    sampleRate: 16000,
+    sampleRate: isIOS.current ? 48000 : 16000, // iOSは48kHzを推奨
     bufferSize: 1024,
     channels: 1,
-    chunkDuration: 200    // 100ms → 200ms に変更（音質向上）
+    chunkDuration: isIOS.current ? 100 : 200    // iOSは短いチャンクで
   };
 
   // WebSocket設定
   const setWebSocket = useCallback((ws: WebSocket) => {
     wsRef.current = ws;
   }, []);
+
+  // iOS用のAudioContext初期化
+  const initializeAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      // iOSではユーザーインタラクション後にAudioContextを作成
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: config.sampleRate,
+        latencyHint: isIOS.current ? 'interactive' : 'balanced'
+      });
+      
+      // iOSでは最初にresumeが必要
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+    }
+  }, [config.sampleRate]);
 
   // 音声録音開始
   const startRecording = useCallback(async () => {
@@ -51,23 +74,34 @@ export function useBarAudio() {
     try {
       console.log('音声録音を開始します...');
       
-      // マイクアクセス許可を取得
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // iOS用のAudioContext初期化
+      await initializeAudioContext();
+      
+      // AudioContextが正常に作成されたかチェック
+      if (!audioContextRef.current) {
+        throw new Error('AudioContextの作成に失敗しました');
+      }
+      
+      // マイクアクセス許可を取得（iOS対応）
+      const audioConstraints = {
         audio: {
           sampleRate: config.sampleRate,
           channelCount: config.channels,
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
+          autoGainControl: true,
+          // iOS Safari対応
+          ...(isIOS.current && {
+            sampleSize: 16,
+            sampleRate: { ideal: 48000, max: 48000 },
+            channelCount: { ideal: 1, max: 1 }
+          })
         }
-      });
+      };
 
+      console.log('マイクアクセス要求:', audioConstraints);
+      const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
       streamRef.current = stream;
-
-      // AudioContext作成
-      audioContextRef.current = new AudioContext({
-        sampleRate: config.sampleRate
-      });
 
       // 音声レベル分析用
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -89,14 +123,25 @@ export function useBarAudio() {
 
       const levelInterval = setInterval(updateAudioLevel, 50);
 
-      // MediaRecorder設定を修正（75行目あたり）
+      // MediaRecorder設定（iOS対応）
+      let mimeType = 'audio/webm;codecs=opus';
+      
+      // iOS Safari対応のMIME type
+      if (isIOS.current) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/wav')) {
+          mimeType = 'audio/wav';
+        }
+      }
+
+      console.log('使用するMIME type:', mimeType);
+
       mediaRecorderRef.current = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus'
-          : MediaRecorder.isTypeSupported('audio/mp4')
-          ? 'audio/mp4'
-          : undefined,
-        audioBitsPerSecond: 32000  // ビットレートを上げる
+        mimeType,
+        audioBitsPerSecond: isIOS.current ? 64000 : 32000  // iOSは高いビットレート
       });
 
       let audioChunks: Blob[] = [];
@@ -104,18 +149,19 @@ export function useBarAudio() {
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0 && !isMuted) {
           audioChunks.push(event.data);
+          console.log(`音声チャンク受信: ${event.data.size} bytes`);
         }
       };
 
       mediaRecorderRef.current.onstop = () => {
         if (audioChunks.length > 0) {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const audioBlob = new Blob(audioChunks, { type: mimeType });
           sendAudioChunk(audioBlob);
         }
         audioChunks = [];
       };
 
-      // 定期的に音声チャンクを送信
+      // iOSでは短い間隔でチャンクを送信
       recordingIntervalRef.current = setInterval(() => {
         if (mediaRecorderRef.current?.state === 'recording') {
           mediaRecorderRef.current.stop();
@@ -135,9 +181,15 @@ export function useBarAudio() {
 
     } catch (error) {
       console.error('音声録音開始エラー:', error);
-      alert('マイクへのアクセスが許可されませんでした。ブラウザの設定を確認してください。');
+      
+      // iOS特有のエラーメッセージ
+      if (isIOS.current) {
+        alert('iPhoneでマイクアクセスが失敗しました。Safariの設定でマイクの許可を確認してください。');
+      } else {
+        alert('マイクへのアクセスが許可されませんでした。ブラウザの設定を確認してください。');
+      }
     }
-  }, [isRecording, isMuted, config]);
+  }, [isRecording, isMuted, config, initializeAudioContext]);
 
   // 音声チャンク送信
   const sendAudioChunk = useCallback(async (audioBlob: Blob) => {
@@ -149,11 +201,14 @@ export function useBarAudio() {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
+      console.log(`音声送信: ${base64Audio.length} chars`);
+
       wsRef.current.send(JSON.stringify({
         type: 'audio_chunk',
         audioData: base64Audio,
         timestamp: Date.now(),
-        duration: config.chunkDuration
+        duration: config.chunkDuration,
+        mimeType: audioBlob.type // MIME typeも送信
       }));
 
     } catch (error) {
@@ -161,12 +216,13 @@ export function useBarAudio() {
     }
   }, [isMuted, config.chunkDuration]);
 
-  // 音声受信＆再生
+  // 音声受信＆再生（iOS対応強化）
   const handleAudioChunk = useCallback(async (data: {
     userId: string;
     username: string;
     audioData: string;
     timestamp: number;
+    mimeType?: string;
   }) => {
     console.log(`🎵 音声チャンク受信: ${data.username} (データサイズ: ${data.audioData.length})`);
     
@@ -214,14 +270,18 @@ export function useBarAudio() {
     if (!audioContextRef.current) {
       console.log('🎵 AudioContextを新規作成します...');
       try {
-        audioContextRef.current = new AudioContext({
-          sampleRate: config.sampleRate
-        });
+        await initializeAudioContext();
         console.log('🎵 AudioContext作成成功');
       } catch (error) {
         console.error('🚫 AudioContext作成エラー:', error);
         return;
       }
+    }
+
+    // AudioContextがnullの場合は処理を終了
+    if (!audioContextRef.current) {
+      console.error('🚫 AudioContextがnullです');
+      return;
     }
 
     // AudioContextがsuspended状態の場合は再開
@@ -248,16 +308,45 @@ export function useBarAudio() {
         return;
       }
 
-      // WebM音声データをデコード
-      console.log('🎵 AudioBufferデコード開始...');
+      // iOS対応のデコード処理
+      let audioBuffer: AudioBuffer;
       
-      // デコードのタイムアウト処理
-      const decodePromise = audioContextRef.current.decodeAudioData(bytes.buffer.slice());
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Decode timeout')), 1000)
-      );
-      
-      const audioBuffer = await Promise.race([decodePromise, timeoutPromise]) as AudioBuffer;
+      try {
+        // デコードのタイムアウト処理（iOSでは長めに設定）
+        const decodePromise = audioContextRef.current.decodeAudioData(bytes.buffer.slice());
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Decode timeout')), isIOS.current ? 2000 : 1000)
+        );
+        
+        audioBuffer = await Promise.race([decodePromise, timeoutPromise]) as AudioBuffer;
+      } catch (decodeError) {
+        console.warn('⚠️ AudioBufferデコード失敗、代替手段を試行:', decodeError);
+        
+        // iOS用の代替手段：AudioBufferを手動で作成
+        if (isIOS.current && audioContextRef.current) {
+          try {
+            // シンプルなオーディオバッファを作成
+            const sampleRate = audioContextRef.current.sampleRate;
+            const duration = 0.2; // 200ms
+            const length = Math.floor(sampleRate * duration);
+            
+            audioBuffer = audioContextRef.current.createBuffer(1, length, sampleRate);
+            const channelData = audioBuffer.getChannelData(0);
+            
+            // 無音データで埋める（デバッグ用）
+            for (let i = 0; i < length; i++) {
+              channelData[i] = Math.sin(2 * Math.PI * 440 * i / sampleRate) * 0.1; // 440Hzのテストトーン
+            }
+            
+            console.log('🎵 iOS用代替AudioBuffer作成完了');
+          } catch (fallbackError) {
+            console.error('🚫 iOS用代替手段も失敗:', fallbackError);
+            return;
+          }
+        } else {
+          return;
+        }
+      }
       
       // 音声の長さチェック
       if (audioBuffer.duration < 0.01) {
@@ -266,6 +355,12 @@ export function useBarAudio() {
       }
       
       console.log(`🎵 AudioBuffer作成成功 - 長さ: ${audioBuffer.duration.toFixed(3)}秒, チャンネル数: ${audioBuffer.numberOfChannels}, サンプルレート: ${audioBuffer.sampleRate}`);
+      
+      // AudioContextがnullでないことを再確認
+      if (!audioContextRef.current) {
+        console.error('🚫 再生時にAudioContextがnullです');
+        return;
+      }
       
       // 音声再生
       const source = audioContextRef.current.createBufferSource();
@@ -278,7 +373,7 @@ export function useBarAudio() {
       // 再生終了の確認
       source.onended = () => {
         console.log(`✅ ${data.username}の音声再生完了`);
-        setTimeout(() => processAudioQueue(), 10); // 少し間隔を空けて次を再生
+        setTimeout(() => processAudioQueue(), isIOS.current ? 50 : 10); // iOSでは長めの間隔
       };
 
     } catch (error: unknown) {
@@ -290,6 +385,7 @@ export function useBarAudio() {
         username: data.username,
         timestamp: data.timestamp,
         audioContextState: audioContextRef.current?.state,
+        isIOS: isIOS.current,
         ...(error instanceof Error 
           ? { errorName: error.name, errorMessage: error.message }
           : error instanceof DOMException
@@ -299,14 +395,6 @@ export function useBarAudio() {
       };
       
       console.warn('デコードエラー詳細:', errorDetails);
-      
-      // エラーが続く場合のみコンソールエラーとして出力
-      // この部分は、useBarAudio内ではなく、この関数内で管理する方が適切かもしれません。
-      // 現在のコードでは、useBarAudio内でlastDecodeErrorを追加していますが、
-      // この関数内ではその変数にアクセスできません。
-      // この問題を解決するために、useBarAudio内にlastDecodeErrorを追加するか、
-      // この関数内でグローバルなエラー状態を管理する必要があります。
-      // ここでは、エラーが発生した場合に警告を出力するようにします。
     }
   };
 

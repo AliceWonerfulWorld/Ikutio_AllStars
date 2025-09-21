@@ -22,6 +22,7 @@ interface BarInfo {
   createdAt: number;
   owner?: string; // オーナー名を追加
   users?: BarUser[]; // ユーザーリストを追加
+  bartender?: BarUser; // バーテンダー情報を追加
 }
 
 export function useWebSocket() {
@@ -95,6 +96,33 @@ export function useWebSocket() {
     }
   }, []);
 
+  // バーテンダー情報を取得するヘルパー関数
+  const getBartenderInfo = useCallback((bar: BarInfo): string => {
+    // 1. 直接ownerフィールドがある場合
+    if (bar.owner) {
+      console.log('バーテンダー情報 (owner):', bar.owner);
+      return bar.owner;
+    }
+    
+    // 2. bartenderフィールドがある場合
+    if (bar.bartender?.username) {
+      console.log('バーテンダー情報 (bartender):', bar.bartender.username);
+      return bar.bartender.username;
+    }
+    
+    // 3. users配列からrole='bartender'のユーザーを探す
+    if (bar.users && bar.users.length > 0) {
+      const bartender = bar.users.find(user => user.role === 'bartender');
+      if (bartender) {
+        console.log('バーテンダー情報 (users配列):', bartender.username);
+        return bartender.username;
+      }
+    }
+    
+    console.warn('バーテンダー情報が見つかりません:', bar);
+    return '不明';
+  }, []);
+
   // メッセージハンドリング
   const handleMessage = useCallback((data: any) => {
     console.log('受信:', data.type, data);
@@ -102,16 +130,24 @@ export function useWebSocket() {
     switch (data.type) {
       case 'joined_bar':
         setCurrentBar(data.barId);
-        setUsers(data.users);
+        setUsers(data.users || []);
         setMessages([]);
         console.log(`BAR ${data.barId} に参加しました`);
         break;
       case 'user_joined':
-        setUsers(prev => [...prev, data.user]);
+        setUsers(prev => {
+          const newUsers = [...prev, data.user];
+          console.log('ユーザー参加後のリスト:', newUsers);
+          return newUsers;
+        });
         console.log(`${data.user.username} が参加しました`);
         break;
       case 'user_left':
-        setUsers(prev => prev.filter(u => u.id !== data.user.id));
+        setUsers(prev => {
+          const newUsers = prev.filter(u => u.id !== data.user.id);
+          console.log('ユーザー退出後のリスト:', newUsers);
+          return newUsers;
+        });
         console.log(`${data.user.username} が退出しました`);
         break;
       case 'chat_message':
@@ -119,12 +155,20 @@ export function useWebSocket() {
         break;
       case 'bar_created':
         setCurrentBar(data.barId);
-        setUsers([]);
+        setUsers(data.users || []);
         setMessages([]);
         console.log(`BAR "${data.title}" を作成しました`);
         break;
       case 'bars_list':
-        setAvailableBars(data.bars);
+        console.log('受信したバーリスト:', data.bars);
+        // バーリストを処理してバーテンダー情報を追加
+        const processedBars = data.bars.map((bar: any) => ({
+          ...bar,
+          // バーテンダー情報を確実に設定
+          owner: bar.owner || (bar.users?.find((u: BarUser) => u.role === 'bartender')?.username) || '不明'
+        }));
+        console.log('処理後のバーリスト:', processedBars);
+        setAvailableBars(processedBars);
         break;
       case 'error':
         console.error('サーバーエラー:', data.error);
@@ -143,7 +187,7 @@ export function useWebSocket() {
         }
         break;
     }
-  }, []);
+  }, [getBartenderInfo]);
 
   // BAR一覧取得
   const getBars = useCallback(() => {
@@ -176,15 +220,19 @@ export function useWebSocket() {
 
     const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
+    const userData = {
+      id: userId,
+      username,
+      role: 'bartender' as const,
+      isMuted: false
+    };
+
+    console.log('バー作成リクエスト:', { title, user: userData });
+
     wsRef.current.send(JSON.stringify({
       type: 'create_bar',
       title,
-      user: {
-        id: userId,
-        username,
-        role: 'bartender',
-        isMuted: false
-      }
+      user: userData
     }));
   }, []);
 
@@ -197,15 +245,19 @@ export function useWebSocket() {
 
     const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
+    const userData = {
+      id: userId,
+      username,
+      role: 'listener' as const,
+      isMuted: false
+    };
+
+    console.log('バー参加リクエスト:', { barId, user: userData });
+
     wsRef.current.send(JSON.stringify({
       type: 'join_bar',
       barId,
-      user: {
-        id: userId,
-        username,
-        role: 'listener',
-        isMuted: false
-      }
+      user: userData
     }));
   }, []);
 
@@ -274,6 +326,7 @@ export function useWebSocket() {
     joinBar,
     sendMessage,
     leaveBar,
-    getBars
+    getBars,
+    getBartenderInfo // バーテンダー情報取得関数をエクスポート
   };
 }
