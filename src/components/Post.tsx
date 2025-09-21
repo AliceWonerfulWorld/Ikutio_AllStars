@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Smile,
   X,
+  Plus, // 🚀 Plusアイコンを追加
 } from "lucide-react";
 // 🔧 共通型定義をインポート
 import { PostComponentType, ReplyType, StanpType } from "@/types/post";
@@ -740,8 +741,8 @@ export default function Post({
               </div>
             )}
 
-            {/* 🚀 リアクションセクション（表示/非表示対応） */}
-            {showReactions && visibleReactions.length > 0 && (
+            {/* 🚀 リアクションセクション（表示/非表示対応） - 条件を調整 */}
+            {showReactions && (
               <div className="mt-3">
                 <div className="bg-gray-900/30 border border-gray-700/30 rounded-xl p-4">
                   {/* リアクションヘッダー */}
@@ -760,8 +761,9 @@ export default function Post({
                     </button>
                   </div>
 
-                  {/* リアクション一覧 */}
+                  {/* リアクション一覧と追加ボタン */}
                   <div className="flex flex-wrap gap-3">
+                    {/* 既存のリアクション */}
                     {visibleReactions.map((url) => {
                       const count = stanpCountMap[url] || 0;
                       const isMine =
@@ -792,8 +794,16 @@ export default function Post({
                         </button>
                       );
                     })}
+                    
+                    {/* 🚀 リアクション追加ボタン（常に表示） */}
+                    <button
+                      onClick={() => setShowStampPicker(!showStampPicker)}
+                      className="flex items-center justify-center w-16 h-16 rounded-xl border-2 border-dashed border-gray-600/60 text-gray-400 hover:border-gray-500/80 hover:text-gray-300 hover:bg-gray-800/30 transition-all duration-300 group"
+                      title="リアクションを追加"
+                    >
+                      <Plus size={24} className="group-hover:scale-110 transition-transform duration-300" />
+                    </button>
                   </div>
-
                 </div>
               </div>
             )}
