@@ -7,6 +7,7 @@ import {
   Share,
   MoreHorizontal,
   Smile,
+  X,
 } from "lucide-react";
 // 🔧 共通型定義をインポート
 import { PostComponentType, ReplyType, StanpType } from "@/types/post";
@@ -43,6 +44,7 @@ export default function Post({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false); // 🚀 全リプライ表示制御
+  const [showReactions, setShowReactions] = useState(true); // 🚀 リアクション表示制御
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [showStampPicker, setShowStampPicker] = useState(false);
@@ -194,7 +196,7 @@ export default function Post({
           ...prev,
           { 
             id: `temp-${Date.now()}`, 
-            post_id: post.id, 
+            post_id: Number(post.id), // 🔧 string を number に変換
             user_id: currentUserId, 
             stanp_url 
           }
@@ -269,8 +271,12 @@ export default function Post({
     : localReplies.slice(0, INITIAL_REPLY_COUNT);
   const hiddenRepliesCount = Math.max(0, localReplies.length - INITIAL_REPLY_COUNT);
 
+  // リアクション数を計算
+  const totalReactions = Object.values(stanpCountMap).reduce((sum, count) => sum + count, 0);
+  const visibleReactions = stampList.filter((url) => (stanpCountMap[url] || 0) > 0);
+
   return (
-    <div className="p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800">
+    <div className="p-4 hover:bg-gray-950/50 transition-colors border-b border-gray-800/50">
       <div className="flex space-x-3">
         {/* アバター */}
         {post.user_icon_url ? (
@@ -371,6 +377,7 @@ export default function Post({
 
           {/* アクションボタン */}
           <div className="flex items-center justify-between max-w-md">
+            {/* リプライボタン */}
             <button
               className={`flex items-center space-x-2 transition-colors group ${
                 showReplies ? "text-blue-400" : "text-gray-500 hover:text-blue-400"
@@ -393,38 +400,61 @@ export default function Post({
               }`}>
                 <MessageCircle size={20} />
               </div>
-              <span className="text-sm">{repliesCount}</span>
+              <span className="text-sm font-medium">
+                {localReplies.length > 0 ? localReplies.length : ""}
+              </span>
             </button>
 
+            {/* いいねボタン */}
             <button
               onClick={onLike}
               className={`flex items-center space-x-2 transition-colors group ${
-                liked ? "text-pink-500" : "text-gray-500 hover:text-pink-500"
+                liked ? "text-red-400" : "text-gray-500 hover:text-red-400"
               }`}
             >
-              <div
-                className={`p-2 rounded-full transition-colors ${
-                  liked ? "bg-pink-500/10" : "group-hover:bg-pink-500/10"
-                }`}
-              >
+              <div className={`p-2 rounded-full transition-colors ${
+                liked ? "bg-red-500/10" : "group-hover:bg-red-500/10"
+              }`}>
                 <Heart size={20} fill={liked ? "currentColor" : "none"} />
               </div>
-              <span className="text-sm">{post.likes ?? 0}</span>
+              <span className="text-sm font-medium">{post.likes > 0 ? post.likes : ""}</span>
             </button>
 
+            {/* 🚀 リアクションボタン（表示/非表示切り替え） */}
+            <button
+              className={`flex items-center space-x-2 transition-colors group ${
+                showReactions && totalReactions > 0 ? "text-yellow-400" : "text-gray-500 hover:text-yellow-400"
+              }`}
+              onClick={() => {
+                if (totalReactions > 0) {
+                  setShowReactions(!showReactions);
+                } else {
+                  setShowStampPicker(!showStampPicker);
+                }
+              }}
+            >
+              <div className={`p-2 rounded-full transition-colors ${
+                showReactions && totalReactions > 0 ? "bg-yellow-500/10" : "group-hover:bg-yellow-500/10"
+              }`}>
+                <Smile size={20} />
+              </div>
+              <span className="text-sm font-medium">
+                {totalReactions > 0 ? totalReactions : ""}
+              </span>
+            </button>
+
+            {/* ブックマークボタン */}
             <button
               onClick={onBookmark}
               className={`flex items-center space-x-2 transition-colors group ${
                 bookmarked
-                  ? "text-green-400"
-                  : "text-gray-500 hover:text-green-400"
+                  ? "text-blue-400"
+                  : "text-gray-500 hover:text-blue-400"
               }`}
             >
-              <div
-                className={`p-2 rounded-full transition-colors ${
-                  bookmarked ? "bg-green-500/10" : "group-hover:bg-green-500/10"
-                }`}
-              >
+              <div className={`p-2 rounded-full transition-colors ${
+                bookmarked ? "bg-blue-500/10" : "group-hover:bg-blue-500/10"
+              }`}>
                 <Bookmark
                   size={20}
                   fill={bookmarked ? "currentColor" : "none"}
@@ -432,350 +462,382 @@ export default function Post({
               </div>
             </button>
 
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-400 transition-colors group">
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+            {/* その他ボタン */}
+            <button className="flex items-center space-x-2 text-gray-500 hover:text-gray-300 transition-colors group">
+              <div className="p-2 rounded-full group-hover:bg-gray-500/10 transition-colors">
                 <Share size={20} />
               </div>
             </button>
           </div>
 
           {/* 🚀 改善されたインタラクションエリア */}
-<div className="mt-3">
-  {/* 🚀 折りたたみ可能なリプライセクション */}
-  {localReplies.length > 0 && showReplies && (
-    <div className="bg-gray-900/30 border border-gray-700/30 rounded-xl p-4 mb-3">
-      {/* リプライヘッダー */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <MessageCircle size={16} className="text-blue-400" />
-          <span className="text-sm text-gray-300 font-medium">
-            リプライ ({localReplies.length})
-          </span>
-        </div>
-        <button
-          onClick={() => setShowReplies(false)}
-          className="text-gray-400 hover:text-white transition-colors"
-        >
-          ×
-        </button>
-      </div>
-
-      {/* スクロール可能なリプライリスト */}
-      <div className="max-h-60 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-        {displayedReplies.map((reply) => {
-          const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
-          
-          return (
-            <div key={reply.id} className="flex items-start gap-3">
-              <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {reply.username?.charAt(0) ?? "?"}
+          <div className="mt-3">
+            {/* 🚀 リプライがない場合の入力欄表示 */}
+            {localReplies.length === 0 && showReplyInput && (
+              <div className="bg-gray-900/30 border border-gray-700/30 rounded-xl p-4 mb-3">
+                <div className="flex items-center space-x-2 mb-3">
+                  <MessageCircle size={16} className="text-blue-400" />
+                  <span className="text-sm text-gray-300 font-medium">リプライを追加</span>
+                </div>
+                
+                <form
+                  className="flex items-center gap-3 bg-gray-800/40 border border-blue-400/50 rounded-lg p-3 shadow-lg shadow-blue-500/10"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleReply();
+                  }}
+                >
+                  <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {currentUserName?.charAt(0) ?? "U"}
+                  </div>
+                  <input
+                    ref={replyInputRef}
+                    type="text"
+                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 text-sm"
+                    placeholder="リプライを入力..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    disabled={replyLoading}
+                    maxLength={200}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowReplyInput(false);
+                        setReplyText("");
+                      }}
+                      className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded transition-colors"
+                      disabled={replyLoading}
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold disabled:bg-gray-600 transition-all duration-300 flex-shrink-0"
+                      disabled={replyLoading || !replyText.trim()}
+                    >
+                      {replyLoading ? "送信中" : "送信"}
+                    </button>
+                  </div>
+                </form>
               </div>
-              <div className={`bg-gray-800/50 rounded-lg px-3 py-2 text-sm text-white flex-1 ${
-                isTempReply ? 'opacity-75' : ''
-              }`}>
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="font-semibold text-xs text-blue-300">
-                    {reply.username ?? "User"}
-                  </span>
-                  <span className="text-gray-400 text-xs">
-                    {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  {isTempReply && (
-                    <span className="text-yellow-400 text-xs">送信中...</span>
+            )}
+
+            {/* 🚀 折りたたみ可能なリプライセクション */}
+            {localReplies.length > 0 && showReplies && (
+              <div className="bg-gray-900/30 border border-gray-700/30 rounded-xl p-4 mb-3">
+                {/* リプライヘッダー */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <MessageCircle size={16} className="text-blue-400" />
+                    <span className="text-sm text-gray-300 font-medium">
+                      リプライ ({localReplies.length})
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowReplies(false)}
+                    className="text-gray-400 hover:text-white transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* スクロール可能なリプライリスト */}
+                <div className="max-h-60 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                  {displayedReplies.map((reply) => {
+                    const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
+                    
+                    return (
+                      <div key={reply.id} className="flex items-start gap-3">
+                        <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {reply.username?.charAt(0) ?? "?"}
+                        </div>
+                        <div className={`bg-gray-800/50 rounded-lg px-3 py-2 text-sm text-white flex-1 ${
+                          isTempReply ? 'opacity-75' : ''
+                        }`}>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-semibold text-xs text-blue-300">
+                              {reply.username ?? "User"}
+                            </span>
+                            <span className="text-gray-400 text-xs">
+                              {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {isTempReply && (
+                              <span className="text-yellow-400 text-xs">送信中...</span>
+                            )}
+                          </div>
+                          <div className="text-gray-200 text-sm leading-relaxed">
+                            {reply.text}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* +○件ボタン */}
+                {hiddenRepliesCount > 0 && !showAllReplies && (
+                  <button
+                    onClick={() => setShowAllReplies(true)}
+                    className="mt-3 w-full text-center py-2 text-blue-400 hover:text-blue-300 text-sm transition-colors hover:bg-blue-500/5 rounded-lg border border-blue-400/20"
+                  >
+                    +{hiddenRepliesCount}件のリプライを表示
+                  </button>
+                )}
+
+                {/* 折りたたむボタン */}
+                {showAllReplies && hiddenRepliesCount > 0 && (
+                  <button
+                    onClick={() => setShowAllReplies(false)}
+                    className="mt-3 w-full text-center py-2 text-gray-400 hover:text-gray-300 text-sm transition-colors hover:bg-gray-500/5 rounded-lg border border-gray-600/20"
+                  >
+                    リプライを折りたたむ
+                  </button>
+                )}
+
+                {/* 🚀 動的なリプライ追加ボタン/入力欄 */}
+                <div className="mt-4 pt-3 border-t border-gray-700/30">
+                  {!showReplyInput ? (
+                    // 🚀 リプライ追加ボタン
+                    <button
+                      onClick={() => {
+                        setShowReplyInput(true);
+                        setTimeout(() => replyInputRef.current?.focus(), 100);
+                      }}
+                      className="flex items-center justify-center space-x-2 w-full py-3 text-blue-400 hover:text-blue-300 text-sm transition-all duration-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/10 group transform hover:scale-105"
+                    >
+                      <MessageCircle size={16} className="group-hover:rotate-12 transition-transform" />
+                      <span>リプライを追加</span>
+                    </button>
+                  ) : (
+                    // 🚀 リプライ入力欄（ボタンが変化）
+                    <form
+                      className="flex items-center gap-3 bg-gray-800/40 border border-blue-400/50 rounded-lg p-3 shadow-lg shadow-blue-500/10"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleReply();
+                      }}
+                    >
+                      <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {currentUserName?.charAt(0) ?? "U"}
+                      </div>
+                      <input
+                        ref={replyInputRef}
+                        type="text"
+                        className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 text-sm"
+                        placeholder="リプライを入力..."
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        disabled={replyLoading}
+                        maxLength={200}
+                      />
+                      <div className="flex items-center space-x-2">
+                        {/* キャンセルボタン */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReplyInput(false);
+                            setReplyText("");
+                          }}
+                          className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded transition-colors"
+                          disabled={replyLoading}
+                        >
+                          キャンセル
+                        </button>
+                        {/* 送信ボタン */}
+                        <button
+                          type="submit"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold disabled:bg-gray-600 transition-all duration-300 flex-shrink-0"
+                          disabled={replyLoading || !replyText.trim()}
+                        >
+                          {replyLoading ? "送信中" : "送信"}
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </div>
-                <div className="text-gray-200 text-sm leading-relaxed">
-                  {reply.text}
+              </div>
+            )}
+
+            {/* 🚀 リアクションセクション（表示/非表示対応） */}
+            {showReactions && visibleReactions.length > 0 && (
+              <div className="mt-3">
+                <div className="bg-gray-900/30 border border-gray-700/30 rounded-xl p-4">
+                  {/* リアクションヘッダー */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <Smile size={16} className="text-yellow-400" />
+                      <span className="text-sm text-gray-300 font-medium">
+                        リアクション ({totalReactions})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowReactions(false)}
+                      className="text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* リアクション一覧 */}
+                  <div className="flex flex-wrap gap-3">
+                    {visibleReactions.map((url) => {
+                      const count = stanpCountMap[url] || 0;
+                      const isMine =
+                        !!currentUserId &&
+                        localStanps.some(
+                          (s) => s.user_id === currentUserId && s.stanp_url === url
+                        );
+                      
+                      return (
+                        <button
+                          key={url}
+                          className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 text-base border-2 ${
+                            isMine
+                              ? "bg-blue-500/20 border-blue-400/60 text-blue-300 shadow-lg shadow-blue-500/20"
+                              : "bg-gray-800/50 border-gray-600/40 text-gray-300 hover:bg-gray-700/50 hover:border-gray-500/60"
+                          } ${loading ? 'opacity-50' : 'hover:scale-110 hover:shadow-lg'}`}
+                          onClick={() => handleAddStanp(url)}
+                          disabled={loading}
+                        >
+                          <img
+                            src={getImageUrl(url)}
+                            alt="stamp"
+                            className="w-10 h-10 object-contain"
+                          />
+                          <span className="font-bold text-base min-w-[20px] text-center">
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* リアクション追加ボタン */}
+                  <div className="mt-3 pt-3 border-t border-gray-700/30">
+                    <button
+                      className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-600/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40 hover:border-gray-500/50 transition-all duration-300 text-sm"
+                      onClick={() => setShowStampPicker(!showStampPicker)}
+                      disabled={loading}
+                    >
+                      <Smile size={16} />
+                      <span>リアクションを追加</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            )}
 
-      {/* +○件ボタン */}
-      {hiddenRepliesCount > 0 && !showAllReplies && (
-        <button
-          onClick={() => setShowAllReplies(true)}
-          className="mt-3 w-full text-center py-2 text-blue-400 hover:text-blue-300 text-sm transition-colors hover:bg-blue-500/5 rounded-lg border border-blue-400/20"
-        >
-          +{hiddenRepliesCount}件のリプライを表示
-        </button>
-      )}
-
-      {/* 折りたたむボタン */}
-      {showAllReplies && hiddenRepliesCount > 0 && (
-        <button
-          onClick={() => setShowAllReplies(false)}
-          className="mt-3 w-full text-center py-2 text-gray-400 hover:text-gray-300 text-sm transition-colors hover:bg-gray-500/5 rounded-lg border border-gray-600/20"
-        >
-          リプライを折りたたむ
-        </button>
-      )}
-
-      {/* 🚀 動的なリプライ追加ボタン/入力欄 */}
-      <div className="mt-4 pt-3 border-t border-gray-700/30">
-        {!showReplyInput ? (
-          // 🚀 リプライ追加ボタン
-          <button
-            onClick={() => {
-              setShowReplyInput(true);
-              setTimeout(() => replyInputRef.current?.focus(), 100);
-            }}
-            className="flex items-center justify-center space-x-2 w-full py-3 text-blue-400 hover:text-blue-300 text-sm transition-all duration-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/10 group transform hover:scale-105"
-          >
-            <MessageCircle size={16} className="group-hover:rotate-12 transition-transform" />
-            <span>リプライを追加</span>
-          </button>
-        ) : (
-          // 🚀 リプライ入力欄（ボタンが変化）
-          <form
-            className="flex items-center gap-3 bg-gray-800/40 border border-blue-400/50 rounded-lg p-3 shadow-lg shadow-blue-500/10"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleReply();
-            }}
-          >
-            <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {currentUserName?.charAt(0) ?? "U"}
-            </div>
-            <input
-              ref={replyInputRef}
-              type="text"
-              className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 text-sm"
-              placeholder="リプライを入力..."
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              disabled={replyLoading}
-              maxLength={200}
-            />
-            <div className="flex items-center space-x-2">
-              {/* キャンセルボタン */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReplyInput(false);
-                  setReplyText("");
-                }}
-                className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded transition-colors"
-                disabled={replyLoading}
-              >
-                キャンセル
-              </button>
-              {/* 送信ボタン */}
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold disabled:bg-gray-600 transition-all duration-300 flex-shrink-0"
-                disabled={replyLoading || !replyText.trim()}
-              >
-                {replyLoading ? "送信中" : "送信"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  )}
-
-  {/* 🚀 スタンプセクション（大きくて見やすい版） */}
-  {(!showReplies || localReplies.length === 0) && (
-    <div className="flex items-center justify-between">
-      {/* 既存スタンプ表示（大きなサイズ） */}
-      <div className="flex flex-wrap gap-3">
-        {stampList
-          .filter((url) => (stanpCountMap[url] || 0) > 0)
-          .map((url) => {
-            const count = stanpCountMap[url] || 0;
-            const isMine =
-              !!currentUserId &&
-              localStanps.some(
-                (s) => s.user_id === currentUserId && s.stanp_url === url
-              );
-            
-            return (
-              <button
-                key={url}
-                className={`group flex items-center space-x-2 px-3 py-2.5 rounded-xl transition-all duration-300 text-sm border-2 ${
-                  isMine
-                    ? "bg-blue-500/20 border-blue-400/60 text-blue-300 shadow-lg shadow-blue-500/20"
-                    : "bg-gray-800/50 border-gray-600/40 text-gray-300 hover:bg-gray-700/50 hover:border-gray-500/60"
-                } ${loading ? 'opacity-50' : 'hover:scale-110 hover:shadow-lg'}`}
-                onClick={() => handleAddStanp(url)}
-                disabled={loading}
-              >
-                <img
-                  src={getImageUrl(url)}
-                  alt="stamp"
-                  className="w-7 h-7 object-contain" // 🚀 サイズを大きく（w-4 h-4 → w-7 h-7）
-                />
-                <span className="font-bold text-sm"> {/* 🚀 フォントも大きく */}
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-      </div>
-      
-      {/* リアクション追加ボタン（大きめ） */}
-      <button
-        className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gray-800/40 border-2 border-gray-600/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40 hover:border-gray-500/50 transition-all duration-300 hover:scale-105 text-sm ml-3"
-        onClick={() => setShowStampPicker(!showStampPicker)}
-        disabled={loading}
-      >
-        <Smile size={16} /> {/* 🚀 アイコンも大きく */}
-        <span>リアクション</span>
-      </button>
-    </div>
-  )}
-
-  {/* 🚀 リプライがない場合の入力欄 */}
-  {localReplies.length === 0 && showReplyInput && (
-    <div className="bg-gray-900/40 border border-gray-700/30 rounded-xl p-3 mt-3">
-      <form
-        className="flex items-center gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleReply();
-        }}
-      >
-        <div className="w-7 h-7 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-          {currentUserName?.charAt(0) ?? "U"}
-        </div>
-        <input
-          ref={replyInputRef}
-          type="text"
-          className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 text-sm"
-          placeholder="最初のリプライを入力..."
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-          disabled={replyLoading}
-          maxLength={200}
-        />
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => {
-              setShowReplyInput(false);
-              setReplyText("");
-            }}
-            className="text-gray-400 hover:text-white text-xs px-2 py-1 rounded transition-colors"
-            disabled={replyLoading}
-          >
-            キャンセル
-          </button>
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold disabled:bg-gray-600 transition-all duration-300 flex-shrink-0"
-            disabled={replyLoading || !replyText.trim()}
-          >
-            {replyLoading ? "送信中" : "送信"}
-          </button>
-        </div>
-      </form>
-    </div>
-  )}
-</div>
-
-{/* 🚀 改善されたスタンプピッカー（モーダル風） */}
-{showStampPicker && (
-  <>
-    {/* 背景オーバーレイ */}
-    <div 
-      className="fixed inset-0 bg-black/50 z-30"
-      onClick={() => setShowStampPicker(false)}
-    />
-    
-    {/* ピッカー本体 */}
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900/95 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-2xl p-6 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto z-40">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Smile size={20} className="text-yellow-400" />
-          <span className="text-white font-bold text-lg">リアクションを選択</span>
-        </div>
-        <button
-          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-full hover:bg-gray-700/50 transition-all"
-          onClick={() => setShowStampPicker(false)}
-        >
-          ×
-        </button>
-      </div>
-
-      {/* スタンプグリッド */}
-      <div className="grid grid-cols-5 gap-4 mb-6"> {/* gap-2 → gap-4 */}
-        {stampList.map((url) => {
-          const count = stanpCountMap[url] || 0;
-          const isMine = !!currentUserId && localStanps.some(
-            (s) => s.user_id === currentUserId && s.stanp_url === url
-          );
-          
-          return (
-            <button
-              key={url}
-              className={`relative w-16 h-16 flex items-center justify-center rounded-xl transition-all duration-300 ${
-                isMine
-                  ? "bg-blue-500/20 border-2 border-blue-400/50 shadow-lg"
-                  : "bg-gray-800/40 border border-gray-600/30 hover:bg-gray-700/40"
-              } ${loading ? 'opacity-50' : 'hover:scale-110'}`}
-              onClick={() => handleAddStanp(url)}
-              disabled={loading}
-            >
-              <img
-                src={getImageUrl(url)}
-                alt="stamp"
-                className="w-12 h-12 object-contain" // 🚀 ピッカー内でも大きく（w-8 h-8 → w-12 h-12）
-              />
-              {count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center font-bold"> {/* 🚀 カウント表示も大きく */}
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 使用中スタンプ（コンパクト表示） */}
-      {Object.keys(stanpCountMap).filter(url => stanpCountMap[url] > 0).length > 0 && (
-        <div className="border-t border-gray-700/50 pt-4">
-          <div className="text-sm text-gray-400 mb-3">この投稿のリアクション</div>
-          <div className="flex flex-wrap gap-2">
-            {stampList
-              .filter((url) => (stanpCountMap[url] || 0) > 0)
-              .map((url) => (
-                <div
-                  key={url}
-                  className="flex items-center space-x-1.5 bg-gray-800/60 rounded-full px-3 py-1.5"
+            {/* 🚀 リアクションがない場合の追加ボタン */}
+            {!showReactions && totalReactions === 0 && (
+              <div className="mt-3">
+                <button
+                  className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-gray-800/40 border border-gray-600/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40 hover:border-gray-500/50 transition-all duration-300 text-sm"
+                  onClick={() => setShowStampPicker(!showStampPicker)}
+                  disabled={loading}
                 >
-                  <img
-                    src={getImageUrl(url)}
-                    alt="used-stamp"
-                    className="w-4 h-4 object-contain"
-                  />
-                  <span className="text-xs text-white font-medium">
-                    {stanpCountMap[url]}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
-  </>
-)}
+                  <Smile size={16} />
+                  <span>リアクションを追加</span>
+                </button>
+              </div>
+            )}
 
-          {/* 🗑️ 古いリプライ・スタンプ表示を削除 */}
-          {/* 
-以下のセクションがあれば削除してください：
-- リプライ一覧
-- スタンプ（リアクション）エリア  
-- 重複したスタンプピッカー
-*/}
+            {/* 🚀 改善されたスタンプピッカー（モーダル風） */}
+            {showStampPicker && (
+              <>
+                {/* 背景オーバーレイ */}
+                <div 
+                  className="fixed inset-0 bg-black/50 z-30"
+                  onClick={() => setShowStampPicker(false)}
+                />
+                
+                {/* ピッカー本体 */}
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900/95 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-2xl p-6 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto z-40">
+                  {/* ヘッダー */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                      <Smile size={20} className="text-yellow-400" />
+                      <span className="text-white font-bold text-lg">リアクションを選択</span>
+                    </div>
+                    <button
+                      className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-full hover:bg-gray-700/50 transition-all"
+                      onClick={() => setShowStampPicker(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* スタンプグリッド */}
+                  <div className="grid grid-cols-5 gap-4 mb-6"> {/* gap-2 → gap-4 */}
+                    {stampList.map((url) => {
+                      const count = stanpCountMap[url] || 0;
+                      const isMine = !!currentUserId && localStanps.some(
+                        (s) => s.user_id === currentUserId && s.stanp_url === url
+                      );
+                      
+                      return (
+                        <button
+                          key={url}
+                          className={`relative w-16 h-16 flex items-center justify-center rounded-xl transition-all duration-300 ${
+                            isMine
+                              ? "bg-blue-500/20 border-2 border-blue-400/50 shadow-lg"
+                              : "bg-gray-800/40 border border-gray-600/30 hover:bg-gray-700/40"
+                          } ${loading ? 'opacity-50' : 'hover:scale-110'}`}
+                          onClick={() => handleAddStanp(url)}
+                          disabled={loading}
+                        >
+                          <img
+                            src={getImageUrl(url)}
+                            alt="stamp"
+                            className="w-12 h-12 object-contain" // 🚀 ピッカー内でも大きく（w-8 h-8 → w-12 h-12）
+                          />
+                          {count > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center font-bold"> {/* 🚀 カウント表示も大きく */}
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 使用中スタンプ（コンパクト表示） */}
+                  {Object.keys(stanpCountMap).filter(url => stanpCountMap[url] > 0).length > 0 && (
+                    <div className="border-t border-gray-700/50 pt-4">
+                      <div className="text-sm text-gray-400 mb-3">この投稿のリアクション</div>
+                      <div className="flex flex-wrap gap-2">
+                        {stampList
+                          .filter((url) => (stanpCountMap[url] || 0) > 0)
+                          .map((url) => (
+                            <div
+                              key={url}
+                              className="flex items-center space-x-1.5 bg-gray-800/60 rounded-full px-3 py-1.5"
+                            >
+                              <img
+                                src={getImageUrl(url)}
+                                alt="used-stamp"
+                                className="w-4 h-4 object-contain"
+                              />
+                              <span className="text-xs text-white font-medium">
+                                {stanpCountMap[url]}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+

@@ -10,7 +10,7 @@ export type ReplyType = {
 
 export type StanpType = {
   id: string;
-  post_id: string;
+  post_id: number; // string → number に変更
   user_id: string;
   stanp_url: string;
 };
