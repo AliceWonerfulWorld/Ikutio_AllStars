@@ -270,7 +270,17 @@ export default function Home() {
       const todosWithStatus = await Promise.all(
         (todosData ?? []).map(async (todo: any) => {
           if (!isValidUserId(userId)) {
-            return { ...todo, liked: false, bookmarked: false };
+            // ユーザー情報を含めて投稿データを作成
+            const userInfo = userMap[todo.user_id] || {};
+            return { 
+              ...todo, 
+              liked: false, 
+              bookmarked: false,
+              user_icon_url: userInfo.iconUrl,
+              displayName: userInfo.displayName,
+              setID: userInfo.setID,
+              username: userInfo.username || "User"
+            };
           }
           try {
             const postIdNum = Number(todo.id);
@@ -288,14 +298,30 @@ export default function Home() {
                 .eq("user_id", userId as string)
                 .maybeSingle(),
             ]);
+            
+            // ユーザー情報を含めて投稿データを作成
+            const userInfo = userMap[todo.user_id] || {};
             return {
               ...todo,
               liked: likeData?.on === true,
               bookmarked: bookmarkData?.on === true,
+              user_icon_url: userInfo.iconUrl,
+              displayName: userInfo.displayName,
+              setID: userInfo.setID,
+              username: userInfo.username || "User"
             };
           } catch (e) {
             console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
-            return { ...todo, liked: false, bookmarked: false };
+            const userInfo = userMap[todo.user_id] || {};
+            return { 
+              ...todo, 
+              liked: false, 
+              bookmarked: false,
+              user_icon_url: userInfo.iconUrl,
+              displayName: userInfo.displayName,
+              setID: userInfo.setID,
+              username: userInfo.username || "User"
+            };
           }
         })
       );

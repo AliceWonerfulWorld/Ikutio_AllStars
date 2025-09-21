@@ -265,6 +265,17 @@ export default function Post({
     return `${R2_PUBLIC_URL}${trimmed}`;
   };
 
+  // R2画像URL変換関数（ユーザーアイコン用）
+  const getPublicIconUrl = (iconUrl?: string) => {
+    if (!iconUrl) return "";
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `${R2_PUBLIC_URL}${filename}`;
+    }
+    return iconUrl;
+  };
+
   return (
     <div className="p-4 hover:bg-gray-900/50 transition-colors border-b border-gray-800">
       <div className="flex space-x-3">
@@ -272,14 +283,24 @@ export default function Post({
         {post.user_icon_url ? (
           <a href={`/profile/${post.user_id}`}>
             <img
-              src={post.user_icon_url}
+              src={getPublicIconUrl(post.user_icon_url)}
               alt="icon"
               className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80"
               referrerPolicy="no-referrer"
               onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
+                // 画像読み込みに失敗した場合はデフォルトアイコンを表示
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = parent.querySelector('.fallback-avatar') as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }
               }}
             />
+            {/* フォールバックアイコン */}
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold cursor-pointer hover:opacity-80 fallback-avatar" style={{ display: 'none' }}>
+              {post.displayName?.charAt(0) ?? post.username?.charAt(0) ?? "?"}
+            </div>
           </a>
         ) : (
           <a href={`/profile/${post.user_id}`}>
