@@ -6,7 +6,8 @@ import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import { supabase } from "@/utils/supabase/client";
-import { Post as PostType } from "@/types";
+// 🔧 共通型定義をインポート
+import { PostType } from "@/types/post";
 
 export default function BookmarksPage() {
   const [posts, setPosts] = useState<PostType[]>([]);
@@ -315,13 +316,28 @@ export default function BookmarksPage() {
                 <Post
                   key={post.id}
                   post={{
-                    ...post,
+                    id: post.id,
+                    user_id: post.user_id,
+                    username: post.username,
+                    title: post.title,
+                    created_at: post.created_at,
+                    tags: post.tags || [],
+                    replies: [], // 🔧 空配列で初期化
+                    likes: post.likes,
                     bookmarked: post.bookmarked ?? false,
+                    image_url: post.image_url,
+                    user_icon_url: post.user_icon_url,
+                    displayName: post.displayName,
+                    setID: post.setID,
+                    stamps: [] // 🔧 空配列で初期化
                   }}
                   liked={post.liked === true}
                   bookmarked={post.bookmarked === true}
                   onLike={() => handleLike(post.id)}
                   onBookmark={() => handleBookmark(post.id)}
+                  stampList={[]}
+                  currentUserId={userId || undefined} // 🔧 null を undefined に変換
+                  currentUserName={userId ? "User" : "User"}
                 />
               ))
             )}

@@ -11,6 +11,8 @@ import { supabase } from "@/utils/supabase/client";
 import PWAInstaller from "@/components/PWAInstaller";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { useAuth } from "@/contexts/AuthContext";
+// 🔧 共通型定義をインポート
+import { PostType, ReplyType, StanpType } from "@/types/post";
 
 // 砂時計アイコン（Lucide ReactのSVGをインラインで利用）
 function HourglassIcon({ className = "w-5 h-5 text-yellow-400 mr-1" }) {
@@ -47,43 +49,10 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-// 🔧 修正された型定義
-type ReplyType = {
-  id: string;
-  post_id: number;
-  user_id: string;
-  text: string;
-  created_at: string;
-  username?: string;
-};
-
-type StanpType = {
-  id: string;
-  post_id: string;
-  user_id: string;
-  stanp_url: string;
-};
-
-type PostType = {
-  id: string;
-  user_id: string;
-  username: string;
-  title: string;
-  created_at: string;
-  tags: string[];
-  replies_count: number; // 🔧 リプライ数用
-  likes: number;
-  bookmarked: boolean;
-  image_url?: string;
-  iconUrl?: string;
-  displayName?: string;
-  setID?: string;
-  liked?: boolean;
-  user_icon_url?: string;
-  // 🚀 事前取得データ
-  replies_data?: ReplyType[]; // 🔧 リプライデータ用
-  stamps_data?: StanpType[];  // 🔧 スタンプデータ用
-};
+// 🗑️ ローカルの型定義を削除（インポートした型を使用）
+// type ReplyType = { ... } ← 削除
+// type StanpType = { ... } ← 削除  
+// type PostType = { ... } ← 削除
 
 // R2のパブリック開発URL
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
@@ -110,7 +79,7 @@ export default function Home() {
   >({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 🔧 統一されたR2画像URL変換関数
+  // R2画像URL変換関数をメモ化
   const getPublicIconUrl = useCallback((iconUrl?: string) => {
     if (!iconUrl) return "";
     if (iconUrl.includes("cloudflarestorage.com")) {
@@ -301,7 +270,7 @@ export default function Home() {
           displayName: userInfo.displayName,
           setID: userInfo.setID,
           username: userInfo.username || "User",
-          replies_count: todo.replies || 0, // 🔧 名前を修正
+          replies: todo.replies || 0, // 🔧 数値として保持
           // 🚀 リプライとスタンプを事前に含める
           replies_data: repliesMap.get(postIdNum) || [],
           stamps_data: stampsMap.get(postIdNum) || []
@@ -756,7 +725,7 @@ export default function Home() {
                         onLike={() => handleLike(todo.id)}
                         onBookmark={() => handleBookmark(todo.id)}
                         stampList={stampList}
-                        currentUserId={user?.id}
+                        currentUserId={user?.id || undefined} // 🔧 null を undefined に変換（または型定義を修正）
                         currentUserName={
                           user?.user_metadata?.displayName || 
                           user?.user_metadata?.username || 

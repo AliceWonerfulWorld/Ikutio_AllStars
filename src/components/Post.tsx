@@ -8,49 +8,17 @@ import {
   MoreHorizontal,
   Smile,
 } from "lucide-react";
-
-// 🔧 修正された型定義
-type ReplyType = {
-  id: string;
-  post_id: number;
-  user_id: string;
-  text: string;
-  created_at: string;
-  username?: string;
-};
-
-type StanpType = {
-  id: string;
-  post_id: string;
-  user_id: string;
-  stanp_url: string;
-};
-
-type PostType = {
-  id: string;
-  user_id: string;
-  username: string;
-  title: string;
-  created_at: string;
-  tags: string[];
-  replies: ReplyType[]; // 🔧 配列データのみ
-  likes: number;
-  bookmarked: boolean;
-  image_url?: string;
-  user_icon_url?: string;
-  displayName?: string;
-  setID?: string;
-  stamps?: StanpType[];
-};
+// 🔧 共通型定義をインポート
+import { PostComponentType, ReplyType, StanpType } from "@/types/post";
 
 type PostProps = {
-  post: PostType;
+  post: PostComponentType; // 🔧 専用の型を使用
   liked: boolean;
   bookmarked: boolean;
   onLike: () => void;
   onBookmark: () => void;
   stampList?: string[];
-  currentUserId?: string;
+  currentUserId?: string | null; // 🔧 null も許可
   onRefresh?: () => void;
   currentUserName?: string;
 };
@@ -198,6 +166,7 @@ export default function Post({
 
   // 🔧 修正されたスタンプ追加・取り消し
   const handleAddStanp = async (stanp_url: string) => {
+    // 🔧 null チェックを追加
     if (!currentUserId) {
       alert("ログインが必要です");
       return;
@@ -523,7 +492,7 @@ export default function Post({
               .filter((url) => stanpCountMap[url])
               .map((url) => {
                 const isMine =
-                  !!currentUserId &&
+                  !!currentUserId && // 🔧 null チェック
                   localStanps.some(
                     (s) => s.user_id === currentUserId && s.stanp_url === url
                   );
