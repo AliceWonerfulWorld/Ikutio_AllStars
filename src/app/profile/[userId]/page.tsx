@@ -183,10 +183,17 @@ export default function UserProfilePage() {
     setIsFollowing(false);
   };
 
-  // バナー画像アップロード処理（この関数は実際には個別ユーザーページでは不要）
+  // バナー画像アップロード処理
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // 🔒 権限チェック: 自分のプロフィールの場合のみ許可
+    if (!currentUserId || currentUserId !== userId) {
+      alert("自分のプロフィールのみ編集できます");
+      return;
+    }
+    
     if (!file.type.startsWith("image/")) {
       alert("画像ファイルのみアップロードできます");
       return;
@@ -195,49 +202,79 @@ export default function UserProfilePage() {
       alert("画像サイズは10MB以下にしてください");
       return;
     }
+    
     setBannerUploading(true);
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id;
-    if (!userId) {
-      alert("ユーザーIDが取得できませんでした");
-      setBannerUploading(false);
-      return;
-    }
-    let fileExt = file.name.split(".").pop();
-    if (!fileExt) fileExt = "png";
-    const fileName = `banner_${userId}_${Date.now()}.${fileExt}`;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64, fileName }),
-      });
-      if (!res.ok) {
-        alert("バナー画像アップロード失敗");
+    
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const authUserId = authData?.user?.id;
+      
+      // 🔒 追加の権限チェック: 認証されたユーザーIDと一致するか確認
+      if (!authUserId || authUserId !== userId) {
+        alert("権限がありません");
         setBannerUploading(false);
         return;
       }
-      const { imageUrl } = await res.json();
-      await supabase
-        .from("usels")
-        .update({ banner_url: imageUrl })
-        .eq("user_id", userId);
+      
+      let fileExt = file.name.split(".").pop();
+      if (!fileExt) fileExt = "png";
+      const fileName = `banner_${authUserId}_${Date.now()}.${fileExt}`;
 
-      // 型安全な更新
-      setProfile((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          banner_url: imageUrl,
-        };
-      });
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(",")[1];
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ file: base64, fileName }),
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("Upload error:", errorText);
+            alert("バナー画像アップロード失敗");
+            return;
+          }
+          
+          const { imageUrl } = await res.json();
+          
+          // 🔒 データベース更新時も権限チェック
+          const { error } = await supabase
+            .from("usels")
+            .update({ banner_url: imageUrl })
+            .eq("user_id", authUserId); // 認証されたユーザーIDを使用
+
+          if (error) {
+            console.error("Database update error:", error);
+            alert("バナー画像の保存に失敗しました");
+            return;
+          }
+
+          // 型安全な更新
+          setProfile((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              banner_url: imageUrl,
+            };
+          });
+          
+          alert("バナー画像が更新されました！");
+        } catch (error) {
+          console.error("Banner upload error:", error);
+          alert("バナー画像のアップロードに失敗しました");
+        } finally {
+          setBannerUploading(false);
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      alert("予期しないエラーが発生しました");
       setBannerUploading(false);
-      alert("バナー画像が更新されました！");
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   if (loading) {
@@ -325,23 +362,27 @@ export default function UserProfilePage() {
               {/* フォールバック背景（デフォルトのグラデーション） */}
               <div className="banner-fallback h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative" style={{ display: profile.banner_url ? 'none' : 'block' }} />
               
-              {/* バナー編集ボタン */}
-              <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
-                <Camera size={20} />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleBannerUpload}
-                  disabled={bannerUploading}
-                />
-              </label>
-              
-              {/* アップロード中の表示 */}
-              {bannerUploading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="text-white">アップロード中...</div>
-                </div>
+              {/* バナー編集ボタン - 自分のプロフィールの場合のみ表示 */}
+              {currentUserId && currentUserId === userId && (
+                <>
+                  <label className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors cursor-pointer">
+                    <Camera size={20} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBannerUpload}
+                      disabled={bannerUploading}
+                    />
+                  </label>
+                  
+                  {/* アップロード中の表示 */}
+                  {bannerUploading && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="text-white">アップロード中...</div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="px-4 pb-4">
@@ -363,12 +404,13 @@ export default function UserProfilePage() {
                   )}
                 </div>
                 <div className="flex space-x-2">
+                  {/* フォローボタン - 他のユーザーの場合のみ表示 */}
                   {currentUserId &&
                     currentUserId !== userId &&
                     (isFollowing ? (
                       <button
                         onClick={handleUnfollow}
-                        className="border px-4 py-2 rounded-full font-semibold bg-gray-600 text-white transition-colors flex items-center space-x-2 text-sm sm:text-base"
+                        className="border px-4 py-2 rounded-full font-semibold bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2 text-sm sm:text-base"
                       >
                         フォロー中
                       </button>
@@ -380,6 +422,16 @@ export default function UserProfilePage() {
                         フォロー
                       </button>
                     ))}
+                  
+                  {/* 自分のプロフィールの場合は編集ボタンを表示（オプション） */}
+                  {currentUserId && currentUserId === userId && (
+                    <button
+                      onClick={() => {/* 編集ページへの遷移やモーダル表示 */}}
+                      className="border px-4 py-2 rounded-full font-semibold bg-gray-800 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2 text-sm sm:text-base"
+                    >
+                      プロフィール編集
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
