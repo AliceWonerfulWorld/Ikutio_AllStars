@@ -9,9 +9,9 @@ import {
   Smile,
 } from "lucide-react";
 
-// 型定義を明確化
+// 🔧 修正された型定義
 type ReplyType = {
-  id: string | number; // 🔧 文字列または数値を許可
+  id: string;
   post_id: number;
   user_id: string;
   text: string;
@@ -26,7 +26,6 @@ type StanpType = {
   stanp_url: string;
 };
 
-// 型定義を修正
 type PostType = {
   id: string;
   user_id: string;
@@ -34,7 +33,7 @@ type PostType = {
   title: string;
   created_at: string;
   tags: string[];
-  replies: ReplyType[]; // 🔧 配列型のみ
+  replies: ReplyType[]; // 🔧 配列データのみ
   likes: number;
   bookmarked: boolean;
   image_url?: string;
@@ -52,13 +51,13 @@ type PostProps = {
   onBookmark: () => void;
   stampList?: string[];
   currentUserId?: string;
-  onRefresh?: () => void; // 🔧 リフレッシュ関数を追加
-  currentUserName?: string; // �� 現在のユーザー名を追加
+  onRefresh?: () => void;
+  currentUserName?: string;
 };
 
 // 🔧 型安全なヘルパー関数を追加
-const isTemporaryReply = (id: string | number): boolean => {
-  return typeof id === 'string' && id.startsWith('temp-');
+const isTemporaryReply = (id: string): boolean => {
+  return id.startsWith('temp-');
 };
 
 export default function Post({
@@ -70,7 +69,7 @@ export default function Post({
   stampList = [],
   currentUserId,
   onRefresh,
-  currentUserName = "User" // 🔧 デフォルト値を設定
+  currentUserName = "User"
 }: PostProps) {
   // ローカルstate
   const [showReplyInput, setShowReplyInput] = useState(false);

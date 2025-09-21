@@ -71,7 +71,7 @@ type PostType = {
   title: string;
   created_at: string;
   tags: string[];
-  replies_count: number; // 🔧 名前を変更
+  replies_count: number; // 🔧 リプライ数用
   likes: number;
   bookmarked: boolean;
   image_url?: string;
@@ -81,8 +81,8 @@ type PostType = {
   liked?: boolean;
   user_icon_url?: string;
   // 🚀 事前取得データ
-  replies_data?: ReplyType[];
-  stamps_data?: StanpType[];
+  replies_data?: ReplyType[]; // 🔧 リプライデータ用
+  stamps_data?: StanpType[];  // 🔧 スタンプデータ用
 };
 
 // R2のパブリック開発URL
@@ -743,29 +743,27 @@ export default function Home() {
                           title: temp,
                           created_at: todo.created_at || "",
                           tags: todo.tags || [],
-                          replies: todo.replies_data || [], // 🔧 重複削除：配列データのみ
+                          replies: todo.replies_data || [], // 🔧 配列データを渡す
                           likes: todo.likes || 0,
                           bookmarked: todo.bookmarked || false,
                           image_url: todo.image_url || "",
                           user_icon_url: userMap[todo.user_id]?.iconUrl,
                           displayName: userMap[todo.user_id]?.displayName,
-                          stamps: todo.stamps_data || [] // 🔧 重複削除：stampsのみ
+                          stamps: todo.stamps_data || []
                         }}
                         liked={todo.liked ?? false}
                         bookmarked={todo.bookmarked ?? false}
                         onLike={() => handleLike(todo.id)}
                         onBookmark={() => handleBookmark(todo.id)}
-                        // 🚀 グローバルデータを渡す
                         stampList={stampList}
                         currentUserId={user?.id}
-                        // 🔧 現在のユーザー名を渡す
                         currentUserName={
                           user?.user_metadata?.displayName || 
                           user?.user_metadata?.username || 
                           userMap[user?.id || ""]?.username ||
                           "User"
                         }
-                        onRefresh={fetchTodos} // 🔧 リフレッシュ関数を追加
+                        onRefresh={fetchTodos}
                       />
                     </div>
                   );
