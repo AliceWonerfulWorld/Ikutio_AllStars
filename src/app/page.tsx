@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import PostForm from "@/components/PostForm";
@@ -11,6 +11,8 @@ import { supabase } from "@/utils/supabase/client";
 import PWAInstaller from "@/components/PWAInstaller";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { useAuth } from "@/contexts/AuthContext";
+// 🔧 共通型定義をインポート
+import { PostType, ReplyType, StanpType } from "@/types/post";
 
 // 砂時計アイコン（Lucide ReactのSVGをインラインで利用）
 function HourglassIcon({ className = "w-5 h-5 text-yellow-400 mr-1" }) {
@@ -47,36 +49,13 @@ function getRemainingTime(createdAt: string) {
     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-type PostType = {
-  id: string;
-  user_id: string;
-  username: string;
-  title: string;
-  created_at: string;
-  tags: string[];
-  replies: number;
-  likes: number;
-  bookmarked: boolean;
-  image_url?: string;
-  iconUrl?: string;
-  displayName?: string;
-  setID?: string;
-  liked?: boolean;
-};
+// 🗑️ ローカルの型定義を削除（インポートした型を使用）
+// type ReplyType = { ... } ← 削除
+// type StanpType = { ... } ← 削除  
+// type PostType = { ... } ← 削除
 
 // R2のパブリック開発URL
 const R2_PUBLIC_URL = "https://pub-1d11d6a89cf341e7966602ec50afd166.r2.dev/";
-
-// R2画像URL変換関数（profile画面と同じロジック）
-function getPublicIconUrl(iconUrl?: string) {
-  if (!iconUrl) return "";
-  if (iconUrl.includes("cloudflarestorage.com")) {
-    const filename = iconUrl.split("/").pop();
-    if (!filename) return "";
-    return `${R2_PUBLIC_URL}${filename}`;
-  }
-  return iconUrl;
-}
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -85,7 +64,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  // usels全ユーザー情報を格納
+  const [stampList, setStampList] = useState<string[]>([]);
   const [userMap, setUserMap] = useState<
     Record<
       string,
@@ -94,159 +73,140 @@ export default function Home() {
         displayName?: string;
         setID?: string;
         username?: string;
-        isBunkatsu?: boolean; // 追加
+        isBunkatsu?: boolean;
       }
     >
   >({});
-
-  // クライアントサイドでのみ実行されることを保証
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // 初回マウント時にusels全件取得
-  useEffect(() => {
-    const fetchAllUsers = async () => {
-      const { data, error } = await supabase
-        .from("usels")
-        .select("user_id, icon_url, username, setID, isBunkatsu"); // 追加
-      if (error) {
-        console.error("usels取得エラー", error);
-        return;
-      }
-      const map: Record<
-        string,
-        {
-          iconUrl?: string;
-          displayName?: string;
-          setID?: string;
-          username?: string;
-          isBunkatsu?: boolean;
-        }
-      > = {};
-      (data ?? []).forEach((user: any) => {
-        map[user.user_id] = {
-          iconUrl: getPublicIconUrl(user.icon_url),
-          displayName: user.username || "User",
-          setID: user.setID || "",
-          username: user.username || "",
-          isBunkatsu: user.isBunkatsu ?? false, // 追加
-        };
-      });
-      setUserMap(map);
-    };
-    fetchAllUsers();
-  }, []);
-  const [userId, setUserId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isValidUserId = (id: any) => typeof id === 'string' && id.length > 0 && id !== 'null' && id !== 'undefined';
-  // Supabaseリアルタイム購読
-  useEffect(() => {
-    const channel = supabase
-      .channel("todos-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "todos" },
-        (payload) => {
-          fetchTodos();
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
-  // ログインユーザーID取得
-  useEffect(() => {
-    const fetchUserId = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const raw = userData?.user?.id ?? null;
-      if (isValidUserId(raw)) setUserId(raw as string); else setUserId(null);
-    };
-    fetchUserId();
-  }, []);
-
-  // 認証リダイレクト後の ?error=server_error などをユーザーに可視化
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const err = params.get('error');
-    const desc = params.get('error_description');
-    if (err) {
-      let msg = `OAuth エラー (${err})`;
-      if (desc) msg += `: ${decodeURIComponent(desc)}`;
-      if (err === 'server_error') {
-        msg += '\nTwitter プロバイダ設定 (Client ID/Secret または API Key/Secret) の不一致や X Portal の User authentication settings 未保存が原因の可能性があります。Supabase ダッシュボードで Twitter Provider のフィールド種別とキーを再確認し、X 側で Callback URL / Scope を保存して再試行してください。';
-      }
-      setAuthError(msg);
+  // R2画像URL変換関数をメモ化
+  const getPublicIconUrl = useCallback((iconUrl?: string) => {
+    if (!iconUrl) return "";
+    if (iconUrl.includes("cloudflarestorage.com")) {
+      const filename = iconUrl.split("/").pop();
+      if (!filename) return "";
+      return `${R2_PUBLIC_URL}${filename}`;
     }
+    return iconUrl;
   }, []);
 
-  // 投稿取得 & ユーザー情報取得
-  const fetchTodos = async () => {
+  // 🚀 統一された最適化済み投稿取得関数
+  const fetchTodos = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
+      // 1. 投稿データを取得（最新50件に制限）
       const { data: todosData, error: todosError } = await supabase
         .from("todos")
-        .select("*");
-      
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
       if (todosError) {
         console.error("Error fetching todos:", todosError);
         setError("投稿の読み込みに失敗しました");
         return;
       }
 
-      // 投稿に紐づくuser_id一覧
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!todosData || todosData.length === 0) {
+        setPosts([]);
+        return;
+      }
+
+      // 2. ユーザーIDを抽出
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const userIds = Array.from(
         new Set(
-          (todosData ?? [])
+          todosData
             .map((todo: any) => todo.user_id)
-            .filter(
-              (id: string | null | undefined) =>
-                !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
+            .filter((id: string | null | undefined) =>
+              !!id && id !== "null" && id !== "undefined" && uuidRegex.test(id)
             )
         )
       );
 
-      // uselsから該当ユーザー情報をまとめて取得
-      let usersData: any[] = [];
-      let usersError: any = null;
-      
-      if (userIds.length > 0) {
-        try {
-          const { data, error } = await supabase
-            .from("usels")
-            .select("user_id, icon_url, username, setID, isBunkatsu")
-            .in("user_id", userIds);
-          usersData = data ?? [];
-          usersError = error;
-          
-          if (usersError) {
-            console.error("Error fetching users:", usersError);
-            // エラーが発生しても処理を続行（ユーザー情報なしで投稿を表示）
-          }
-        } catch (error) {
-          console.error("Error in user data fetch:", error);
-          // エラーが発生しても処理を続行
-        }
+      // 3. 現在のユーザーIDを取得
+      let userId = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        userId = userData?.user?.id ?? null;
+      } catch (error) {
+        console.warn("Error getting user session:", error);
       }
 
-      // user_id→iconUrl, displayName, setIDのMap作成
-      const userMap: Record<
-        string,
-        {
-          iconUrl?: string;
-          displayName?: string;
-          setID?: string;
-          username?: string;
-          isBunkatsu?: boolean;
-        }
-      > = {};
+      // 4. 投稿IDを抽出
+      const postIds = todosData.map(todo => Number(todo.id));
       
+      // 🚀 5. 全データを並列で一括取得
+      const [
+        usersResult, 
+        likesResult, 
+        bookmarksResult, 
+        repliesResult, 
+        stampsResult,
+        stampListResult
+      ] = await Promise.all([
+        // ユーザー情報
+        userIds.length > 0 
+          ? supabase
+              .from("usels")
+              .select("user_id, icon_url, username, setID, isBunkatsu")
+              .in("user_id", userIds)
+          : Promise.resolve({ data: [], error: null }),
+        
+        // いいね情報（ログイン済みの場合のみ）
+        userId && postIds.length > 0
+          ? supabase
+              .from("likes")
+              .select("post_id, on")
+              .eq("user_id", userId)
+              .in("post_id", postIds)
+          : Promise.resolve({ data: [], error: null }),
+        
+        // ブックマーク情報（ログイン済みの場合のみ）
+        userId && postIds.length > 0
+          ? supabase
+              .from("bookmarks")
+              .select("post_id, on")
+              .eq("user_id", userId)
+              .in("post_id", postIds)
+          : Promise.resolve({ data: [], error: null }),
+        
+        // 🚀 リプライを一括取得
+        postIds.length > 0
+          ? supabase
+              .from("replies")
+              .select("id, post_id, user_id, text, created_at")
+              .in("post_id", postIds)
+              .order("created_at", { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
+        
+        // 🚀 スタンプを一括取得
+        postIds.length > 0
+          ? supabase
+              .from("stamp")
+              .select("id, post_id, user_id, stanp_url")
+              .in("post_id", postIds)
+          : Promise.resolve({ data: [], error: null }),
+        
+        // 🚀 スタンプリストを取得
+        supabase
+          .from("make_stamp")
+          .select("make_stanp_url")
+      ]);
+
+      const { data: usersData } = usersResult;
+      const { data: likesData } = likesResult;
+      const { data: bookmarksData } = bookmarksResult;
+      const { data: repliesData } = repliesResult;
+      const { data: stampsData } = stampsResult;
+      const { data: stampListData } = stampListResult;
+
+      // 6. ユーザーマップを作成
+      const userMapLocal: Record<string, any> = {};
       (usersData ?? []).forEach((user: any) => {
-        userMap[user.user_id] = {
+        userMapLocal[user.user_id] = {
           iconUrl: getPublicIconUrl(user.icon_url),
           displayName: user.username || "User",
           setID: user.setID || "",
@@ -254,301 +214,383 @@ export default function Home() {
           isBunkatsu: user.isBunkatsu ?? false,
         };
       });
-      setUserMap(userMap);
+      setUserMap(userMapLocal);
 
-      // ログインユーザーID取得（エラーハンドリングを追加）
-      let userId = null;
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        userId = userData?.user?.id ?? null;
-      } catch (error) {
-        console.warn("Error getting user session:", error);
-        userId = null;
-      }
+      // 7. リアクションマップを作成
+      const likesMap = new Map();
+      const bookmarksMap = new Map();
+      
+      (likesData ?? []).forEach((like: any) => {
+        likesMap.set(like.post_id, like.on);
+      });
+      
+      (bookmarksData ?? []).forEach((bookmark: any) => {
+        bookmarksMap.set(bookmark.post_id, bookmark.on);
+      });
 
-      // 投稿一覧取得（userId が null の場合は likes / bookmarks クエリを送らない）
-      const todosWithStatus = await Promise.all(
-        (todosData ?? []).map(async (todo: any) => {
-          if (!isValidUserId(userId)) {
-            return { ...todo, liked: false, bookmarked: false };
-          }
-          try {
-            const postIdNum = Number(todo.id);
-            const [{ data: likeData }, { data: bookmarkData }] = await Promise.all([
-              supabase
-                .from("likes")
-                .select("on")
-                .eq("post_id", postIdNum)
-                .eq("user_id", userId as string)
-                .maybeSingle(),
-              supabase
-                .from("bookmarks")
-                .select("on")
-                .eq("post_id", postIdNum)
-                .eq("user_id", userId as string)
-                .maybeSingle(),
-            ]);
-            return {
-              ...todo,
-              liked: likeData?.on === true,
-              bookmarked: bookmarkData?.on === true,
-            };
-          } catch (e) {
-            console.warn("fetchTodos: like/bookmark 状態取得失敗", e);
-            return { ...todo, liked: false, bookmarked: false };
-          }
-        })
-      );
+      // 🚀 8. リプライマップを作成
+      const repliesMap = new Map<number, ReplyType[]>();
+      (repliesData ?? []).forEach((reply: any) => {
+        const postId = reply.post_id;
+        if (!repliesMap.has(postId)) {
+          repliesMap.set(postId, []);
+        }
+        repliesMap.get(postId)!.push({
+          ...reply,
+          username: userMapLocal[reply.user_id]?.username || "User"
+        });
+      });
+
+      // 🚀 9. スタンプマップを作成
+      const stampsMap = new Map<number, StanpType[]>();
+      (stampsData ?? []).forEach((stamp: any) => {
+        const postId = Number(stamp.post_id);
+        if (!stampsMap.has(postId)) {
+          stampsMap.set(postId, []);
+        }
+        stampsMap.get(postId)!.push(stamp);
+      });
+
+      // 🚀 10. スタンプリストをグローバル状態に保存
+      const stampListLocal = (stampListData ?? [])
+        .map((row: any) => row.make_stanp_url)
+        .filter(Boolean);
+      setStampList(stampListLocal);
+
+      // 11. 投稿データにすべての情報を統合
+      const todosWithStatus = todosData.map((todo: any) => {
+        const userInfo = userMapLocal[todo.user_id] || {};
+        const postIdNum = Number(todo.id);
+        
+        return {
+          ...todo,
+          liked: likesMap.get(postIdNum) || false,
+          bookmarked: bookmarksMap.get(postIdNum) || false,
+          user_icon_url: userInfo.iconUrl,
+          displayName: userInfo.displayName,
+          setID: userInfo.setID,
+          username: userInfo.username || "User",
+          replies: todo.replies || 0, // 🔧 数値として保持
+          // 🚀 リプライとスタンプを事前に含める
+          replies_data: repliesMap.get(postIdNum) || [],
+          stamps_data: stampsMap.get(postIdNum) || []
+        };
+      });
+
       setPosts(todosWithStatus);
     } catch (error) {
       console.error("fetchTodos: Unexpected error:", error);
       setError("データの読み込み中にエラーが発生しました");
+      setPosts([]);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [getPublicIconUrl]);
 
-  // 1秒ごとに再レンダリングして残り時間を更新
+  // 投稿追加時の処理
+  const handlePostAdded = useCallback(() => {
+    setTimeout(() => {
+      fetchTodos();
+    }, 300);
+  }, [fetchTodos]);
+
+  // クライアントサイドでのみ実行
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // 🔧 依存関係を修正した初期データ取得
+  useEffect(() => {
+    if (isClient && !authLoading) {
+      fetchTodos();
+    }
+  }, [isClient, authLoading]); // fetchTodosを削除
+
+  // リアルタイム購読
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const channel = supabase
+      .channel("todos-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "todos" },
+        (payload) => {
+          console.log("New post added:", payload);
+          fetchTodos();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isClient]); // fetchTodosを削除
+
+  // 1秒ごとの再レンダリングを最適化
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setPosts((prev) => [...prev]); // 強制再レンダリング
+      // 時間表示のみを更新
+      setPosts(prev => [...prev]);
     }, 1000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  // 投稿保存・取得直後の反映遅延対策: 1秒遅延してfetchTodos実行
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchTodos();
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // いいね追加/削除
+  // いいね追加/削除を最適化
   const handleLike = async (postId: string) => {
     if (!user) return;
 
     const userId = user.id;
     const postIdNum = Number(postId);
 
-    // 既にいいね済みかチェック
-    const { data: likeData, error: likeError } = await supabase
-      .from("likes")
-      .select("id, on")
-      .eq("post_id", postIdNum)
-      .eq("user_id", userId)
-      .maybeSingle();
+    try {
+      // 🚀 楽観的更新: UIを即座に更新
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const isCurrentlyLiked = post.liked;
+            return {
+              ...post,
+              liked: !isCurrentlyLiked,
+              likes: isCurrentlyLiked 
+                ? Math.max(post.likes - 1, 0) 
+                : post.likes + 1
+            };
+          }
+          return post;
+        })
+      );
 
-    if (likeError) {
-      console.error("Error checking like status:", likeError);
-      return;
-    }
-
-    // 現在のlikes取得
-    const { data: todoData } = await supabase
-      .from("todos")
-      .select("likes, user_id")
-      .eq("id", postIdNum)
-      .single();
-    const currentLikes = todoData?.likes ?? 0;
-    const postOwnerId = todoData?.user_id;
-
-    if (likeData?.on) {
-      // いいね解除
-      await supabase
+      // バックグラウンドでDB更新
+      const { data: likeData, error: likeError } = await supabase
         .from("likes")
-        .update({ on: false })
+        .select("id, on")
         .eq("post_id", postIdNum)
-        .eq("user_id", userId);
-      await supabase
-        .from("todos")
-        .update({ likes: Math.max(currentLikes - 1, 0) })
-        .eq("id", postIdNum);
-    } else {
-      // いいね処理
-      const isNewLike = !likeData; // 新規いいねかどうかを判定
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (likeData) {
-        // 再いいね（通知は送信しない）
-        await supabase
-          .from("likes")
-          .update({ on: true })
-          .eq("post_id", postIdNum)
-          .eq("user_id", userId);
-        await supabase
-          .from("todos")
-          .update({ likes: currentLikes + 1 })
-          .eq("id", postIdNum);
-      } else {
-        // 新規いいね（通知を送信）
-        await supabase.from("likes").insert({
-          post_id: postIdNum,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          on: true,
-        });
-        await supabase
-          .from("todos")
-          .update({ likes: currentLikes + 1 })
-          .eq("id", postIdNum);
+      if (likeError) {
+        console.error("Error checking like status:", likeError);
+        // エラー時は元に戻す
+        setPosts(prevPosts => 
+          prevPosts.map(post => {
+            if (post.id === postId) {
+              return {
+                ...post,
+                liked: !post.liked,
+                likes: post.liked 
+                  ? Math.max(post.likes - 1, 0) 
+                  : post.likes + 1
+              };
+            }
+            return post;
+          })
+        );
+        return;
       }
 
-      // いいね通知を送信（新規いいねの場合のみ）
-      if (isNewLike && postOwnerId && postOwnerId !== userId) {
-        try {
-          await fetch("/api/send-like-notification", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              postId: postIdNum,
-              likerId: userId,
-              postOwnerId: postOwnerId,
+      // 現在のlikes取得
+      const { data: todoData } = await supabase
+        .from("todos")
+        .select("likes, user_id")
+        .eq("id", postIdNum)
+        .single();
+      const currentLikes = todoData?.likes ?? 0;
+      const postOwnerId = todoData?.user_id;
+
+      if (likeData?.on) {
+        // いいね解除
+        await Promise.all([
+          supabase
+            .from("likes")
+            .update({ on: false })
+            .eq("post_id", postIdNum)
+            .eq("user_id", userId),
+          supabase
+            .from("todos")
+            .update({ likes: Math.max(currentLikes - 1, 0) })
+            .eq("id", postIdNum)
+        ]);
+      } else {
+        // いいね処理
+        const isNewLike = !likeData;
+
+        if (likeData) {
+          // 再いいね
+          await Promise.all([
+            supabase
+              .from("likes")
+              .update({ on: true })
+              .eq("post_id", postIdNum)
+              .eq("user_id", userId),
+            supabase
+              .from("todos")
+              .update({ likes: currentLikes + 1 })
+              .eq("id", postIdNum)
+          ]);
+        } else {
+          // 新規いいね
+          await Promise.all([
+            supabase.from("likes").insert({
+              post_id: postIdNum,
+              user_id: userId,
+              created_at: new Date().toISOString(),
+              on: true,
             }),
-          });
-        } catch (error) {
-          console.error("Error sending like notification:", error);
+            supabase
+              .from("todos")
+              .update({ likes: currentLikes + 1 })
+              .eq("id", postIdNum)
+          ]);
+        }
+
+        // いいね通知を送信（新規いいねの場合のみ）
+        if (isNewLike && postOwnerId && postOwnerId !== userId) {
+          try {
+            await fetch("/api/send-like-notification", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                postId: postIdNum,
+                likerId: userId,
+                postOwnerId: postOwnerId,
+              }),
+            });
+          } catch (error) {
+            console.error("Error sending like notification:", error);
+          }
         }
       }
-    }
 
-    // 投稿データを再取得
-    await fetchTodos();
+      // 🚀 全体リフレッシュは行わない（楽観的更新のみ）
+    } catch (error) {
+      console.error("Error in handleLike:", error);
+      // エラー時は元に戻す
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              liked: !post.liked,
+              likes: post.liked 
+                ? Math.max(post.likes - 1, 0) 
+                : post.likes + 1
+            };
+          }
+          return post;
+        })
+      );
+    }
   };
 
-  // ブックマーク追加/解除
+  // ブックマーク追加/解除を最適化
   const handleBookmark = async (postId: string) => {
     if (!user) {
       alert("ブックマークするにはログインが必要です");
       return;
     }
+
     const userId = user.id;
     const postIdNum = Number(postId);
 
-    // 既にブックマーク済みかチェック
-    const { data: bookmarkData } = await supabase
-      .from("bookmarks")
-      .select("id, on")
-      .eq("post_id", postIdNum)
-      .eq("user_id", userId)
-      .single();
+    try {
+      // 🚀 楽観的更新: UIを即座に更新
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              bookmarked: !post.bookmarked
+            };
+          }
+          return post;
+        })
+      );
 
-    if (bookmarkData?.on) {
-      // ブックマーク解除
-      await supabase
+      // バックグラウンドでDB更新
+      const { data: bookmarkData } = await supabase
         .from("bookmarks")
-        .update({ on: false })
+        .select("id, on")
         .eq("post_id", postIdNum)
-        .eq("user_id", userId);
-    } else {
-      // ブックマーク（新規 or 再ブックマーク）
-      if (bookmarkData) {
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (bookmarkData?.on) {
+        // ブックマーク解除
         await supabase
           .from("bookmarks")
-          .update({ on: true })
+          .update({ on: false })
           .eq("post_id", postIdNum)
           .eq("user_id", userId);
       } else {
-        await supabase.from("bookmarks").insert({
-          post_id: postIdNum,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          on: true,
-        });
+        // ブックマーク（新規 or 再ブックマーク）
+        if (bookmarkData) {
+          await supabase
+            .from("bookmarks")
+            .update({ on: true })
+            .eq("post_id", postIdNum)
+            .eq("user_id", userId);
+        } else {
+          await supabase.from("bookmarks").insert({
+            post_id: postIdNum,
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            on: true,
+          });
+        }
       }
+      
+      // 🚀 全体リフレッシュは行わない（楽観的更新のみ）
+    } catch (error) {
+      console.error("Error in handleBookmark:", error);
+      // エラー時は元に戻す
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              bookmarked: !post.bookmarked
+            };
+          }
+          return post;
+        })
+      );
     }
-    fetchTodos(); // 状態更新
   };
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // ローディング表示
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
-        // 基本的な投稿データを取得
-        const { data: todosData, error: todosError } = await supabase
-          .from("todos")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (todosError) {
-          throw todosError;
-        }
-
-        if (!todosData) {
-          setPosts([]);
-          return;
-        }
-
-        // 認証済みユーザーの場合のみ、いいね・ブックマーク状態を取得
-        if (user) {
-          const userId = user.id;
-
-          const postsWithUserData = await Promise.all(
-            todosData.map(async (todo) => {
-              try {
-                // いいね状態
-                const { data: likeData } = await supabase
-                  .from("likes")
-                  .select("on")
-                  .eq("post_id", Number(todo.id))
-                  .eq("user_id", userId)
-                  .maybeSingle();
-
-                // ブックマーク状態
-                const { data: bookmarkData } = await supabase
-                  .from("bookmarks")
-                  .select("on")
-                  .eq("post_id", Number(todo.id))
-                  .eq("user_id", userId)
-                  .maybeSingle();
-
-                return {
-                  ...todo,
-                  liked: likeData?.on === true,
-                  bookmarked: bookmarkData?.on === true,
-                };
-              } catch (error) {
-                console.warn(
-                  `投稿 ${todo.id} のユーザーデータ取得エラー:`,
-                  error
-                );
-                return {
-                  ...todo,
-                  liked: false,
-                  bookmarked: false,
-                };
-              }
-            })
-          );
-
-          setPosts(postsWithUserData);
-        } else {
-          // 未ログインの場合は、いいね・ブックマーク状態なしで表示
-          const postsWithoutUserData = todosData.map((todo) => ({
-            ...todo,
-            liked: false,
-            bookmarked: false,
-          }));
-          setPosts(postsWithoutUserData);
-        }
-      } catch (error) {
-        console.error("投稿取得エラー:", error);
-        setError("投稿の読み込みに失敗しました");
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // 認証状態が確定してから実行
-    if (!authLoading) {
-      fetchPosts();
-    }
-  }, [user, authLoading]);
+  // エラー表示
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button 
+            onClick={() => fetchTodos()}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            再試行
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -620,66 +662,82 @@ export default function Home() {
             </div>
             
             {/* 投稿フォーム */}
-            {isClient && <PostForm onPostAdded={fetchTodos} r2PublicUrl={R2_PUBLIC_URL} />}
+            {isClient && <PostForm onPostAdded={handlePostAdded} r2PublicUrl={R2_PUBLIC_URL} />}
             
             {/* 投稿一覧表示 */}
             <div className="relative z-10">
-              {posts.map((todo) => {
-                const remaining = getRemainingTime(todo.created_at);
-                const result = todo.title;
-                const hours = Math.floor(
-                  (new Date().getTime() - new Date(todo.created_at).getTime()) /
-                    3600000
-                );
-                // isBunkatsu取得
-                const isBunkatsu = userMap[todo.user_id]?.isBunkatsu;
-                let temp = result;
-                if (isBunkatsu) {
-                  temp = result.slice(0, result.length - hours * 2);
-                  if (result.length >= 24) {
-                    temp = result.slice(0, result.length - hours * 3);
+              {posts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>まだ投稿がありません</p>
+                </div>
+              ) : (
+                posts.map((todo) => {
+                  const remaining = getRemainingTime(todo.created_at);
+                  const result = todo.title;
+                  const hours = Math.floor(
+                    (new Date().getTime() - new Date(todo.created_at).getTime()) /
+                      3600000
+                  );
+                  // isBunkatsu取得
+                  const isBunkatsu = userMap[todo.user_id]?.isBunkatsu;
+                  let temp = result;
+                  if (isBunkatsu) {
+                    temp = result.slice(0, result.length - hours * 2);
+                    if (result.length >= 24) {
+                      temp = result.slice(0, result.length - hours * 3);
+                    }
                   }
-                }
 
-                return (
-                  <div key={todo.id} className="relative">
-                    {/* 砂時計＋残り時間 */}
-                    {remaining && (
-                      <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
-                        <HourglassIcon />
-                        <span className="text-yellow-300 font-mono">
-                          {remaining}
-                        </span>
-                      </div>
-                    )}
+                  return (
+                    <div key={todo.id} className="relative">
+                      {/* 砂時計＋残り時間 */}
+                      {remaining && (
+                        <div className="absolute right-4 top-2 flex items-center bg-gray-900/80 rounded-full px-2 py-1 text-xs z-20 border border-yellow-400">
+                          <HourglassIcon />
+                          <span className="text-yellow-300 font-mono">
+                            {remaining}
+                          </span>
+                        </div>
+                      )}
 
-                    <Post
-                      post={{
-                        id: todo.id,
-                        user_id: todo.user_id || "",
-                        username:
-                          userMap[todo.user_id]?.username ||
-                          todo.username ||
-                          "User",
-                        setID: userMap[todo.user_id]?.setID || "",
-                        title: temp,
-                        created_at: todo.created_at || "",
-                        tags: todo.tags || [],
-                        replies: todo.replies || 0,
-                        likes: todo.likes || 0,
-                        bookmarked: todo.bookmarked || false,
-                        image_url: todo.image_url || "",
-                        user_icon_url: userMap[todo.user_id]?.iconUrl,
-                        displayName: userMap[todo.user_id]?.displayName,
-                      }}
-                      liked={todo.liked ?? false}
-                      bookmarked={todo.bookmarked ?? false}
-                      onLike={() => handleLike(todo.id)}
-                      onBookmark={() => handleBookmark(todo.id)}
-                    />
-                  </div>
-                );
-              })}
+                      <Post
+                        post={{
+                          id: todo.id,
+                          user_id: todo.user_id || "",
+                          username:
+                            userMap[todo.user_id]?.username ||
+                            todo.username ||
+                            "User",
+                          setID: userMap[todo.user_id]?.setID || "",
+                          title: temp,
+                          created_at: todo.created_at || "",
+                          tags: todo.tags || [],
+                          replies: todo.replies_data || [], // 🔧 配列データを渡す
+                          likes: todo.likes || 0,
+                          bookmarked: todo.bookmarked || false,
+                          image_url: todo.image_url || "",
+                          user_icon_url: userMap[todo.user_id]?.iconUrl,
+                          displayName: userMap[todo.user_id]?.displayName,
+                          stamps: todo.stamps_data || []
+                        }}
+                        liked={todo.liked ?? false}
+                        bookmarked={todo.bookmarked ?? false}
+                        onLike={() => handleLike(todo.id)}
+                        onBookmark={() => handleBookmark(todo.id)}
+                        stampList={stampList}
+                        currentUserId={user?.id || undefined} // 🔧 null を undefined に変換（または型定義を修正）
+                        currentUserName={
+                          user?.user_metadata?.displayName || 
+                          user?.user_metadata?.username || 
+                          userMap[user?.id || ""]?.username ||
+                          "User"
+                        }
+                        onRefresh={fetchTodos}
+                      />
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
           
