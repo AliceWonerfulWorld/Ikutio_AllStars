@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { SignUpData } from '@/types'
-import { Eye, EyeOff, User, Mail, Lock, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, User, Mail, Lock, Sparkles, Home } from 'lucide-react'
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState<SignUpData>({
@@ -61,6 +61,17 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 py-6">
+      {/* ホームに戻るボタン */}
+      <div className="absolute top-4 left-4 z-10">
+        <Link 
+          href="/"
+          className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 hover:bg-gray-800/70 text-white rounded-lg transition-all duration-300 backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/70"
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-sm font-medium">ホーム</span>
+        </Link>
+      </div>
+
       {/* 背景エフェクト - モバイル対応 */}
       <div className="absolute inset-0">
         <div className="absolute top-0 -left-4 w-48 h-48 sm:w-72 sm:h-72 bg-gray-800/30 rounded-full filter blur-xl opacity-50 animate-blob"></div>
