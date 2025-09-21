@@ -42,13 +42,48 @@ export default function StartView({
     padding: '80px 20px 40px',
   };
 
+  const titleContainerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+  };
+
+  const logoStyle: CSSProperties = {
+    width: '48px',
+    height: '48px',
+    borderRadius: '50%',
+    border: '1px solid rgba(255, 255, 255, 0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    position: 'relative',
+    boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
+  };
+
+  const clockHandStyle: CSSProperties = {
+    width: '4px',
+    height: '14px',
+    backgroundColor: '#ffffff',
+    borderRadius: '2px',
+    position: 'absolute',
+    transformOrigin: 'bottom center',
+    transform: 'rotate(225deg)', // 7時の位置（左下方向）
+    boxShadow: '0 0 8px rgba(255, 255, 255, 0.6)',
+  };
+
   const titleStyle: CSSProperties = {
     fontSize: '72px',
     fontWeight: 900,
     color: '#ffffff',
-    marginBottom: '16px',
-    letterSpacing: '0.1em',
-    textShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
+    letterSpacing: '0.05em',
+    textShadow: '0 0 40px rgba(255, 255, 255, 0.7)',
+    fontFamily: '"Inter", "SF Pro Display", "Helvetica Neue", "Arial Black", sans-serif',
+    fontStretch: 'ultra-condensed',
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
   };
 
   const subtitleStyle: CSSProperties = {
@@ -175,8 +210,13 @@ export default function StartView({
 
   return (
     <div style={containerStyle}>
-      {/* タイトル */}
-      <div style={titleStyle}>Clock</div>
+      {/* タイトルとロゴ */}
+      <div style={titleContainerStyle}>
+        <div style={logoStyle}>
+          <div style={clockHandStyle} />
+        </div>
+        <div style={titleStyle}>Clock</div>
+      </div>
       
       {/* サブタイトル */}
       <div style={subtitleStyle}>あなたのAIアシスタント</div>
