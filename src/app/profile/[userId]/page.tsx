@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/utils/supabase/client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -265,7 +266,17 @@ export default function UserProfilePage() {
                   </div>
                 )}
                 <div className="flex items-center space-x-1">
-                  <span>{profile.birth_date}から登録</span>
+                  <span>
+                    {posts.length > 0 && posts[posts.length - 1]?.created_at
+                      ? (() => {
+                          const date = new Date(posts[posts.length - 1].created_at);
+                          const year = date.getFullYear();
+                          const month = date.getMonth() + 1;
+                          return `${year}年${month}月から Tikuru24を利用してます。`;
+                        })()
+                      : "Tikuru24を利用してます。"
+                    }
+                  </span>
                 </div>
               </div>
               <div className="flex space-x-6 text-sm">
@@ -283,27 +294,37 @@ export default function UserProfilePage() {
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
             {posts.map((post) => {
-              const rawIconUrl = profile?.icon_url;
               const publicIconUrl = getPublicIconUrl(profile?.icon_url);
               return (
                 <div
                   key={post.id}
                   className="p-4 hover:bg-gray-900/50 transition-colors"
+                  style={{ cursor: 'default' }} // インラインスタイルで確実に無効化
+                  onClick={(e) => e.preventDefault()} // クリックイベントを無効化
                 >
                   <div className="flex space-x-3">
                     {/* 投稿アイコン表示 */}
-                    {publicIconUrl && publicIconUrl.startsWith("https://") ? (
-                      <Image
-                        src={publicIconUrl}
-                        alt="icon"
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
+                    {publicIconUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={publicIconUrl}
+                          alt="icon"
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            // 画像読み込みに失敗した場合はデフォルトアイコンを表示
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                        {/* フォールバックアイコン */}
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold absolute top-0 left-0" style={{ display: 'none' }}>
+                          {(profile?.username || "U").charAt(0)}
+                        </div>
+                      </div>
                     ) : (
                       <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                         {(profile?.username || "U").charAt(0)}
@@ -312,10 +333,10 @@ export default function UserProfilePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-semibold">
-                          {profile?.display_name}
+                          {profile?.username}
                         </span>
                         <span className="text-gray-400 text-sm">
-                          @{profile?.username}
+                          @{profile?.setID}
                         </span>
                         <span className="text-gray-400 text-sm">·</span>
                         <span className="text-gray-400 text-sm">
@@ -340,12 +361,8 @@ export default function UserProfilePage() {
                         </div>
                       )}
                       <div className="flex items-center space-x-6 text-sm text-gray-400">
-                        <button className="hover:text-blue-400 transition-colors">
-                          返信 {post.replies ?? 0}
-                        </button>
-                        <button className="hover:text-red-400 transition-colors">
-                          いいね {post.likes ?? 0}
-                        </button>
+                        <span style={{ cursor: 'default' }}>返信 {post.replies ?? 0}</span>
+                        <span style={{ cursor: 'default' }}>いいね {post.likes ?? 0}</span>
                       </div>
                     </div>
                   </div>

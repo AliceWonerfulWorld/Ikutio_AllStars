@@ -497,7 +497,17 @@ function ProfilePageContent() {
                   )}
                   <div className="flex items-center space-x-1">
                     <Calendar size={16} />
-                    <span>{formData.birthDate}から登録</span>
+                    <span>
+                      {posts.length > 0 && posts[posts.length - 1]?.created_at
+                        ? (() => {
+                            const date = new Date(posts[posts.length - 1].created_at);
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1; // getMonth()は0から始まるため+1
+                            return `${year}年${month}月から Tikuru24を利用してます。`;
+                          })()
+                        : "Tikuru24を利用してます。"
+                      }
+                    </span>
                   </div>
                 </div>
 
@@ -534,52 +544,48 @@ function ProfilePageContent() {
           {/* 投稿一覧 */}
           <div className="divide-y divide-gray-800">
             {posts.map((post) => {
-              // デバッグ用ログ出力
-              const rawIconUrl = post.icon_url;
-              const publicIconUrl = getPublicIconUrl(post.icon_url);
-              console.log("[投稿アイコン] post.icon_url:", rawIconUrl);
-              console.log(
-                "[投稿アイコン] getPublicIconUrl(post.icon_url):",
-                publicIconUrl
-              );
-
+              // プロフィール情報からアイコンを取得
+              const publicIconUrl = getPublicIconUrl(formData.iconUrl);
+              
               return (
                 <div
                   key={post.id}
                   className="p-4 hover:bg-gray-900/50 transition-colors"
+                  style={{ cursor: 'default' }} // クリック無効化
+                  onClick={(e) => e.preventDefault()} // クリックイベントを無効化
                 >
                   <div className="flex space-x-3">
                     {/* 投稿アイコン表示 */}
-                    <Link
-                      href={`/profile/${post.user_id ?? ""}`}
-                      className="block"
-                    >
-                      {post.icon_url &&
-                      getPublicIconUrl(post.icon_url).startsWith("https://") ? (
+                    {publicIconUrl ? (
+                      <div className="relative">
                         <Image
-                          src={getPublicIconUrl(post.iconUrl)}
+                          src={publicIconUrl}
                           alt="icon"
                           width={40}
                           height={40}
                           className="w-10 h-10 rounded-full object-cover"
                           referrerPolicy="no-referrer"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
+                            // 画像読み込みに失敗した場合はデフォルトアイコンを表示
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
                           }}
                         />
-                      ) : (
-                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {(post.display_name || post.username || "U").charAt(
-                            0
-                          )}
+                        {/* フォールバックアイコン */}
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold absolute top-0 left-0" style={{ display: 'none' }}>
+                          {(formData.displayName || "U").charAt(0)}
                         </div>
-                      )}
-                    </Link>
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        {(formData.displayName || "U").charAt(0)}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-semibold">
-                          {formData.displayName}
+                          {formData.username || formData.displayName}
                         </span>
                         <span className="text-gray-400 text-sm">
                           @{formData.setID}
@@ -607,12 +613,8 @@ function ProfilePageContent() {
                         </div>
                       )}
                       <div className="flex items-center space-x-6 text-sm text-gray-400">
-                        <button className="hover:text-blue-400 transition-colors">
-                          返信 {post.replies ?? 0}
-                        </button>
-                        <button className="hover:text-red-400 transition-colors">
-                          いいね {post.likes ?? 0}
-                        </button>
+                        <span style={{ cursor: 'default' }}>返信 {post.replies ?? 0}</span>
+                        <span style={{ cursor: 'default' }}>いいね {post.likes ?? 0}</span>
                       </div>
                     </div>
                   </div>
