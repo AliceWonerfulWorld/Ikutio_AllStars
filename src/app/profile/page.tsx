@@ -250,19 +250,20 @@ function ProfilePageContent() {
         if (userError) {
           console.error("Error fetching user data:", userError);
         } else if (userData) {
+          console.log('🔍 userData.created_at:', userData.created_at); // デバッグログ
           setFormData({
-            setID: userData.setID || userData.username || "user", // 🔧 正しいsetIDフィールドを使用
-            displayName: userData.username || userData.display_name || "ユーザー", // 🔧 usernameを優先
+            setID: userData.setID || userData.username || "user",
+            displayName: userData.username || userData.display_name || "ユーザー",
             username: userData.username || "user",
-            bio: userData.bio || "プログラミングが好きです。Next.jsとReactを勉強中です。",
-            location: userData.location || "東京, 日本",
-            website: userData.site || "https://example.com", // 🔧 website → site に変更
+            bio: userData.introduction || "プログラミングが好きです。Next.jsとReactを勉強中です。",
+            location: userData.place || "東京, 日本",
+            website: userData.site || "https://example.com",
             birthDate: userData.birth_date || "1990-01-01",
-            joinDate: userData.join_date || "2024年1月",
-            following: userData.following || 150,
-            follower: userData.follower || 1200,
-            iconUrl: userData.icon_url || undefined,
-            bannerUrl: userData.banner_url || undefined,
+            joinDate: userData.created_at || "2024-01-01",
+            following: Number(userData.follow) || 0,
+            follower: followerCount || 0,
+            iconUrl: userData.icon_url,
+            bannerUrl: userData.banner_url,
             isBunkatsu: userData.isBunkatsu ?? false,
           });
         }
@@ -713,37 +714,66 @@ function ProfilePageContent() {
                 </div>
                 <p className="text-white">{formData.bio}</p>
 
-                <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                  {formData.location && (
+                <div className="space-y-2 text-gray-400 text-sm">
+                  {/* 1行目: 場所とサイトURL */}
+                  <div className="flex items-center space-x-4">
+                    {formData.location && (
+                      <div className="flex items-center space-x-1">
+                        <MapPin size={16} />
+                        <span>{formData.location}</span>
+                      </div>
+                    )}
+                    {formData.website && (
+                      <div className="flex items-center space-x-1">
+                        <LinkIcon size={16} />
+                        <a
+                          href={formData.website}
+                          className="text-blue-400 hover:underline"
+                        >
+                          {formData.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 2行目: 誕生日と参加日 */}
+                  <div className="flex items-center space-x-4">
+                    {/* 誕生日 */}
+                    {formData.birthDate && (
+                      <div className="flex items-center space-x-1">
+                        <Calendar size={16} />
+                        <span>
+                          {(() => {
+                            const date = new Date(formData.birthDate);
+                            if (isNaN(date.getTime())) {
+                              return "誕生日未設定";
+                            }
+                            const month = date.getMonth() + 1;
+                            const day = date.getDate();
+                            return `${month}月${day}日生まれ`;
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* 参加日 */}
                     <div className="flex items-center space-x-1">
-                      <MapPin size={16} />
-                      <span>{formData.location}</span>
+                      <Calendar size={16} />
+                      <span>
+                        {formData.joinDate
+                          ? (() => {
+                              const date = new Date(formData.joinDate);
+                              if (isNaN(date.getTime())) {
+                                return "Tikuru24を利用してます。";
+                              }
+                              const year = date.getFullYear();
+                              const month = date.getMonth() + 1;
+                              return `${year}年${month}月から Tikuru24を利用してます。`;
+                            })()
+                          : "Tikuru24を利用してます。"
+                        }
+                      </span>
                     </div>
-                  )}
-                  {formData.website && (
-                    <div className="flex items-center space-x-1">
-                      <LinkIcon size={16} />
-                      <a
-                        href={formData.website}
-                        className="text-blue-400 hover:underline"
-                      >
-                        {formData.website}
-                      </a>
-                    </div>
-                  )}
-                  <div className="flex items-center space-x-1">
-                    <Calendar size={16} />
-                    <span>
-                      {posts.length > 0 && posts[posts.length - 1]?.created_at
-                        ? (() => {
-                            const date = new Date(posts[posts.length - 1].created_at);
-                            const year = date.getFullYear();
-                            const month = date.getMonth() + 1; // getMonth()は0から始まるため+1
-                            return `${year}年${month}月から Tikuru24を利用してます。`;
-                          })()
-                        : "Tikuru24を利用してます。"
-                      }
-                    </span>
                   </div>
                 </div>
 
