@@ -41,6 +41,7 @@ export default function Post({
 }: PostProps) {
   // ローカルstate
   const [showReplyInput, setShowReplyInput] = useState(false);
+  const [showReplies, setShowReplies] = useState(false); // 🚀 リプライ表示/非表示制御
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [showStampPicker, setShowStampPicker] = useState(false);
@@ -85,20 +86,20 @@ export default function Post({
     setReplyLoading(true);
     
     try {
-      const { data: auth } = await supabase.auth.getUser();
-      const user_id = auth?.user?.id;
-      if (!user_id) {
-        alert("ログインが必要です");
-        return;
-      }
+    const { data: auth } = await supabase.auth.getUser();
+    const user_id = auth?.user?.id;
+    if (!user_id) {
+      alert("ログインが必要です");
+      return;
+    }
 
       // 🚀 楽観的更新: 即座にUIに反映
       const optimisticReply: ReplyType = {
         id: tempId, // 🔧 一意なIDを使用
         post_id: Number(post.id),
-        user_id: user_id,
+      user_id: user_id,
         text: trimmedText,
-        created_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
         username: currentUserName
       };
 
@@ -175,7 +176,7 @@ export default function Post({
     setLoading(true);
     
     try {
-      // 既に自分が押していれば「取り消し」
+    // 既に自分が押していれば「取り消し」
       const myStanp = localStanps.find(
         (s) => s.user_id === currentUserId && s.stanp_url === stanp_url
       );
@@ -200,13 +201,13 @@ export default function Post({
       }
 
       // バックグラウンドでDB更新
-      if (myStanp) {
+    if (myStanp) {
         const { error } = await supabase
-          .from("stamp")
-          .delete()
-          .eq("post_id", post.id)
+        .from("stamp")
+        .delete()
+        .eq("post_id", post.id)
           .eq("user_id", currentUserId)
-          .eq("stanp_url", stanp_url);
+        .eq("stanp_url", stanp_url);
         
         if (error) {
           // エラー時は元に戻す
@@ -214,17 +215,17 @@ export default function Post({
           alert("スタンプ削除に失敗しました: " + error.message);
         }
       } else {
-        const { error } = await supabase.from("stamp").insert({
-          post_id: post.id,
+    const { error } = await supabase.from("stamp").insert({
+      post_id: post.id,
           user_id: currentUserId,
-          stanp_url,
-        });
+      stanp_url,
+    });
         
         if (error) {
           // エラー時は元に戻す
           setLocalStanps(post.stamps || []);
-          alert("スタンプ追加に失敗しました: " + error.message);
-        }
+      alert("スタンプ追加に失敗しました: " + error.message);
+    }
       }
       
     } catch (error) {
@@ -232,7 +233,7 @@ export default function Post({
       // エラー時は元に戻す
       setLocalStanps(post.stamps || []);
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   };
 
@@ -363,13 +364,23 @@ export default function Post({
           {/* アクションボタン */}
           <div className="flex items-center justify-between max-w-md">
             <button
-              className="flex items-center space-x-2 text-gray-500 hover:text-blue-400 transition-colors group"
+              className={`flex items-center space-x-2 transition-colors group ${
+                showReplies ? "text-blue-400" : "text-gray-500 hover:text-blue-400"
+              }`}
               onClick={() => {
-                setShowReplyInput(!showReplyInput);
+                if (localReplies.length > 0) {
+                  // 🚀 リプライがある場合は表示切り替え
+                  setShowReplies(!showReplies);
+                } else {
+                  // リプライがない場合は入力欄を表示
+                  setShowReplyInput(!showReplyInput);
                 setTimeout(() => replyInputRef.current?.focus(), 100);
+                }
               }}
             >
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+              <div className={`p-2 rounded-full transition-colors ${
+                showReplies ? "bg-blue-500/10" : "group-hover:bg-blue-500/10"
+              }`}>
                 <MessageCircle size={20} />
               </div>
               <span className="text-sm">{repliesCount}</span>
@@ -418,154 +429,239 @@ export default function Post({
             </button>
           </div>
 
-          {/* 🔧 修正されたリプライ一覧 */}
-          <div className="mt-3 space-y-2">
-            {localReplies.slice(0, 3).map((reply) => {
-              // 🔧 型安全な一時的ID判定
-              const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
-              
-              return (
-                <div key={reply.id} className="flex items-start gap-2 ml-2">
-                  <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {reply.username?.charAt(0) ?? "?"}
-                  </div>
-                  <div className={`bg-gray-800 rounded-xl px-3 py-2 text-sm text-white max-w-xs ${
-                    isTempReply ? 'opacity-75' : ''
-                  }`}>
-                    <span className="font-semibold mr-2">
-                      {reply.username ?? "User"}
-                    </span>
-                    <span className="text-gray-400 text-xs">
-                      {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <div className="mt-1 whitespace-pre-wrap">{reply.text}</div>
-                    {isTempReply && (
-                      <div className="text-xs text-gray-500 mt-1">送信中...</div>
-                    )}
+          {/* 🚀 シンプルなインタラクションエリア */}
+          <div className="mt-3 space-y-3">
+            {/* 折りたたみ可能なリプライ一覧（ヘッダーなし） */}
+            {localReplies.length > 0 && (
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                showReplies ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="space-y-3 ml-2">
+                  {localReplies.map((reply) => {
+                    const isTempReply = typeof reply.id === 'string' && reply.id.startsWith('temp-');
+                    
+                    return (
+                      <div key={reply.id} className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                          {reply.username?.charAt(0) ?? "?"}
+                        </div>
+                        <div className={`bg-gray-800/40 backdrop-blur-sm rounded-xl px-4 py-3 text-sm text-white flex-1 border border-gray-700/20 ${
+                          isTempReply ? 'opacity-75' : ''
+                        }`}>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="font-semibold text-sm text-blue-300">
+                              {reply.username ?? "User"}
+                            </span>
+                            <span className="text-gray-400 text-xs">
+                              {new Date(reply.created_at).toLocaleTimeString("ja-JP", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {isTempReply && (
+                              <span className="text-yellow-400 text-xs flex items-center space-x-1">
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+                                <span>送信中</span>
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-gray-200 leading-relaxed">
+                            {reply.text}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* リプライ追加ボタン（リプライ表示時のみ） */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => {
+                        setShowReplyInput(!showReplyInput);
+                        setTimeout(() => replyInputRef.current?.focus(), 100);
+                      }}
+                      className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 text-sm transition-colors group w-full justify-center py-2 border border-blue-400/20 rounded-lg hover:bg-blue-500/5"
+                    >
+                      <MessageCircle size={16} />
+                      <span>リプライを追加</span>
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-            {localReplies.length > 3 && (
-              <div className="ml-2 text-gray-400 text-sm">
-                他 {localReplies.length - 3} 件のリプライ
+              </div>
+            )}
+
+            {/* スタンプセクション */}
+            {Object.keys(stanpCountMap).filter(url => stanpCountMap[url] > 0).length > 0 && (
+              <div className="ml-2">
+                <div className="flex flex-wrap gap-2">
+                  {stampList
+                    .filter((url) => (stanpCountMap[url] || 0) > 0)
+                    .map((url) => {
+                      const count = stanpCountMap[url] || 0;
+                      const isMine =
+                        !!currentUserId &&
+                        localStanps.some(
+                          (s) => s.user_id === currentUserId && s.stanp_url === url
+                        );
+                      
+                      return (
+                        <button
+                          key={url}
+                          className={`group flex items-center space-x-2 px-3 py-2 rounded-full transition-all duration-300 text-sm border ${
+                            isMine
+                              ? "bg-blue-500/20 border-blue-400/50 text-blue-300 shadow-lg shadow-blue-500/20"
+                              : "bg-gray-800/40 border-gray-600/30 text-gray-300 hover:bg-gray-700/40 hover:border-gray-500/50"
+                          } ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                          onClick={() => handleAddStanp(url)}
+                          disabled={loading}
+                        >
+                          <img
+                            src={getImageUrl(url)}
+                            alt="stamp"
+                            className="w-5 h-5 object-contain"
+                          />
+                          <span className="font-medium">
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  
+                  {/* スタンプ追加ボタン */}
+                  <button
+                    className="flex items-center space-x-2 px-3 py-2 rounded-full bg-gray-800/30 border border-gray-600/20 text-gray-400 hover:text-gray-200 hover:bg-gray-700/30 hover:border-gray-500/30 transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    onClick={() => setShowStampPicker(!showStampPicker)}
+                    disabled={loading}
+                  >
+                    <Smile size={16} />
+                    <span className="text-sm">追加</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* リプライ入力欄 */}
+            {showReplyInput && (
+              <div className="ml-2">
+                <form
+                  className="flex items-center gap-3 bg-gray-900/40 border border-gray-700/30 rounded-xl p-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleReply();
+                  }}
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    {currentUserName?.charAt(0) ?? "U"}
+                  </div>
+                  <input
+                    ref={replyInputRef}
+                    type="text"
+                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-400 text-sm"
+                    placeholder="リプライを入力..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    disabled={replyLoading}
+                    maxLength={200}
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold disabled:bg-gray-600 transition-all duration-300 hover:scale-105 flex-shrink-0"
+                    disabled={replyLoading || !replyText.trim()}
+                  >
+                    {replyLoading ? "送信中..." : "送信"}
+                  </button>
+                </form>
               </div>
             )}
           </div>
 
-          {/* リプライ入力欄 */}
-          {showReplyInput && (
-            <form
-              className="flex items-center gap-2 mt-2 ml-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleReply();
-              }}
-            >
-              <input
-                ref={replyInputRef}
-                type="text"
-                className="flex-1 bg-gray-900 border border-gray-700 rounded-full px-3 py-2 text-white placeholder-gray-400 text-sm focus:outline-none"
-                placeholder="リプライを入力..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                disabled={replyLoading}
-                maxLength={200}
-              />
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold disabled:bg-gray-600"
-                disabled={replyLoading || !replyText.trim()}
-              >
-                {replyLoading ? "送信中..." : "送信"}
-              </button>
-            </form>
-          )}
-
-          {/* スタンプ（リアクション）エリア */}
-          <div className="flex items-center gap-2 mt-2 ml-2 relative">
-            {/* 既存スタンプ表示 */}
-            {stampList
-              .filter((url) => stanpCountMap[url])
-              .map((url) => {
-                const isMine =
-                  !!currentUserId && // 🔧 null チェック
-                  localStanps.some(
-                    (s) => s.user_id === currentUserId && s.stanp_url === url
-                  );
-                return (
-                  <button
-                    key={url}
-                    className={`relative group focus:outline-none`}
-                    style={{ width: 44, height: 44 }}
-                    onClick={() => handleAddStanp(url)}
-                    tabIndex={0}
-                    disabled={loading}
-                  >
-                    <img
-                      src={getImageUrl(url)}
-                      alt="stamp"
-                      className={`w-10 h-10 object-contain border bg-black transition-all ${
-                        isMine
-                          ? "ring-2 ring-blue-400 ring-offset-2"
-                          : "border-gray-700"
-                      } ${loading ? 'opacity-50' : ''}`}
-                      style={{
-                        borderRadius: 8,
-                        opacity: loading ? 0.5 : 1,
-                        boxShadow: isMine ? "0 0 8px 2px #60a5fa" : undefined,
-                      }}
-                    />
-                    <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full px-1 min-w-[18px] text-center">
-                      {stanpCountMap[url]}
-                    </span>
-                  </button>
-                );
-              })}
-
-            {/* スタンプ追加ボタン */}
-            <button
-              className="w-7 h-7 flex items-center justify-center border border-gray-700 rounded-full bg-black hover:bg-gray-800 disabled:opacity-50"
-              onClick={() => setShowStampPicker(!showStampPicker)}
-              disabled={loading}
-              aria-label="スタンプ追加"
-            >
-              <Smile size={18} />
-            </button>
-
-            {/* スタンプ一覧ポップアップ */}
-            {showStampPicker && (
-              <div className="absolute z-10 left-0 top-10 p-2 bg-gray-900 border border-gray-700 rounded-xl shadow-lg items-center min-w-[200px]">
-                <div className="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto p-1">
-                  {stampList.map((url) => (
-                    <button
-                      key={url}
-                      className="w-16 h-16 flex items-center justify-center hover:bg-gray-800 disabled:opacity-50"
-                      onClick={() => handleAddStanp(url)}
-                      disabled={loading}
-                    >
-                      <img
-                        src={getImageUrl(url)}
-                        alt="stamp"
-                        className="w-14 h-14 object-contain border border-gray-700 bg-black"
-                        style={{ borderRadius: 8 }}
-                      />
-                    </button>
-                  ))}
+          {/* 🚀 改善されたスタンプピッカー（重複削除） */}
+          {showStampPicker && (
+            <div className="absolute z-20 left-4 top-full mt-2 bg-gray-900/95 backdrop-blur-xl border border-gray-700/50 rounded-2xl shadow-2xl shadow-black/50 p-4 min-w-[320px] max-w-[400px]">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Smile size={18} className="text-yellow-400" />
+                  <span className="text-white font-semibold">リアクションを選択</span>
                 </div>
                 <button
-                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white"
+                  className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white rounded-full hover:bg-gray-700/50 transition-all"
                   onClick={() => setShowStampPicker(false)}
                   aria-label="閉じる"
                 >
                   ×
                 </button>
               </div>
+
+              {/* スタンプグリッド */}
+              <div className="grid grid-cols-6 gap-2 mb-4">
+                {stampList.map((url) => {
+                  const count = stanpCountMap[url] || 0;
+                  const isMine = !!currentUserId && localStanps.some(
+                    (s) => s.user_id === currentUserId && s.stanp_url === url
+                  );
+                  
+                return (
+                    <button
+                      key={url}
+                      className={`relative w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 ${
+                        isMine
+                          ? "bg-blue-500/20 border-2 border-blue-400/50 shadow-lg shadow-blue-500/20"
+                          : "bg-gray-800/40 border border-gray-600/30 hover:bg-gray-700/40 hover:border-gray-500/50"
+                      } ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
+                      onClick={() => handleAddStanp(url)}
+                      disabled={loading}
+                    >
+                      <img
+                        src={getImageUrl(url)}
+                        alt="stamp"
+                        className="w-8 h-8 object-contain"
+                      />
+                      {count > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                </div>
+
+              {/* 使用中スタンプサマリー */}
+              {Object.keys(stanpCountMap).filter(url => stanpCountMap[url] > 0).length > 0 && (
+                <div className="border-t border-gray-700/50 pt-3">
+                  <div className="text-xs text-gray-400 mb-2">この投稿のリアクション:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {stampList
+                      .filter((url) => (stanpCountMap[url] || 0) > 0)
+                      .map((url) => (
+                        <div
+                          key={url}
+                          className="flex items-center space-x-1 bg-gray-800/60 rounded-full px-2 py-1"
+                        >
+                          <img
+                            src={getImageUrl(url)}
+                            alt="used-stamp"
+                            className="w-4 h-4 object-contain"
+                          />
+                          <span className="text-xs text-white font-medium">
+                            {stanpCountMap[url]}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              </div>
             )}
-          </div>
+
+          {/* 🗑️ 古いリプライ・スタンプ表示を削除 */}
+          {/* 
+以下のセクションがあれば削除してください：
+- リプライ一覧
+- スタンプ（リアクション）エリア  
+- 重複したスタンプピッカー
+*/}
         </div>
       </div>
     </div>
