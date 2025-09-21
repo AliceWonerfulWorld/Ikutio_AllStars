@@ -54,24 +54,24 @@ export default function StartView({
     width: '48px',
     height: '48px',
     borderRadius: '50%',
-    border: '1px solid rgba(255, 255, 255, 0.6)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
     position: 'relative',
-    boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
+    boxShadow: '0 0 8px rgba(255, 255, 255, 0.1)',
   };
 
   const clockHandStyle: CSSProperties = {
     width: '4px',
-    height: '14px',
+    height: '32px', // さらに長くして円周をはみ出させる
     backgroundColor: '#ffffff',
     borderRadius: '2px',
     position: 'absolute',
-    transformOrigin: 'bottom center',
-    transform: 'rotate(225deg)', // 7時の位置（左下方向）
-    boxShadow: '0 0 8px rgba(255, 255, 255, 0.6)',
+    transformOrigin: 'center center',
+    transform: 'translate(-8px, -4px) rotate(250deg)', // 角度をもう少し垂直に近く（200deg → 250deg）
+    boxShadow: '0 0 4px rgba(255, 255, 255, 0.2)',
   };
 
   const titleStyle: CSSProperties = {
