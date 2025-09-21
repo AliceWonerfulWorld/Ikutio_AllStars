@@ -97,6 +97,16 @@ export default function Post({
         return;
       }
 
+      // ユーザー情報をデータベースから取得
+      const { data: userData } = await supabase
+        .from("usels")
+        .select("username, icon_url")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      const actualUsername = userData?.username || currentUserName || "User";
+      const actualIconUrl = userData?.icon_url;
+
       // 楽観的更新
       const optimisticReply: ReplyType = {
         id: tempId,
@@ -104,7 +114,8 @@ export default function Post({
         user_id: user_id,
         text: trimmedText,
         created_at: new Date().toISOString(),
-        username: currentUserName
+        username: actualUsername,
+        user_icon_url: actualIconUrl // 🔧 アイコン情報を追加
       };
 
       setLocalReplies(prev => [...prev, optimisticReply]);
@@ -550,9 +561,26 @@ export default function Post({
                     
                     return (
                       <div key={reply.id} className="flex items-start gap-3">
-                        <div className="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {/* アイコン表示を改善 */}
+                        {reply.user_icon_url ? (
+                          <img
+                            src={getPublicIconUrl(reply.user_icon_url)}
+                            alt="icon"
+                            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const parent = e.currentTarget.parentElement;
+                              if (parent) {
+                                const fallback = parent.querySelector('.fallback-avatar') as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 fallback-avatar ${reply.user_icon_url ? 'hidden' : ''}`}>
                           {reply.username?.charAt(0) ?? "?"}
                         </div>
+                        
                         <div className={`bg-gray-800/50 rounded-lg px-3 py-2 text-sm text-white flex-1 ${
                           isTempReply ? 'opacity-75' : ''
                         }`}>

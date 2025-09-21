@@ -6,6 +6,7 @@ export type ReplyType = {
   text: string;
   created_at: string;
   username?: string;
+  user_icon_url?: string; // 🔧 アイコン情報を追加
 };
 
 export type StanpType = {
